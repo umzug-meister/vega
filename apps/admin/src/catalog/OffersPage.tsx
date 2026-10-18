@@ -409,19 +409,14 @@ export function OffersPage() {
               <TableRow>
                 <TableCell>LKW</TableCell>
                 <TableCell>Anfahrt</TableCell>
-                <TableCell
-                  align="right"
-                  sx={{ fontWeight: 700, color: "text.primary" }}
-                >
-                  Träger
-                </TableCell>
-                <TableCell align="right">Einzelpreis</TableCell>
+                <TableCell>Träger</TableCell>
+                <TableCell>Stundenpreis</TableCell>
                 {hours.map((hour) => (
                   <TableCell key={hour} align="right">
-                    {hour}
+                    {`${hour} ${"h"}`}
                   </TableCell>
                 ))}
-                <TableCell align="right" />
+                <TableCell />
               </TableRow>
             </TableHead>
             <TableBody>
@@ -455,7 +450,7 @@ export function OffersPage() {
                             <>
                               <TableCell
                                 rowSpan={workerCounts.length}
-                                sx={{ fontWeight: 700 }}
+                                sx={{ fontWeight: 700, textAlign: "center" }}
                               >
                                 {trucks}
                               </TableCell>
@@ -465,7 +460,6 @@ export function OffersPage() {
                               >
                                 <TextField
                                   fullWidth
-                                  size="small"
                                   type="number"
                                   label="Anfahrtskosten"
                                   value={truckRates[rateKey] ?? "0"}
@@ -481,7 +475,7 @@ export function OffersPage() {
                                   }
                                   onBlur={() => void saveTruckRate(trucks)}
                                   slotProps={{
-                                    htmlInput: { min: 0, step: "0.01" },
+                                    htmlInput: { min: 0 },
                                     input: { endAdornment: "€" },
                                   }}
                                 />
@@ -489,7 +483,9 @@ export function OffersPage() {
                             </>
                           )}
                           <TableCell align="right" sx={{ minWidth: 90 }}>
-                            <Typography sx={{ fontWeight: 700 }}>
+                            <Typography
+                              sx={{ fontWeight: 700, textAlign: "center" }}
+                            >
                               {workers}
                             </Typography>
                           </TableCell>
