@@ -57,7 +57,7 @@ import {
 } from "@mui/material";
 import { authClient } from "../auth-client.js";
 import { useAdminNotification } from "./AdminNotifications.js";
-import type { AdminRoute } from "../routes.js";
+import { formatAdminRouteTitle, type AdminRoute } from "../routes.js";
 import type { StaffUser } from "../types.js";
 import type { EmailTarget } from "../email/EmailDialog.js";
 import { apiRequest } from "../api/api-request.js";
@@ -157,7 +157,7 @@ export function AdminShell({
           ? `Rechnung | ${invoiceNumber}`
           : "Rechnung"
         : "Rechnung | Neu"
-      : route.title;
+      : formatAdminRouteTitle(route);
 
   useEffect(() => {
     if (isContentArea) setContentOpen(true);
@@ -667,8 +667,8 @@ export function AdminShell({
               >
                 <List component="div" disablePadding>
                   <ListItemButton
-                    title="Archivierte Aufträge"
-                    aria-label="Archivierte Aufträge"
+                    title="Aufträge"
+                    aria-label="Aufträge"
                     sx={{ pl: 4 }}
                     selected={pathname === "/orders/archived"}
                     onClick={() => {
@@ -680,13 +680,13 @@ export function AdminShell({
                       <FormatListNumberedOutlined />
                     </ListItemIcon>
                     {!sidebarCollapsed && (
-                      <ListItemText primary="Archivierte Aufträge" />
+                      <ListItemText primary="Aufträge" />
                     )}
                   </ListItemButton>
                   {isAdmin && (
                     <ListItemButton
-                      title="Archivierte Rechnungen"
-                      aria-label="Archivierte Rechnungen"
+                      title="Rechnungen"
+                      aria-label="Rechnungen"
                       sx={{ pl: 4 }}
                       selected={pathname === "/invoices/archived"}
                       onClick={() => {
@@ -698,7 +698,7 @@ export function AdminShell({
                         <ReceiptLongOutlined />
                       </ListItemIcon>
                       {!sidebarCollapsed && (
-                        <ListItemText primary="Archivierte Rechnungen" />
+                        <ListItemText primary="Rechnungen" />
                       )}
                     </ListItemButton>
                   )}

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
-import { resolveAdminRoute } from "../src/routes.js";
+import { formatAdminRouteTitle, resolveAdminRoute } from "../src/routes.js";
 
 test("a direct two-factor URL does not mark the sign-in flow as authenticated", async () => {
   const app = await readFile(new URL("../src/App.tsx", import.meta.url), "utf8");
@@ -54,6 +54,15 @@ test("new archive, invoice, and profile routes are available with admin-only met
   assert.equal(resolveAdminRoute("/invoices/archived")?.adminOnly, true);
   assert.equal(resolveAdminRoute("/orders/archived")?.adminOnly, undefined);
   assert.equal(resolveAdminRoute("/profile")?.profile, true);
+});
+
+test("nested routes display their parent and subroute in the navbar title", () => {
+  assert.equal(formatAdminRouteTitle(resolveAdminRoute("/orders/archived")!), "Archiv | Aufträge");
+  assert.equal(formatAdminRouteTitle(resolveAdminRoute("/invoices/archived")!), "Archiv | Rechnungen");
+  assert.equal(formatAdminRouteTitle(resolveAdminRoute("/settings/offers")!), "Katalog | Angebote");
+  assert.equal(formatAdminRouteTitle(resolveAdminRoute("/settings/users")!), "Verwaltung | Nutzer");
+  assert.equal(formatAdminRouteTitle(resolveAdminRoute("/maintenance")!), "Verwaltung | Maintenance");
+  assert.equal(formatAdminRouteTitle(resolveAdminRoute("/settings")!), "Optionen");
 });
 
 test("unknown and malformed legacy paths resolve to not found", () => {
