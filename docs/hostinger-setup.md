@@ -78,12 +78,12 @@ Details: [Betrieb und Konfiguration](./operations.md#datenbank).
 4. Als Framework **Express.js** auswählen, nicht React/Vite. In der Ansicht
    „Build- und Ausgabeeinstellungen“ diese Werte eintragen:
 
-   | Einstellung | Wert |
-   |---|---|
-   | Build command | `npm run build` |
-   | Package manager | `npm` |
-   | Output directory | `.` |
-   | Entry file | `server.js` |
+   | Einstellung      | Wert            |
+   | ---------------- | --------------- |
+   | Build command    | `npm run build` |
+   | Package manager  | `npm`           |
+   | Output directory | `.`             |
+   | Entry file       | `server.js`     |
 
    Die versionierte Root-Einstiegsdatei lädt `apps/server/dist/main.js`.
    Das gesamte Projekt bleibt als Output erhalten: Der Server braucht auch
@@ -106,6 +106,7 @@ Details: [Betrieb und Konfiguration](./operations.md#datenbank).
    Kundenformular gemeinsam. Der Startbefehl ist `npm start`; nicht separat
    Vite-Dev-Server starten. Der Prozess muss den von Hostinger bereitgestellten
    `PORT` verwenden können (Vega verwendet `PORT` oder standardmäßig `3000`).
+
 5. Wenn Node 24 nicht verfügbar ist oder nach der Installation kein
    Build-Lauf im Log erscheint, die Build-Einstellungen prüfen und nötigenfalls
    mit Hostinger klären. Die tatsächlich
@@ -128,17 +129,17 @@ Variablen an der Node-App setzen, nicht mit `VITE_`-Präfix und nicht als
 Browser-Konfiguration. Für Produktion sind mindestens folgende Werte
 erforderlich:
 
-| Variable | Wert / Hinweise |
-|---|---|
-| `NODE_ENV` | `production` |
-| `DATABASE_URL` | Vollständige MySQL-URL aus Schritt 2 |
-| `APP_BASE_URL` | Öffentliche Vega-Origin mit HTTPS, z. B. `https://app.example.de` |
-| `BETTER_AUTH_URL` | Dieselbe öffentliche Vega-Origin, ohne Pfad |
-| `BETTER_AUTH_SECRET` | Zufälliger, einmaliger Secret-Wert mit mindestens 32 Zeichen; lokal z. B. mit `openssl rand -base64 32` erzeugen und nur direkt in hPanel einfügen |
-| `BETTER_AUTH_TRUSTED_ORIGINS` | Exakte Origins, kommagetrennt; produktiv mindestens die Vega-Origin, z. B. `https://app.example.de` |
-| `CORS_ALLOWED_ORIGINS` | Exakte HTTPS-Origins, kommagetrennt: Vega-Origin und WordPress-Origin, z. B. `https://app.example.de,https://www.example.de` |
-| `HOSTINGER_MAIL_API_TOKEN` | Serverseitiger Hostinger-Mail-API-Token |
-| `HOSTINGER_MAILBOX_RESOURCE_ID` | Resource-ID des Postfachs; ggf. aus dem Mail-API-Setup ermitteln |
+| Variable                        | Wert / Hinweise                                                                                                                                    |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                      | `production`                                                                                                                                       |
+| `DATABASE_URL`                  | Vollständige MySQL-URL aus Schritt 2                                                                                                               |
+| `APP_BASE_URL`                  | Öffentliche Vega-Origin mit HTTPS, z. B. `https://app.example.de`                                                                                  |
+| `BETTER_AUTH_URL`               | Dieselbe öffentliche Vega-Origin, ohne Pfad                                                                                                        |
+| `BETTER_AUTH_SECRET`            | Zufälliger, einmaliger Secret-Wert mit mindestens 32 Zeichen; lokal z. B. mit `openssl rand -base64 32` erzeugen und nur direkt in hPanel einfügen |
+| `BETTER_AUTH_TRUSTED_ORIGINS`   | Exakte Origins, kommagetrennt; produktiv mindestens die Vega-Origin, z. B. `https://app.example.de`                                                |
+| `CORS_ALLOWED_ORIGINS`          | Exakte HTTPS-Origins, kommagetrennt: Vega-Origin und WordPress-Origin, z. B. `https://app.example.de,https://www.example.de`                       |
+| `HOSTINGER_MAIL_API_TOKEN`      | Serverseitiger Hostinger-Mail-API-Token                                                                                                            |
+| `HOSTINGER_MAILBOX_RESOURCE_ID` | Resource-ID des Postfachs; ggf. aus dem Mail-API-Setup ermitteln                                                                                   |
 
 `BETTER_AUTH_TRUSTED_ORIGINS` und `CORS_ALLOWED_ORIGINS` sind Listen von
 **Origins** im Format `https://host[:port]`, ohne Slash, Pfad oder Wildcard
@@ -149,15 +150,15 @@ Better-Auth-Origin. WordPress muss den Vega-Loader von der Vega-Origin laden.
 Optionale Variablen nur setzen, wenn die jeweilige Integration eingerichtet
 und getestet ist:
 
-| Variable | Wann setzen |
-|---|---|
-| `HOSTINGER_MAIL_API_BASE_URL` | Nur für einen dokumentierten API-Endpoint-Override; standardmäßig `https://api.mail.hostinger.com` |
-| `GOOGLE_MAPS_API_KEY` | Places API (New) und Routes API; serverseitig beschränken, Quoten/Kosten überwachen |
-| `GOOGLE_CLOUD_PROJECT` | Google-Cloud-Projekt für GCS |
-| `GCS_BUCKET` | GCS-Bucket für Bild-Uploads; Bucket- und Berechtigungssetup siehe [GCS-Anleitung](./gcs-bucket-setup.md) |
+| Variable                         | Wann setzen                                                                                                                                             |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `HOSTINGER_MAIL_API_BASE_URL`    | Nur für einen dokumentierten API-Endpoint-Override; standardmäßig `https://api.mail.hostinger.com`                                                      |
+| `GOOGLE_MAPS_API_KEY`            | Places API (New) und Routes API; serverseitig beschränken, Quoten/Kosten überwachen                                                                     |
+| `GOOGLE_CLOUD_PROJECT`           | Google-Cloud-Projekt für GCS                                                                                                                            |
+| `GCS_BUCKET`                     | GCS-Bucket für Bild-Uploads; Bucket- und Berechtigungssetup siehe [GCS-Anleitung](./gcs-bucket-setup.md)                                                |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Nur wenn Hostinger eine sicher bereitgestellte externe ADC-Credentials-Datei unterstützt; Datei außerhalb des Repositories und nicht öffentlich ablegen |
-| `MAIL_MAINTENANCE_LIMIT` | Optionaler Cron-Batch, 1–200; Standard 25 |
-| `HOST`, `PORT` | Nur falls der Host sie nicht selbst setzt; Standard-Host ist `0.0.0.0`, Standard-Port `3000` |
+| `MAIL_MAINTENANCE_LIMIT`         | Optionaler Cron-Batch, 1–200; Standard 25                                                                                                               |
+| `HOST`, `PORT`                   | Nur falls der Host sie nicht selbst setzt; Standard-Host ist `0.0.0.0`, Standard-Port `3000`                                                            |
 
 Wenn GCS-Credentials nicht sicher als Runtime-Credentials bereitgestellt werden
 können, GCS nicht aktivieren und den Bild-Upload-Go-live als blockiert
@@ -204,6 +205,7 @@ Vor **jedem** Release:
    Bei einem anderen von hPanel verwalteten Deployment den dort vorgesehenen
    Release-Schritt verwenden, aber anschließend dieselben Migrationen und
    Smoke-Checks ausführen. Keine unbekannten lokalen Änderungen überschreiben.
+
 3. Datenbankmigrationen aus dem Repository-Root gegen die **Ziel-Datenbank**
    ausrollen:
 
@@ -227,6 +229,7 @@ Vor **jedem** Release:
    Alternativ Hostingers sichere CLI-/Umgebungsverwaltung verwenden. Nicht als
    `DATABASE_URL=...` in die Befehlszeile, Shell-History oder ein versioniertes
    `.env` schreiben.
+
 4. Erst nach erfolgreichem Build und Migration den Node-Prozess in hPanel
    starten bzw. neu starten. Migrationen nicht mit `migrate dev` auf der
    Produktionsdatenbank ausführen und keine Tabellen manuell ändern.
@@ -321,26 +324,26 @@ Mail-Cron als Purge-Nachweis werten. Siehe [Mail-Cron-Runbook](./hostinger-mail-
 ## 9. Release- und Go-live-Checkliste
 
 - [ ] Node 24, npm 11, Build, `npm start`, Portzuweisung und SSH-Befehle im
-  tatsächlichen Hostinger-Tarif nachgewiesen.
+      tatsächlichen Hostinger-Tarif nachgewiesen.
 - [ ] Datenbankverbindung und -version geprüft; Backup und Restore praktisch
-  getestet.
+      getestet.
 - [ ] `npm ci`, `npm run build` und `npm run db:migrate:deploy` erfolgreich.
 - [ ] Produktions-Origins sind HTTPS, exakt und ohne Wildcards; keine Secrets
-  in Frontend-Builds.
+      in Frontend-Builds.
 - [ ] Erster Admin provisioniert, Bootstrap-Variablen entfernt, Passwort
-  geändert und TOTP eingerichtet.
+      geändert und TOTP eingerichtet.
 - [ ] Hostinger-Mail-API mit Testempfänger, Anhängen, Ablehnungen und unklarem
-  Versandausgang geprüft; Absender-/Empfängerwerte in Vega konfiguriert.
+      Versandausgang geprüft; Absender-/Empfängerwerte in Vega konfiguriert.
 - [ ] Google Places/Routes und GCS (falls verwendet) mit produktionsnahen
-  Berechtigungen, Quoten, CORS und Lifecycle getestet.
+      Berechtigungen, Quoten, CORS und Lifecycle getestet.
 - [ ] WordPress-Loader, CSP/CORS, Formular, Anfrage, Admin-Login und Bild-Upload
-  End-to-End getestet.
+      End-to-End getestet.
 - [ ] Cron-Verfügbarkeit und Mail-Retry-Lauf nachgewiesen; `UNKNOWN`-Verfahren
-  bekannt.
+      bekannt.
 - [ ] Purge-Läufe für archivierte Aufträge (60 Tage) und Finanzbelege (30 Tage)
-  implementiert und verifiziert, bevor produktive Archivdaten entstehen.
+      implementiert und verifiziert, bevor produktive Archivdaten entstehen.
 - [ ] Externe gesetzliche Rechnungs-/Gutschriftenaufbewahrung sowie
-  Backup-/Restore-Verantwortung mit den zuständigen Betreibern freigegeben.
+      Backup-/Restore-Verantwortung mit den zuständigen Betreibern freigegeben.
 - [ ] Rollback-Prozess für App-Build und Datenbankmigrationen dokumentiert.
 
 Weiterführend:
