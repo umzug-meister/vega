@@ -90,9 +90,12 @@ export function BasisTab({ value, update, onBasisChange }: BasisTabProps) {
 
   return (
     <Stack spacing={2}>
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 12, lg: 4 }}>
-          <Paper variant="outlined" sx={{ p: 2.5, height: "100%" }}>
+      <Grid container spacing={2} sx={{ alignItems: "stretch" }}>
+        <Grid
+          size={{ xs: 12, md: 12, lg: 4 }}
+          sx={{ display: "flex", alignItems: "stretch" }}
+        >
+          <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
             <AppointmentFields
               value={{
                 movingDate: value.movingDate,
@@ -105,8 +108,11 @@ export function BasisTab({ value, update, onBasisChange }: BasisTabProps) {
             />
           </Paper>
         </Grid>
-        <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-          <Paper variant="outlined" sx={{ p: 2.5, height: "100%" }}>
+        <Grid
+          size={{ xs: 12, md: 6, lg: 4 }}
+          sx={{ display: "flex", alignItems: "stretch" }}
+        >
+          <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Träger und LKW
@@ -149,8 +155,11 @@ export function BasisTab({ value, update, onBasisChange }: BasisTabProps) {
             </Stack>
           </Paper>
         </Grid>
-        <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-          <Paper variant="outlined" sx={{ p: 2.5, height: "100%" }}>
+        <Grid
+          size={{ xs: 12, md: 6, lg: 4 }}
+          sx={{ display: "flex", alignItems: "stretch" }}
+        >
+          <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Preis
@@ -173,7 +182,7 @@ export function BasisTab({ value, update, onBasisChange }: BasisTabProps) {
               />
               <TextField
                 type="number"
-                label="Stundenpreis"
+                label="Einzelpreis"
                 value={basis.extraHourPrice || ""}
                 onChange={(event) =>
                   setBasis({ extraHourPrice: Number(event.target.value) })
@@ -239,7 +248,7 @@ export function BasisTab({ value, update, onBasisChange }: BasisTabProps) {
                     <TableCell>Träger</TableCell>
                     <TableCell>LKW 3,5</TableCell>
                     <TableCell>Stunden</TableCell>
-                    <TableCell>Stundenpreis</TableCell>
+                    <TableCell>Einzelpreis</TableCell>
                     <TableCell>Anfahrt</TableCell>
                     <TableCell>Gesamt</TableCell>
                     <TableCell />

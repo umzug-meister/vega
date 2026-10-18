@@ -23,7 +23,7 @@ Wartungsroute, keine zweite Mail-App.
   Diese Einträge werden **niemals automatisch erneut gesendet**.
   Auch ein eventuell bereits erfolgreicher, aber nicht bestätigter DB-Commit
   darf keinen zweiten Provideraufruf auslösen.
-- Verwaiste `SENDING`-Claims werden nach 70 Sekunden (10 Sekunden
+- Verwaiste `SENDING`-Claims werden nach 90 Sekunden (30 Sekunden
   Provider-Timeout plus 60 Sekunden Reserve) atomar auf `UNKNOWN` gesetzt.
   Der Claim bleibt damit auch nach Prozessabbruch sicher gesperrt.
 - Geloggt werden nur Zähler (`sent`, `failed`, `unknown`, `limit`), niemals Empfänger,

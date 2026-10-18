@@ -11,6 +11,7 @@ import { ConditionsTab } from "../src/orders/ConditionsTab.js";
 import { createEmptyOrder } from "../src/orders/order-form-types.js";
 import { resolveAdminRoute } from "../src/routes.js";
 import type { StaffUser } from "../src/types.js";
+import { mount } from "./dom-test-helpers.js";
 
 function render(element: React.ReactElement) {
   const previous = Reflect.get(globalThis, "React");
@@ -292,6 +293,44 @@ test("order and invoice editor titles show a new label or their saved number", (
   assert.match(savedOrder, /<h1[^>]*>Auftrag \| 1004<\/h1>/u);
 });
 
+test("document title follows new and saved order and invoice pages", async (context) => {
+  const user: StaffUser = {
+    id: "title-test",
+    name: "Test",
+    email: "test@example.test",
+    role: "Admin",
+    twoFactorEnabled: true,
+    mustChangePassword: false,
+    blocked: false,
+  };
+  const app = await mount(null);
+  context.after(() => app.cleanup());
+  const renderPage = async (path: string, invoiceNumber?: string) => {
+    const route = resolveAdminRoute(path);
+    assert.ok(route);
+    await app.render(
+      createElement(AdminShell, {
+        user,
+        route,
+        pathname: path,
+        navigate: () => {},
+        children: null,
+        ...(invoiceNumber ? { invoiceNumber } : {}),
+      }),
+    );
+    await app.flush();
+  };
+
+  await renderPage("/edit/-1");
+  assert.equal(app.window.document.title, "Vega | Auftrag | Neu");
+  await renderPage("/edit/1008");
+  assert.equal(app.window.document.title, "Vega | Auftrag | 1008");
+  await renderPage("/invoices/new");
+  assert.equal(app.window.document.title, "Vega | Rechnung | Neu");
+  await renderPage("/invoices/invoice-id", "R-202");
+  assert.equal(app.window.document.title, "Vega | Rechnung | R-202");
+});
+
 test("order editor omits accounting and links the journal as the seventh tab", () => {
   const html = render(
     createElement(OrderCreatePage, {
@@ -428,10 +467,10 @@ test("empty customer alternative dates are hidden from staff", () => {
   assert.doesNotMatch(html, /Alternativer Zeitraum/u);
 });
 
-test("conditions keep manual editing and expose an explicit server calculation action", () => {
+test("order positions keep manual editing and expose an explicit server calculation action", () => {
   const value = createEmptyOrder();
   value.details.conditions = [
-    { description: "Manuelle Kondition", amount: 125 },
+    { description: "Manuelle Position", amount: 125 },
   ];
   const html = render(
     createElement(ConditionsTab, {
@@ -440,9 +479,9 @@ test("conditions keep manual editing and expose an explicit server calculation a
       onCalculate: () => {},
     }),
   );
-  assert.ok(html.includes("Konditionen berechnen"));
+  assert.ok(html.includes("Positionen berechnen"));
   assert.ok(html.includes("Beschreibung"));
   assert.ok(html.includes("Betrag (€)"));
-  assert.ok(html.includes("Manuelle Kondition"));
+  assert.ok(html.includes("Manuelle Position"));
   assert.ok(html.includes("125,00"));
 });

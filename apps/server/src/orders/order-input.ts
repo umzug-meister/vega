@@ -713,7 +713,7 @@ function validateConditions(
   if (!Array.isArray(value) || value.length > 200) {
     issues.push({
       field: "details.conditions",
-      message: "Ungültige Konditionen.",
+      message: "Ungültige Positionen.",
     });
     return undefined;
   }
@@ -785,7 +785,7 @@ function validateConditions(
       issues.push({
         field: `details.conditions.${index}.kind`,
         message:
-          "Berechnete Konditionen sind nur für angemeldete Mitarbeiter verfügbar.",
+          "Berechnete Positionen sind nur für angemeldete Mitarbeiter verfügbar.",
       });
     if (!allowStaffPricing && (amount ?? 0) > 0)
       issues.push({

@@ -116,23 +116,23 @@ Exakte Versionen sind in `package.json`/`package-lock.json` gepinnt; offen ist n
   von Admins und Kundenberatern je Position angepasst werden; auch
   Freitextpositionen können einen Einzelpreis erhalten. Diese Mitarbeiterpreise
   werden serverseitig validiert, im Auftrags-JSON gespeichert und von der
-  ausdrücklichen Konditionsberechnung verwendet. Freitextpositionen ohne
+  ausdrücklichen Positionskalkulation verwendet. Freitextpositionen ohne
   Einzelpreis blockieren die automatische Kalkulation, nicht das manuelle
   Angebot. Packungen behalten den Hinweis „wird nach Verbrauch berechnet“.
-- Jede fertige Kondition wird auf Cent gerundet; erst danach wird die
+- Jede fertige Auftragsposition wird auf Cent gerundet; erst danach wird die
   Bruttosumme exakt gebildet. Order-Bruttobeträge werden nicht mit der
-  Netto-/Umsatzsteuerarithmetik von Rechnungen vermischt. Die Konditionskarte
+  Netto-/Umsatzsteuerarithmetik von Rechnungen vermischt. Die Positionskarte
   zeigt zusätzlich eine rein informative Netto-/MwSt.-Aufteilung der
   Bruttosumme mit fest 19 % (`Netto = Brutto / 1,19`, MwSt. = Brutto − Netto);
-  sie ändert weder gespeicherte Konditionen noch den Steuersatz einer Rechnung.
-- Berechnete Konditionen können direkt angepasst werden. Eine neue Kalkulation
-  ersetzt bestehende Konditionen erst nach Bestätigung. Gespeicherte
-  Konditionen sind die verbindlichen Beträge; Katalogänderungen werden nur
+  sie ändert weder gespeicherte Positionen noch den Steuersatz einer Rechnung.
+- Berechnete Positionen können direkt angepasst werden. Eine neue Kalkulation
+  ersetzt bestehende Positionen erst nach Bestätigung. Gespeicherte
+  Positionen sind die verbindlichen Beträge; Katalogänderungen werden nur
   durch eine neue, ausdrücklich bestätigte Kalkulation übernommen.
 - Ein serverseitiger `pricingSnapshot` im bestehenden Order-JSON hält die
   verwendeten Preisstände für Services, Packungen und AGB sowie die
   Preisgrundlage. PDF-Tabellen und Angebotsmails verwenden gespeicherte
-  Konditionen; Order-PDF-Preislisten verwenden denselben Snapshot und zeigen
+  Positionen; Order-PDF-Preislisten verwenden denselben Snapshot und zeigen
   bei alten Orders ohne Snapshot keine erfundenen historischen Einzelpreise.
   Kopien übernehmen den Snapshot unverändert. Keine öffentliche Preisvorschau
   und keine anonymen Preis-/Snapshot-Overrides.
@@ -231,19 +231,19 @@ Umgesetzte Details stehen im Code, in den Tests und in den ADRs; den aktuellen
 Stand führt `docs/implementation-status.md`. Hier bleiben nur offene Arbeit und
 Abnahmekriterien.
 
-| Paket                   | Offen                                                                                                                                                                 | Abnahme                                                                           |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| A0 Proof                | Hostinger Node 24/Build/Start/Cron, Mail-API-Anhänge, GCS, WordPress-Loader/CORS in nichtproduktiver Umgebung (lokaler Teil: `proof-01-integration-compatibility.md`) | End-to-End-Proof in Zielumgebung; Tarifgrenzen notiert                            |
-| A1 Build                | Tatsächlicher GitHub-CI-Lauf und Hostinger-Deployment                                                                                                                 | Sauberer CI-Build; Deployment liefert API und beide Frontends                     |
-| A2 Datenmodell          | – (lokal vollständig)                                                                                                                                                 | Leere DB per Migration; keine Kaskaden auf Geschwister/Rechnungen                 |
-| A3 Auth                 | Reset-Mail-Proof mit echtem Hostinger-Versand                                                                                                                         | Kein Signup; Rollenmatrix serverseitig; Admin-2FA vor Datenzugriff                |
-| A4 Geschäftslogik       | Täglicher 60-/30-Tage-Purge (`purgeAt` wird bereits gesetzt), optional mit Cron-Secret                                                                                | Kein öffentlicher Order-Read; serverseitige Konditionsberechnung statt Browserpreise |
-| A5 Kundenformular       | Realer WordPress-/Hostinger-Einbettungsproof                                                                                                                          | Loader lädt in WordPress; Anfrage ohne Login; Consent funktioniert                |
-| A6 Admin-SPA            | – (lokal vollständig)                                                                                                                                                 | Rollenrechte auf API-Ebene                                                        |
-| A7 Mail/PDF/Buchhaltung | 30-Tage-Finanz-Purge, Provider-End-to-End-Test                                                                                                                        | Mailfehler verlieren keine Anfrage; Versand protokolliert; PDFs nicht persistiert |
-| A8 GCS-Bilder           | Realer Provider-/CORS-/Lifecycle-Proof                                                                                                                                | Keine Credentials im Browser; Lifecycle nachweisbar                               |
-| A9 Qualität             | E2E-Szenarien und Security Review (IDOR, XSS/Mail-Editor, CORS, Rate-Limits, Uploads)                                                                                 | Keine öffentlichen Datenlesewege; Restore-/Purge-/Mailfehler abgedeckt            |
-| A10 Betrieb             | Hostinger-Deployment, Cron, Runbook (Grundlage: `operations.md`, `hostinger-mail-cron.md`, `gcs-bucket-setup.md`)                                                     | Deployment-/Rollback-/Cron-Anleitung vorhanden                                    |
+| Paket                   | Offen                                                                                                                                                                 | Abnahme                                                                              |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| A0 Proof                | Hostinger Node 24/Build/Start/Cron, Mail-API-Anhänge, GCS, WordPress-Loader/CORS in nichtproduktiver Umgebung (lokaler Teil: `proof-01-integration-compatibility.md`) | End-to-End-Proof in Zielumgebung; Tarifgrenzen notiert                               |
+| A1 Build                | Tatsächlicher GitHub-CI-Lauf und Hostinger-Deployment                                                                                                                 | Sauberer CI-Build; Deployment liefert API und beide Frontends                        |
+| A2 Datenmodell          | – (lokal vollständig)                                                                                                                                                 | Leere DB per Migration; keine Kaskaden auf Geschwister/Rechnungen                    |
+| A3 Auth                 | Reset-Mail-Proof mit echtem Hostinger-Versand                                                                                                                         | Kein Signup; Rollenmatrix serverseitig; Admin-2FA vor Datenzugriff                   |
+| A4 Geschäftslogik       | Täglicher 60-/30-Tage-Purge (`purgeAt` wird bereits gesetzt), optional mit Cron-Secret                                                                                | Kein öffentlicher Order-Read; serverseitige Positionskalkulation statt Browserpreise |
+| A5 Kundenformular       | Realer WordPress-/Hostinger-Einbettungsproof                                                                                                                          | Loader lädt in WordPress; Anfrage ohne Login; Consent funktioniert                   |
+| A6 Admin-SPA            | – (lokal vollständig)                                                                                                                                                 | Rollenrechte auf API-Ebene                                                           |
+| A7 Mail/PDF/Buchhaltung | 30-Tage-Finanz-Purge, Provider-End-to-End-Test                                                                                                                        | Mailfehler verlieren keine Anfrage; Versand protokolliert; PDFs nicht persistiert    |
+| A8 GCS-Bilder           | Realer Provider-/CORS-/Lifecycle-Proof                                                                                                                                | Keine Credentials im Browser; Lifecycle nachweisbar                                  |
+| A9 Qualität             | E2E-Szenarien und Security Review (IDOR, XSS/Mail-Editor, CORS, Rate-Limits, Uploads)                                                                                 | Keine öffentlichen Datenlesewege; Restore-/Purge-/Mailfehler abgedeckt               |
+| A10 Betrieb             | Hostinger-Deployment, Cron, Runbook (Grundlage: `operations.md`, `hostinger-mail-cron.md`, `gcs-bucket-setup.md`)                                                     | Deployment-/Rollback-/Cron-Anleitung vorhanden                                       |
 
 ## 8. Konfigurations- und Betriebsgrenzen
 

@@ -48,6 +48,11 @@
   weist andere Steuersätze zurück. Vorhandene abweichende Werte werden nicht
   automatisch umgerechnet. Der Editor verlangt dafür eine ausdrückliche
   Auswahl eines zulässigen Satzes, bevor erneut gespeichert werden kann.
+- Einzelpreise auf Rechnungs- und Gutschriftpositionen sind Bruttopreise und
+  beinhalten den ausgewählten Steuersatz. Der Gesamtbetrag ist die Summe der
+  Positions-Bruttopreise; die Umsatzsteuer wird daraus centgenau herausgerechnet,
+  der Nettobetrag ergibt sich als Differenz. Preise, die aus Auftragspositionen
+  übernommen werden, werden daher nicht nochmals um Umsatzsteuer erhöht.
 - Kalenderdaten und Zahlen werden auch serverseitig strikt geprüft;
   unmögliche Daten, `Infinity`, negative oder nicht darstellbare Zeilen-/
   Gesamtbeträge werden abgewiesen. UI und PDF verwenden denselben

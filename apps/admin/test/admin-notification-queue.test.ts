@@ -7,10 +7,10 @@ import {
   type AdminNotification,
 } from "../src/components/admin-notification-queue.js";
 
-test("success notifications expire after three seconds, errors after twenty seconds, warnings stay open", () => {
+test("success notifications expire after three seconds, warnings after fifteen seconds, and errors after twenty seconds", () => {
   assert.equal(adminNotificationAutoHideDuration("success"), 3_000);
+  assert.equal(adminNotificationAutoHideDuration("warning"), 15_000);
   assert.equal(adminNotificationAutoHideDuration("error"), 20_000);
-  assert.equal(adminNotificationAutoHideDuration("warning"), null);
 });
 
 test("notifications stack up to five; further ones wait for a free slot in order", () => {

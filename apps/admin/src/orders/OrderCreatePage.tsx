@@ -12,7 +12,7 @@ import { useAdminNotification } from "../components/AdminNotifications.js";
 import { SectionTabs } from "../components/SectionTabs.js";
 import { AddressesTab } from "./AddressesTab.js";
 import { BasisTab } from "./BasisTab.js";
-import { ConditionsTab } from "./ConditionsTab.js";
+import { ConditionsTab, hasPricingInputsChanged } from "./ConditionsTab.js";
 import { CustomerTab } from "./CustomerTab.js";
 import { ExtrasTab } from "./ExtrasTab.js";
 import { FurnitureTab } from "./FurnitureTab.js";
@@ -28,9 +28,9 @@ const tabNames = [
   "Kunde",
   "Adressen",
   "Umzugsgut",
-  "Verpackung & Leistungen",
+  "Leistungen & Packmaterial",
   "Basis",
-  "Konditionen",
+  "Positionen",
   "Journal",
 ];
 
@@ -43,6 +43,24 @@ function toFormValue(data: CreateOrderInput): OrderFormValue {
     from: { ...base.from, ...data.from },
     to: { ...base.to, ...data.to },
     details: data.details ?? base.details,
+  };
+}
+
+export function orderForSave(value: OrderFormValue): OrderFormValue {
+  return {
+    ...value,
+    details: {
+      ...value.details,
+      extras: {
+        ...value.details.extras,
+        services: value.details.extras.services.filter(
+          (service) =>
+            service.name.trim().length > 0 &&
+            typeof service.unitPrice === "number" &&
+            Number.isFinite(service.unitPrice),
+        ),
+      },
+    },
   };
 }
 
@@ -144,6 +162,8 @@ export function OrderCreatePage({
   }
 
   async function save(): Promise<boolean> {
+    const saveValue = orderForSave(value);
+    const pricingNeedsReview = hasPricingInputsChanged(saveValue);
     const response = await fetch(
       orderNumber === undefined
         ? "/api/orders"
@@ -153,7 +173,7 @@ export function OrderCreatePage({
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
         body: JSON.stringify(
-          orderNumber === undefined ? value : { ...value, revision },
+          orderNumber === undefined ? saveValue : { ...saveValue, revision },
         ),
       },
     );
@@ -199,7 +219,12 @@ export function OrderCreatePage({
       setRevision(saved.revision);
       setValue(toFormValue(saved.data));
       onDirtyChange(false);
-      notify("success", "Auftrag gespeichert.");
+      notify(
+        pricingNeedsReview ? "warning" : "success",
+        pricingNeedsReview
+          ? "Auftrag gespeichert. Preisrelevante Angaben wurden geändert. Bitte prüfen und berechnen Sie die Positionen gegebenenfalls neu."
+          : "Auftrag gespeichert.",
+      );
     }
     return true;
   }
@@ -232,7 +257,7 @@ export function OrderCreatePage({
       if (
         value.details.conditions.length > 0 &&
         !window.confirm(
-          "Die neue Kalkulation ersetzt alle bisherigen Konditionen. Möchten Sie fortfahren?",
+          "Die neue Kalkulation ersetzt alle bisherigen Positionen. Möchten Sie fortfahren?",
         )
       )
         return;
@@ -282,7 +307,7 @@ export function OrderCreatePage({
         ) {
           notify(
             "warning",
-            "Halteverbotzone(n) wurde(n) ausgewählt! Bitte entweder die HVZ entfernen oder als Kondition aufnehmen.",
+            "Halteverbotzone(n) wurde(n) ausgewählt! Bitte entweder die HVZ entfernen oder als Position aufnehmen.",
           );
         }
         const file = await saveAndFetchOrderPdf(orderNumber, () =>

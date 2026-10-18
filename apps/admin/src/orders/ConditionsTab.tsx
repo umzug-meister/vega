@@ -33,6 +33,50 @@ interface ConditionsTabProps {
   onCalculate: () => void;
 }
 
+export function hasPricingInputsChanged(value: OrderFormValue): boolean {
+  const snapshot = value.pricingSnapshot;
+  if (!snapshot) return false;
+  const { basis, extras } = value.details;
+  const currentSource = {
+    offerId: basis.offerId ?? null,
+    workers: basis.workers,
+    trucks: basis.trucks,
+    hours: basis.hours,
+    basePrice: basis.basePrice,
+    extraHourPrice: basis.extraHourPrice,
+    discountPercent: basis.discountPercent,
+    distanceKm: value.details.distanceKm,
+    ...(value.details.distanceSource
+      ? { distanceSource: value.details.distanceSource }
+      : {}),
+    addresses: [
+      value.from,
+      value.to,
+      ...(value.details.showSecondaryFrom && value.details.secondaryFrom
+        ? [value.details.secondaryFrom]
+        : []),
+      ...(value.details.showSecondaryTo && value.details.secondaryTo
+        ? [value.details.secondaryTo]
+        : []),
+    ].map(({ city, parkingSlot }) => ({
+      city,
+      parkingSlot: parkingSlot === true,
+    })),
+    services: extras.services.map(
+      ({ kind, catalogId, quantity, unitPrice }, index) => ({
+        kind,
+        catalogId: catalogId ?? null,
+        quantity,
+        ...(unitPrice !== undefined ||
+        snapshot.source.services[index]?.unitPrice !== undefined
+          ? { unitPrice: unitPrice ?? null }
+          : {}),
+      }),
+    ),
+  };
+  return JSON.stringify(snapshot.source) !== JSON.stringify(currentSource);
+}
+
 export function ConditionsTab({
   value,
   onConditionsChange,
@@ -44,47 +88,7 @@ export function ConditionsTab({
   );
   const netTotal = roundAmountToCents(grossTotal / 1.19);
   const vatTotal = roundAmountToCents(grossTotal - netTotal);
-  const pricingChanged =
-    value.pricingSnapshot &&
-    JSON.stringify(value.pricingSnapshot.source) !==
-      JSON.stringify({
-        offerId: basis.offerId ?? null,
-        workers: basis.workers,
-        trucks: basis.trucks,
-        hours: basis.hours,
-        basePrice: basis.basePrice,
-        extraHourPrice: basis.extraHourPrice,
-        discountPercent: basis.discountPercent,
-        distanceKm: value.details.distanceKm,
-        ...(value.details.distanceSource
-          ? { distanceSource: value.details.distanceSource }
-          : {}),
-        addresses: [
-          value.from,
-          value.to,
-          ...(value.details.showSecondaryFrom && value.details.secondaryFrom
-            ? [value.details.secondaryFrom]
-            : []),
-          ...(value.details.showSecondaryTo && value.details.secondaryTo
-            ? [value.details.secondaryTo]
-            : []),
-        ].map(({ city, parkingSlot }) => ({
-          city,
-          parkingSlot: parkingSlot === true,
-        })),
-        services: value.details.extras.services.map(
-          ({ kind, catalogId, quantity, unitPrice }, index) => ({
-            kind,
-            catalogId: catalogId ?? null,
-            quantity,
-            ...(unitPrice !== undefined ||
-            value.pricingSnapshot?.source.services[index]?.unitPrice !==
-              undefined
-              ? { unitPrice: unitPrice ?? null }
-              : {}),
-          }),
-        ),
-      });
+  const pricingChanged = hasPricingInputsChanged(value);
 
   function updateEntry(index: number, patch: Partial<OrderConditionInput>) {
     onConditionsChange(
@@ -184,12 +188,12 @@ export function ConditionsTab({
             </TableBody>
           </Table>
           <Button variant="contained" onClick={onCalculate}>
-            Konditionen berechnen
+            Positionen berechnen
           </Button>
           {pricingChanged && (
             <Alert severity="warning">
               Preisrelevante Angaben wurden geändert. Die gespeicherten
-              Konditionen bleiben unverändert, bis Sie neu kalkulieren.
+              Positionen bleiben unverändert, bis Sie neu kalkulieren.
             </Alert>
           )}
         </Stack>
@@ -197,7 +201,7 @@ export function ConditionsTab({
       <Paper variant="outlined" sx={{ p: 2.5, minWidth: 0 }}>
         <Stack spacing={1.5}>
           <Typography component="h2" variant="h6">
-            Im Auftrag enthalten
+            Positionen im Auftrag
           </Typography>
           {conditions.map((entry, index) => (
             <Grid
@@ -228,7 +232,7 @@ export function ConditionsTab({
               <Grid size={{ xs: 4, sm: 2 }}>
                 <IconButton
                   color="error"
-                  aria-label="Kondition entfernen"
+                  aria-label="Position entfernen"
                   onClick={() =>
                     onConditionsChange(
                       conditions.filter(
@@ -252,7 +256,7 @@ export function ConditionsTab({
             }
             sx={{ alignSelf: "flex-end" }}
           >
-            Kondition hinzufügen
+            Position hinzufügen
           </Button>
           <Stack spacing={0.25} sx={{ alignItems: "flex-end" }}>
             <Typography variant="body2" color="text.secondary">

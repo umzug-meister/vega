@@ -24,9 +24,12 @@ import {
 } from "@mui/material";
 import AddOutlined from "@mui/icons-material/AddOutlined";
 import RemoveOutlined from "@mui/icons-material/RemoveOutlined";
+import InfoOutlined from "@mui/icons-material/InfoOutlined";
 import type { ReactNode } from "react";
 
-const LazyDateField = lazy(() => import("./DateField.js").then((module) => ({ default: module.DateField })));
+const LazyDateField = lazy(() =>
+  import("./DateField.js").then((module) => ({ default: module.DateField })),
+);
 
 const ValidationFieldContext = createContext<{
   label: string | null;
@@ -35,7 +38,10 @@ const ValidationFieldContext = createContext<{
 
 export function useFieldValidation(label: ReactNode) {
   const validation = useContext(ValidationFieldContext);
-  return { error: isValidationError(label, validation.label), clear: validation.clear };
+  return {
+    error: isValidationError(label, validation.label),
+    clear: validation.clear,
+  };
 }
 
 export function ValidationFieldProvider({
@@ -96,8 +102,8 @@ export function Heading({ children }: PropsWithChildren) {
 }
 export function Info({ children }: PropsWithChildren) {
   return (
-    <Alert severity="warning" icon={false}>
-      <Typography component="div" variant="subtitle1">
+    <Alert severity="info" icon={<InfoOutlined />}>
+      <Typography component="div" variant="subtitle1" sx={{ fontWeight: 700 }}>
         {children}
       </Typography>
     </Alert>
@@ -185,8 +191,23 @@ export function DateField({
   min?: string;
 }) {
   return (
-    <Suspense fallback={<Field label={label} value={value} disabled fullWidth helperText="Datumsauswahl wird geladen …" />}>
-      <LazyDateField label={label} value={value} onChange={onChange} {...(min ? { min } : {})} />
+    <Suspense
+      fallback={
+        <Field
+          label={label}
+          value={value}
+          disabled
+          fullWidth
+          helperText="Datumsauswahl wird geladen …"
+        />
+      }
+    >
+      <LazyDateField
+        label={label}
+        value={value}
+        onChange={onChange}
+        {...(min ? { min } : {})}
+      />
     </Suspense>
   );
 }

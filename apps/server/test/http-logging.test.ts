@@ -7,53 +7,100 @@ import { prisma } from "../src/prisma.js";
 
 async function httpFixture(context: TestContext) {
   const logs: string[] = [];
-  const app = createApp(loadConfig({
-    NODE_ENV: "test",
-    BETTER_AUTH_SECRET: "synthetic-http-logging-secret-longer-than-32",
-  }), { logStream: { write: (chunk: string) => logs.push(chunk) } });
+  const app = createApp(
+    loadConfig({
+      NODE_ENV: "test",
+      BETTER_AUTH_SECRET: "synthetic-http-logging-secret-longer-than-32",
+    }),
+    { logStream: { write: (chunk: string) => logs.push(chunk) } },
+  );
   const server = app.listen(0, "127.0.0.1");
   await once(server, "listening");
-  context.after(() => new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve())));
+  context.after(
+    () =>
+      new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      ),
+  );
   const address = server.address();
   assert.ok(address && typeof address !== "string");
   return { base: `http://127.0.0.1:${address.port}`, logs };
 }
 
-test("HTTP logs contain only request paths, not search values, tokens or headers", async (context) => {
+test("HTTP logs omit routine requests and sensitive request data", async (context) => {
   const { base, logs } = await httpFixture(context);
   const name = "SyntheticConfidentialCustomer";
   const email = "confidential-search@example.test";
   const token = "synthetic-confidential-reset-token";
-  assert.equal((await fetch(`${base}/api/admin/orders?search=${name}&email=${email}`, {
-    headers: {
-      Authorization: "Bearer synthetic-authorization-secret",
-      Cookie: "synthetic-cookie-secret",
-      Referer: `https://example.test/reset-password?token=${token}`,
-    },
-  })).status, 401);
+  assert.equal(
+    (
+      await fetch(`${base}/api/admin/orders?search=${name}&email=${email}`, {
+        headers: {
+          Authorization: "Bearer synthetic-authorization-secret",
+          Cookie: "synthetic-cookie-secret",
+          Referer: `https://example.test/reset-password?token=${token}`,
+        },
+      })
+    ).status,
+    401,
+  );
   await fetch(`${base}/reset-password?token=${token}`);
   // The path parameter also contains a token. Use POST so the auth route does
   // not attempt a database lookup for this synthetic reset link.
-  await fetch(`${base}/api/auth/reset-password/${token}?callbackURL=${email}`, { method: "POST" });
+  await fetch(`${base}/api/auth/reset-password/${token}?callbackURL=${email}`, {
+    method: "POST",
+  });
   const output = logs.join("");
-  for (const value of [name, email, token, "synthetic-authorization-secret", "synthetic-cookie-secret"]) {
-    assert.ok(!output.includes(value), `Unexpected confidential value in log: ${value}`);
+  for (const value of [
+    name,
+    email,
+    token,
+    "synthetic-authorization-secret",
+    "synthetic-cookie-secret",
+  ]) {
+    assert.ok(
+      !output.includes(value),
+      `Unexpected confidential value in log: ${value}`,
+    );
   }
   const records = logs.map((line) => JSON.parse(line));
-  assert.ok(records.some((record) => record.req?.url === "/api/admin/orders"));
-  assert.ok(records.some((record) => record.req?.url === "/reset-password"));
-  assert.ok(records.some((record) => record.req?.url === "/api/auth/reset-password/[redacted]"));
-  assert.ok(records.every((record) => !record.req?.headers && !record.req?.query && !record.res?.headers));
+  assert.ok(records.every((record) => record.level >= 40));
+  assert.ok(records.every((record) => record.msg !== "request completed"));
 });
 
 test("malformed JSON, oversized bodies and unsupported encodings return safe 4xx errors with log correlation", async (context) => {
   const { base, logs } = await httpFixture(context);
   const confidential = "synthetic-private-password-and-mail@example.test";
-  const cases: Array<{ body: string; headers: Record<string, string>; status: number; code: string }> = [
-    { body: `{"email":"${confidential}"`, headers: {}, status: 400, code: "INVALID_JSON" },
-    { body: `{"email":"${confidential}","padding":"${"x".repeat(1024 * 1024)}"}`, headers: {}, status: 413, code: "PAYLOAD_TOO_LARGE" },
-    { body: confidential, headers: { "Content-Encoding": "unsupported" }, status: 415, code: "UNSUPPORTED_ENCODING" },
-    { body: confidential, headers: { "Content-Type": "application/json; charset=unsupported" }, status: 415, code: "UNSUPPORTED_ENCODING" },
+  const cases: Array<{
+    body: string;
+    headers: Record<string, string>;
+    status: number;
+    code: string;
+  }> = [
+    {
+      body: `{"email":"${confidential}"`,
+      headers: {},
+      status: 400,
+      code: "INVALID_JSON",
+    },
+    {
+      body: `{"email":"${confidential}","padding":"${"x".repeat(1024 * 1024)}"}`,
+      headers: {},
+      status: 413,
+      code: "PAYLOAD_TOO_LARGE",
+    },
+    {
+      body: confidential,
+      headers: { "Content-Encoding": "unsupported" },
+      status: 415,
+      code: "UNSUPPORTED_ENCODING",
+    },
+    {
+      body: confidential,
+      headers: { "Content-Type": "application/json; charset=unsupported" },
+      status: 415,
+      code: "UNSUPPORTED_ENCODING",
+    },
   ];
   for (const example of cases) {
     const response = await fetch(`${base}/api/public/orders`, {
@@ -65,13 +112,22 @@ test("malformed JSON, oversized bodies and unsupported encodings return safe 4xx
     const result = await response.json();
     assert.equal(result.error.code, example.code);
     assert.equal(result.error.requestId, response.headers.get("x-request-id"));
-    const record = logs.map((line) => JSON.parse(line)).find((entry) => entry.requestId === result.error.requestId && entry.msg === "request rejected");
+    const record = logs
+      .map((line) => JSON.parse(line))
+      .find(
+        (entry) =>
+          entry.requestId === result.error.requestId &&
+          entry.msg === "request rejected",
+      );
     assert.equal(record?.code, example.code);
     assert.equal(record?.statusCode, example.status);
     assert.equal(record?.level, 40);
     assert.ok(!JSON.stringify(result).includes(confidential));
   }
   const output = logs.join("");
+  const records = logs.map((line) => JSON.parse(line));
+  assert.ok(records.every((record) => record.level >= 40));
+  assert.ok(records.every((record) => record.msg !== "request completed"));
   assert.ok(!output.includes(confidential));
   assert.ok(!output.includes('"padding"'));
   assert.ok(!output.includes('"body"'));
@@ -86,7 +142,10 @@ test("unexpected server failures remain visible without serializing error messag
   Reflect.set(prisma.publicApiRateLimit, "upsert", async () => ({ count: 1 }));
   Reflect.set(prisma.appSettings, "findUniqueOrThrow", async () => {
     reached = true;
-    throw Object.assign(new Error(confidential, { cause: new Error(confidential) }), { body: confidential, password: confidential });
+    throw Object.assign(
+      new Error(confidential, { cause: new Error(confidential) }),
+      { body: confidential, password: confidential },
+    );
   });
   context.after(() => {
     Reflect.set(prisma.appSettings, "findUniqueOrThrow", original);
@@ -102,7 +161,8 @@ test("unexpected server failures remain visible without serializing error messag
   const failure = records.find((record) => record.msg === "request failed");
   assert.equal(failure?.code, "INTERNAL_SERVER_ERROR");
   assert.equal(failure?.level, 50);
-  assert.ok(records.some((record) => record.res?.statusCode === 500));
+  assert.ok(records.every((record) => record.level >= 40));
+  assert.ok(records.every((record) => record.msg !== "request completed"));
   assert.ok(!logs.join("").includes(confidential));
   assert.ok(!JSON.stringify(result).includes(confidential));
 });

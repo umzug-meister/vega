@@ -8,7 +8,12 @@ export {
   MAX_INVOICE_SEQUENCE_VALUE,
 } from "./invoice-number.js";
 export { isValidEmailAddress } from "./email.js";
-export type { SetupVariableDto, SetupInfoDto, SetupCheckDto, SetupSmokeTestDto } from "./setup.js";
+export type {
+  SetupVariableDto,
+  SetupInfoDto,
+  SetupCheckDto,
+  SetupSmokeTestDto,
+} from "./setup.js";
 export { calculateOrderPricing, OrderPricingError } from "./order-pricing.js";
 export type {
   CalculateOrderPricingInput,
@@ -341,9 +346,17 @@ export interface AdminInvoiceDto extends InvoiceInput {
   revision: number;
   invoiceNumber: string;
   orderNumber: number | null;
+  orderOverview?: AdminInvoiceOrderOverview;
   archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Read-only order summary included when preparing an invoice from an order. */
+export interface AdminInvoiceOrderOverview {
+  orderNumber: number;
+  movingDate: string;
+  conditions: OrderConditionInput[];
 }
 
 export interface AdminInvoiceListDto {

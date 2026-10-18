@@ -172,6 +172,10 @@ export function AdminShell({
   }, [isArchivePath]);
 
   useEffect(() => {
+    document.title = `Vega | ${headerTitle}`;
+  }, [headerTitle]);
+
+  useEffect(() => {
     setEmailMenuAnchor(null);
     setEmailTarget(null);
   }, [pathname]);
@@ -730,7 +734,9 @@ export function AdminShell({
                       }
                     }}
                   >
-                    <ListItemIcon><AdminPanelSettingsOutlined /></ListItemIcon>
+                    <ListItemIcon>
+                      <AdminPanelSettingsOutlined />
+                    </ListItemIcon>
                     {!sidebarCollapsed && <ListItemText primary="Verwaltung" />}
                     {!sidebarCollapsed &&
                       (managementOpen ? <ExpandLess /> : <ExpandMore />)}
@@ -769,7 +775,9 @@ export function AdminShell({
                         <ListItemIcon sx={{ minWidth: 36 }}>
                           <BuildOutlined />
                         </ListItemIcon>
-                        {!sidebarCollapsed && <ListItemText primary="Maintenance" />}
+                        {!sidebarCollapsed && (
+                          <ListItemText primary="Maintenance" />
+                        )}
                       </ListItemButton>
                     </List>
                   </Collapse>
@@ -790,7 +798,7 @@ export function AdminShell({
                     <ListItemIcon>
                       <ViewModuleOutlined />
                     </ListItemIcon>
-                    {!sidebarCollapsed && <ListItemText primary="Content" />}
+                    {!sidebarCollapsed && <ListItemText primary="Katalog" />}
                     {!sidebarCollapsed &&
                       (contentOpen ? <ExpandLess /> : <ExpandMore />)}
                   </ListItemButton>
@@ -826,7 +834,7 @@ export function AdminShell({
                           icon: <HandymanOutlined />,
                         },
                         {
-                          label: "Kategorien",
+                          label: "Möbel-Kategorien",
                           path: "/settings/categories",
                           section: "categories",
                           icon: <CategoryOutlined />,
@@ -906,7 +914,11 @@ export function AdminShell({
       >
         <Container
           maxWidth="xl"
-          sx={{ py: { xs: 2.5, md: 3.5 }, px: { xs: 2, sm: 3, lg: 4 } }}
+          sx={{
+            maxWidth: "1800px !important",
+            py: { xs: 2.5, md: 3.5 },
+            px: { xs: 2, sm: 3, lg: 4 },
+          }}
         >
           {route.adminOnly && !isAdmin ? (
             <Paper variant="outlined" sx={{ p: 3 }}>
