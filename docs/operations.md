@@ -24,6 +24,17 @@ Domains oder Secrets in Vite-Builds.
 `localhost` und `127.0.0.1` sind unterschiedliche Origins. Der Kundenformular-Origin
 gehört nur in `CORS_ALLOWED_ORIGINS`. Nach Änderungen an `.env` den Server neu starten.
 
+### Hostinger-Reverse-Proxy
+
+Betreiberentscheidung vom 2026-10-18: Express verwendet ausdrücklich
+`app.set("trust proxy", 1)` vor Routern und Rate-Limits. Diese Einstellung gilt
+auch lokal. Ohne `X-Forwarded-For` bleibt die Socket-Adresse maßgeblich;
+mit Header verwendet Express die rechteste Adresse als `req.ip`.
+
+Nach Änderungen der Hosting-/Proxy-Konfiguration die Client-IP-Ermittlung und
+Rate-Limits im Zielbetrieb erneut prüfen. Better Auth wird unabhängig von
+Express konfiguriert. Rücknahme: die Ein-Hop-Einstellung entfernen.
+
 ### `DATABASE_URL`-Optionen
 
 | Option             | Verhalten                        |
