@@ -40,7 +40,7 @@ test("all content navigation entries have matching icons", async () => {
   ]) {
     assert.match(
       source,
-      new RegExp(`section: "${section}",\\s*icon: <${icon} />`, "u"),
+      new RegExp(`section: "${section}",[\\s\\S]{0,160}?icon: <${icon} />`, "u"),
     );
   }
   assert.match(
@@ -53,7 +53,7 @@ test("all content navigation entries have matching icons", async () => {
   );
   assert.ok(
     source.includes(
-      '{!sidebarCollapsed && <ListItemText primary="Content" />}',
+      '{!sidebarCollapsed && <ListItemText primary="Katalog" />}',
     ),
   );
 });

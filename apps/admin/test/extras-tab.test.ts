@@ -24,10 +24,11 @@ test("packaging and services render in separate responsive cards", () => {
     assert.match(html, /Kunde möchte Verpackungsmaterial kaufen\./u);
     assert.match(html, /Umzugskarton/u);
     assert.match(html, /Packmaterial/u);
-    assert.match(html, /Preis je Einheit/u);
+    assert.match(html, /Einzelpreis/u);
     assert.match(html, /role="combobox"/u);
     assert.doesNotMatch(html, /Katalog-Packmaterial|Katalogleistung/u);
-    assert.match(html, /Bohrarbeiten \/ Leistungen/u);
+    assert.match(html, />Leistungen</u);
+    assert.match(html, /Leistung hinzufügen/u);
     assert.doesNotMatch(html, /Verpackung erwünscht\?/u);
     assert.doesNotMatch(html, /role="switch"/u);
     assert.doesNotMatch(html, /role="tablist"/u);

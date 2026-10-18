@@ -29,7 +29,7 @@ test("offers page renders the truck/workforce matrix and row-add actions", () =>
       "LKW",
       "Anfahrt",
       "Träger",
-      "Stundenpreis",
+      "Einzelpreis",
       "8",
       "7",
       "6",
@@ -148,7 +148,7 @@ test("matrix hides zero-total zero-hour offers and can start adding a worker row
     );
     assert.ok(
       view.container.querySelector(
-        '[aria-label="Stundenpreis 2 Träger, 1 LKW"]',
+        '[aria-label="Einzelpreis 2 Träger, 1 LKW"]',
       ),
     );
     assert.equal(view.window.document.querySelector('[role="dialog"]'), null);

@@ -25,7 +25,7 @@ test("invoice list paginates and search/clear reset to the first page", async (c
   await dom.flush();
   assert.ok(dom.container.textContent?.includes("Rechnungssumme"));
   assert.ok(dom.container.textContent?.includes("Auftragsnummer"));
-  assert.ok(dom.container.textContent?.includes("238,00"));
+  assert.ok(dom.container.textContent?.includes("200,00"));
   await dom.click(button(dom.container, "Go to next page"));
   assert.equal(requests.at(-1)?.get("page"), "2");
   await dom.input(dom.container.querySelector("input")!, " Ada ");

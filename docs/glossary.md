@@ -1,23 +1,25 @@
 # Glossar
 
-| Begriff | Bedeutung in diesem Projekt |
-|---|---|
-| Anfrage | Von einem Kunden über das umfangreiche Formular erstellter erster Order-Datensatz. |
-| Auftrag / Order | Persistierter Datensatz mit Kundendaten, Umzugsangaben, Services, Preis- und Bildreferenzen. Auch Angebotskopien werden als eigene Orders geführt. |
-| Angebotskopie | Eigenständiger Order-Datensatz mit neuer Auftragsnummer und Beziehung zum Ursprung; unabhängig bearbeit-/archivierbar. |
-| `edited` | Bestehendes Bearbeitungskennzeichen. Neue Anfrage false; Kopie true; echte Änderung oder erfolgreicher In-App-Mailversand true. Bedeutet ausdrücklich nicht „angesehen“. |
-| Archivieren | Explizite Aktion eines Berechtigten, die einen Datensatz aus der aktiven Liste nimmt. Orders haben eine 60-Tage-, Rechnungen/Gutschriften/Mahnungen eine 30-Tage-Purge-Frist. |
-| Wiederherstellen | Reaktiviert einen archivierten Datensatz und stoppt dessen aktuelle Purge-Frist. |
-| Purge / endgültiges Entfernen | Entfernen eines archivierten Datensatzes aus der App-DB nach der Frist. Bei Orders werden die Aktionslogs mit entfernt; GCS-Objekte nicht. |
-| Kundenberater | Authentifizierter Mitarbeiter mit Order-/Einzelangebotsrechten, aber ohne globale Katalog-/Preis-, Benutzer- oder Buchhaltungsverwaltung. |
-| Admin | Authentifizierte Person mit allen Anwendungsrechten. |
-| Öffentliche Katalogprojektion | Sichere, speziell freigegebene Felder für den nicht angemeldeten Kundenflow; kein generisches Options- oder Datenbank-DTO. |
-| Loader | Kleines auf Vega gehostetes Script, das WordPress einbindet und absolute Formular-/Asset-/API-Pfade zur Laufzeit bereitstellt. |
-| Signierte GCS-URL | Kurzlebiger, eingeschränkter Upload-/Download-Link. Er ersetzt keine GCS-Credentials im Browser. |
-| E-Mail-Outbox | Persistierte Versandaufgabe, die nach dem erfolgreichen Speichern eines Auftrags verarbeitet und bei Providerfehler erneut versucht wird. |
-| Invoice / Rechnung | Eigenständiger Admin-only Finanzdatensatz. Er kann als Blanco-Rechnung ohne Auftrag oder mit eindeutigem optionalem Auftragsbezug angelegt werden; PDF wird on-demand aus dem aktuellen DB-Stand erzeugt. |
-| Rechnungsjournal | Minimaler Auftragsjournal-Eintrag beim Rechnungs-PDF-Export mit Aktion, Zeitpunkt und Admin-Akteur. |
-| Gutschrift | Separater, optionaler Finanzbeleg; höchstens eine je Rechnung, Nummerierungsverhalten wie bisher. |
-| Mahnungsereignis | Protokollierter Mahnungsversand zu einer Rechnung. |
-| Geschäftsnummer | Gedruckte Auftrags-/Rechnungs-/Gutschriftennummer; getrennt von der internen Datenbank-ID. |
-| Externes Rechnungsarchiv | Vom Betreiber außerhalb der App verantworteter Ablageort für ausgestellte Rechnungen/Gutschriften und deren gesetzliche Aufbewahrung. Die App bestätigt dessen Inhalt nicht. |
+| Begriff                       | Bedeutung in diesem Projekt                                                                                                                                                                                                |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Anfrage                       | Von einem Kunden über das umfangreiche Formular erstellter erster Order-Datensatz.                                                                                                                                         |
+| Auftrag / Order               | Persistierter Datensatz mit Kundendaten, Umzugsangaben, Services, Preis- und Bildreferenzen. Auch Angebotskopien werden als eigene Orders geführt.                                                                         |
+| Angebotskopie                 | Eigenständiger Order-Datensatz mit neuer Auftragsnummer und Beziehung zum Ursprung; unabhängig bearbeit-/archivierbar.                                                                                                     |
+| Position                      | Bepreiste Zeile eines Angebots/Auftrags, einer Rechnung oder Gutschrift. Im Admin-UI und in PDFs heißen solche Zeilen „Positionen“; die bestehenden Auftragsdaten liegen technisch weiterhin im Feld `details.conditions`. |
+| Zusatzleistung                | Aus dem Leistungskatalog gewählter Service, der als Auftragsposition übernommen werden kann. „Leistung“ bleibt die Bezeichnung des Katalogbereichs; eine konkrete bepreiste Zeile im Auftrag oder Beleg heißt „Position“.  |
+| `edited`                      | Bestehendes Bearbeitungskennzeichen. Neue Anfrage false; Kopie true; echte Änderung oder erfolgreicher In-App-Mailversand true. Bedeutet ausdrücklich nicht „angesehen“.                                                   |
+| Archivieren                   | Explizite Aktion eines Berechtigten, die einen Datensatz aus der aktiven Liste nimmt. Orders haben eine 60-Tage-, Rechnungen/Gutschriften/Mahnungen eine 30-Tage-Purge-Frist.                                              |
+| Wiederherstellen              | Reaktiviert einen archivierten Datensatz und stoppt dessen aktuelle Purge-Frist.                                                                                                                                           |
+| Purge / endgültiges Entfernen | Entfernen eines archivierten Datensatzes aus der App-DB nach der Frist. Bei Orders werden die Aktionslogs mit entfernt; GCS-Objekte nicht.                                                                                 |
+| Kundenberater                 | Authentifizierter Mitarbeiter mit Order-/Einzelangebotsrechten, aber ohne globale Katalog-/Preis-, Benutzer- oder Buchhaltungsverwaltung.                                                                                  |
+| Admin                         | Authentifizierte Person mit allen Anwendungsrechten.                                                                                                                                                                       |
+| Öffentliche Katalogprojektion | Sichere, speziell freigegebene Felder für den nicht angemeldeten Kundenflow; kein generisches Options- oder Datenbank-DTO.                                                                                                 |
+| Loader                        | Kleines auf Vega gehostetes Script, das WordPress einbindet und absolute Formular-/Asset-/API-Pfade zur Laufzeit bereitstellt.                                                                                             |
+| Signierte GCS-URL             | Kurzlebiger, eingeschränkter Upload-/Download-Link. Er ersetzt keine GCS-Credentials im Browser.                                                                                                                           |
+| E-Mail-Outbox                 | Persistierte Versandaufgabe, die nach dem erfolgreichen Speichern eines Auftrags verarbeitet und bei Providerfehler erneut versucht wird.                                                                                  |
+| Invoice / Rechnung            | Eigenständiger Admin-only Finanzdatensatz. Er kann als Blanco-Rechnung ohne Auftrag oder mit eindeutigem optionalem Auftragsbezug angelegt werden; PDF wird on-demand aus dem aktuellen DB-Stand erzeugt.                  |
+| Rechnungsjournal              | Minimaler Auftragsjournal-Eintrag beim Rechnungs-PDF-Export mit Aktion, Zeitpunkt und Admin-Akteur.                                                                                                                        |
+| Gutschrift                    | Separater, optionaler Finanzbeleg; höchstens eine je Rechnung, Nummerierungsverhalten wie bisher.                                                                                                                          |
+| Mahnungsereignis              | Protokollierter Mahnungsversand zu einer Rechnung.                                                                                                                                                                         |
+| Geschäftsnummer               | Gedruckte Auftrags-/Rechnungs-/Gutschriftennummer; getrennt von der internen Datenbank-ID.                                                                                                                                 |
+| Externes Rechnungsarchiv      | Vom Betreiber außerhalb der App verantworteter Ablageort für ausgestellte Rechnungen/Gutschriften und deren gesetzliche Aufbewahrung. Die App bestätigt dessen Inhalt nicht.                                               |

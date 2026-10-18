@@ -191,9 +191,12 @@ export function FurnitureTab({
   return (
     <Stack spacing={2}>
       {orderNumber !== undefined && <OrderImages orderNumber={orderNumber} />}
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
-          <Paper variant="outlined" sx={{ p: 2.5, height: "100%" }}>
+      <Grid container spacing={2} sx={{ alignItems: "stretch" }}>
+        <Grid
+          size={{ xs: 12, sm: 6, lg: 4 }}
+          sx={{ display: "flex", alignItems: "stretch" }}
+        >
+          <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Auszug
@@ -259,8 +262,11 @@ export function FurnitureTab({
             </Stack>
           </Paper>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
-          <Paper variant="outlined" sx={{ p: 2.5, height: "100%" }}>
+        <Grid
+          size={{ xs: 12, sm: 6, lg: 4 }}
+          sx={{ display: "flex", alignItems: "stretch" }}
+        >
+          <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Einzug
@@ -294,8 +300,11 @@ export function FurnitureTab({
             </Stack>
           </Paper>
         </Grid>
-        <Grid size={{ xs: 12, sm: 12, lg: 4 }}>
-          <Paper variant="outlined" sx={{ p: 2.5, height: "100%" }}>
+        <Grid
+          size={{ xs: 12, sm: 12, lg: 4 }}
+          sx={{ display: "flex", alignItems: "stretch" }}
+        >
+          <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Kartons

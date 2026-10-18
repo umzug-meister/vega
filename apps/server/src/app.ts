@@ -68,6 +68,7 @@ export function createApp(
   app.use(
     pinoHttp(
       {
+        level: "warn",
         customProps: (_req, res) => ({ requestId: res.locals.requestId }),
         genReqId: (_req, res) => String(res.locals.requestId),
         serializers: {
@@ -139,14 +140,12 @@ export function createApp(
         headers: fromNodeHeaders(req.headers),
       });
       if (!session) {
-        res
-          .status(401)
-          .json({
-            error: {
-              code: "UNAUTHENTICATED",
-              message: "Bitte melden Sie sich an.",
-            },
-          });
+        res.status(401).json({
+          error: {
+            code: "UNAUTHENTICATED",
+            message: "Bitte melden Sie sich an.",
+          },
+        });
         return;
       }
 
@@ -180,36 +179,30 @@ export function createApp(
         headers: fromNodeHeaders(req.headers),
       });
       if (!session) {
-        res
-          .status(401)
-          .json({
-            error: {
-              code: "UNAUTHENTICATED",
-              message: "Bitte melden Sie sich an.",
-            },
-          });
+        res.status(401).json({
+          error: {
+            code: "UNAUTHENTICATED",
+            message: "Bitte melden Sie sich an.",
+          },
+        });
         return;
       }
       if (!session.user.mustChangePassword) {
-        res
-          .status(409)
-          .json({
-            error: {
-              code: "PASSWORD_CHANGE_NOT_REQUIRED",
-              message: "Ein initialer Passwortwechsel ist nicht erforderlich.",
-            },
-          });
+        res.status(409).json({
+          error: {
+            code: "PASSWORD_CHANGE_NOT_REQUIRED",
+            message: "Ein initialer Passwortwechsel ist nicht erforderlich.",
+          },
+        });
         return;
       }
       if (session.user.blocked) {
-        res
-          .status(403)
-          .json({
-            error: {
-              code: "ACCOUNT_BLOCKED",
-              message: "Dieses Konto ist gesperrt.",
-            },
-          });
+        res.status(403).json({
+          error: {
+            code: "ACCOUNT_BLOCKED",
+            message: "Dieses Konto ist gesperrt.",
+          },
+        });
         return;
       }
 
@@ -223,14 +216,12 @@ export function createApp(
         !meetsPasswordPolicy(body.newPassword) ||
         body.currentPassword === body.newPassword
       ) {
-        res
-          .status(400)
-          .json({
-            error: {
-              code: "INVALID_PASSWORD",
-              message: `${PASSWORD_POLICY_MESSAGE} Das neue Passwort muss sich außerdem vom Initialpasswort unterscheiden.`,
-            },
-          });
+        res.status(400).json({
+          error: {
+            code: "INVALID_PASSWORD",
+            message: `${PASSWORD_POLICY_MESSAGE} Das neue Passwort muss sich außerdem vom Initialpasswort unterscheiden.`,
+          },
+        });
         return;
       }
 
@@ -249,14 +240,12 @@ export function createApp(
       } catch (error) {
         if (!(error instanceof APIError) || error.statusCode >= 500)
           throw error;
-        res
-          .status(400)
-          .json({
-            error: {
-              code: "PASSWORD_CHANGE_FAILED",
-              message: "Das Passwort konnte nicht geändert werden.",
-            },
-          });
+        res.status(400).json({
+          error: {
+            code: "PASSWORD_CHANGE_FAILED",
+            message: "Das Passwort konnte nicht geändert werden.",
+          },
+        });
         return;
       }
 
@@ -301,37 +290,31 @@ export function createApp(
     try {
       const orderNumber = Number(req.params.orderNumber);
       if (!Number.isSafeInteger(orderNumber) || orderNumber < 1)
-        return res
-          .status(400)
-          .json({
-            error: {
-              code: "INVALID_ORDER_NUMBER",
-              message: "Ungültige Auftragsnummer.",
-            },
-          });
+        return res.status(400).json({
+          error: {
+            code: "INVALID_ORDER_NUMBER",
+            message: "Ungültige Auftragsnummer.",
+          },
+        });
       const order = await prisma.order.findUnique({
         where: { orderNumber },
         select: { id: true },
       });
       if (!order)
-        return res
-          .status(404)
-          .json({
-            error: {
-              code: "ORDER_NOT_FOUND",
-              message: "Auftrag nicht gefunden.",
-            },
-          });
+        return res.status(404).json({
+          error: {
+            code: "ORDER_NOT_FOUND",
+            message: "Auftrag nicht gefunden.",
+          },
+        });
       const uploads = createUploadService(config);
       if (!uploads)
-        return res
-          .status(503)
-          .json({
-            error: {
-              code: "UPLOADS_UNAVAILABLE",
-              message: "Der Bildspeicher ist noch nicht eingerichtet.",
-            },
-          });
+        return res.status(503).json({
+          error: {
+            code: "UPLOADS_UNAVAILABLE",
+            message: "Der Bildspeicher ist noch nicht eingerichtet.",
+          },
+        });
       res.setHeader("Cache-Control", "no-store");
       return res.json({ data: await uploads.list(order.id) });
     } catch (error) {
@@ -380,11 +363,9 @@ export function createApp(
         (req.body as { signatureName?: unknown } | undefined)?.signatureName,
       );
       if (!input.ok) {
-        res
-          .status(400)
-          .json({
-            error: { code: "INVALID_SIGNATURE_NAME", message: input.message },
-          });
+        res.status(400).json({
+          error: { code: "INVALID_SIGNATURE_NAME", message: input.message },
+        });
         return;
       }
       const staffUser = res.locals.staffUser as { id: string };
@@ -409,14 +390,12 @@ export function createApp(
           origin !== undefined &&
           !config.betterAuthTrustedOrigins.includes(origin)
         ) {
-          res
-            .status(403)
-            .json({
-              error: {
-                code: "INVALID_ORIGIN",
-                message: "Ungültige Anfrage-Origin.",
-              },
-            });
+          res.status(403).json({
+            error: {
+              code: "INVALID_ORIGIN",
+              message: "Ungültige Anfrage-Origin.",
+            },
+          });
           return;
         }
         const body = req.body as { email?: unknown; currentPassword?: unknown };
@@ -427,15 +406,13 @@ export function createApp(
           typeof body.currentPassword !== "string" ||
           body.currentPassword.length === 0
         ) {
-          res
-            .status(400)
-            .json({
-              error: {
-                code: "INVALID_EMAIL_CHANGE",
-                message:
-                  "Bitte geben Sie eine gültige E-Mail-Adresse und Ihr aktuelles Passwort ein.",
-              },
-            });
+          res.status(400).json({
+            error: {
+              code: "INVALID_EMAIL_CHANGE",
+              message:
+                "Bitte geben Sie eine gültige E-Mail-Adresse und Ihr aktuelles Passwort ein.",
+            },
+          });
           return;
         }
 
@@ -448,27 +425,23 @@ export function createApp(
         } catch (error) {
           if (!(error instanceof APIError) || error.statusCode >= 500)
             throw error;
-          res
-            .status(400)
-            .json({
-              error: {
-                code: "PASSWORD_CONFIRMATION_FAILED",
-                message: "Das aktuelle Passwort ist nicht korrekt.",
-              },
-            });
+          res.status(400).json({
+            error: {
+              code: "PASSWORD_CONFIRMATION_FAILED",
+              message: "Das aktuelle Passwort ist nicht korrekt.",
+            },
+          });
           return;
         }
 
         const staffUser = res.locals.staffUser as { id: string; email: string };
         if (staffUser.email.toLowerCase() === email) {
-          res
-            .status(409)
-            .json({
-              error: {
-                code: "EMAIL_UNCHANGED",
-                message: "Diese E-Mail-Adresse ist bereits hinterlegt.",
-              },
-            });
+          res.status(409).json({
+            error: {
+              code: "EMAIL_UNCHANGED",
+              message: "Diese E-Mail-Adresse ist bereits hinterlegt.",
+            },
+          });
           return;
         }
         try {
@@ -478,14 +451,12 @@ export function createApp(
           });
         } catch (error) {
           if (isUniqueConstraintError(error)) {
-            res
-              .status(409)
-              .json({
-                error: {
-                  code: "EMAIL_ALREADY_IN_USE",
-                  message: "Diese E-Mail-Adresse wird bereits verwendet.",
-                },
-              });
+            res.status(409).json({
+              error: {
+                code: "EMAIL_ALREADY_IN_USE",
+                message: "Diese E-Mail-Adresse wird bereits verwendet.",
+              },
+            });
             return;
           }
           throw error;

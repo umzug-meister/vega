@@ -48,6 +48,11 @@
   weist andere Steuersätze zurück. Vorhandene abweichende Werte werden nicht
   automatisch umgerechnet. Der Editor verlangt dafür eine ausdrückliche
   Auswahl eines zulässigen Satzes, bevor erneut gespeichert werden kann.
+- Einzelpreise auf Rechnungs- und Gutschriftpositionen sind Bruttopreise und
+  beinhalten den ausgewählten Steuersatz. Der Gesamtbetrag ist die Summe der
+  Positions-Bruttopreise; die Umsatzsteuer wird daraus centgenau herausgerechnet,
+  der Nettobetrag ergibt sich als Differenz. Preise, die aus Auftragspositionen
+  übernommen werden, werden daher nicht nochmals um Umsatzsteuer erhöht.
 - Kalenderdaten und Zahlen werden auch serverseitig strikt geprüft;
   unmögliche Daten, `Infinity`, negative oder nicht darstellbare Zeilen-/
   Gesamtbeträge werden abgewiesen. UI und PDF verwenden denselben
@@ -95,8 +100,9 @@ Ein bearbeiteter DB-Datensatz kann den früher ausgestellten PDF-Stand nicht rek
   Wiederherstellen der Rechnung archiviert bzw. stellt alle ihre Mahnungen
   mit derselben 30-Tage-Frist wieder her.
   `ReminderEvent.sentAt` setzt ausschließlich der erfolgreiche Outbox-Versand.
-- Die 30-Tage-Finanzbereinigung und externe Archivintegration bleiben offen. Dieser ADR-Vorbehalt ist daher unverändert
-  ein Produktiv-Release-Gate.
+- Die 30-Tage-Finanzbereinigung läuft über den zentralen Root-Einstieg
+  `cron.js`; Hostinger-Ausführung und externe Archivintegration bleiben offen.
+  Dieser ADR-Vorbehalt ist daher unverändert ein Produktiv-Release-Gate.
 
 ## Referenzen
 

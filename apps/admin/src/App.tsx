@@ -1,4 +1,11 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Alert, CircularProgress, Container } from "@mui/material";
 import { authClient } from "./auth-client.js";
 import { AuthCard } from "./auth/AuthCard.js";
@@ -10,26 +17,66 @@ import { TotpSetupPage } from "./auth/TotpSetupPage.js";
 import { AdminShell } from "./components/AdminShell.js";
 import { NotFoundPage } from "./components/NotFoundPage.js";
 import { RoutePlaceholderPage } from "./components/RoutePlaceholderPage.js";
-import { ProfilePage } from "./profile/ProfilePage.js";
-import { OptionsPage } from "./settings/OptionsPage.js";
-import { MaintenancePage } from "./maintenance/MaintenancePage.js";
-import { UserManagementPage } from "./settings/UserManagementPage.js";
 import { resolveAdminRoute } from "./routes.js";
 import type { PendingInitialPassword, StaffUser } from "./types.js";
-import { OrdersPage } from "./orders/OrdersPage.js";
-import { InvoicesPage } from "./invoices/InvoicesPage.js";
-import { InvoiceEditorPage } from "./invoices/InvoiceEditorPage.js";
 import { isTotpRequired, needsTotpSetup } from "@vega/domain";
 import { useLocalNavigation } from "./use-local-navigation.js";
 
-const OrderCreatePage = lazy(() => import("./orders/OrderCreatePage.js").then((module) => ({ default: module.OrderCreatePage })));
-const ContentManagementPage = lazy(() => import("./settings/ContentManagementPage.js").then((module) => ({ default: module.ContentManagementPage })));
+const ProfilePage = lazy(() =>
+  import("./profile/ProfilePage.js").then((module) => ({
+    default: module.ProfilePage,
+  })),
+);
+const OptionsPage = lazy(() =>
+  import("./settings/OptionsPage.js").then((module) => ({
+    default: module.OptionsPage,
+  })),
+);
+const MaintenancePage = lazy(() =>
+  import("./maintenance/MaintenancePage.js").then((module) => ({
+    default: module.MaintenancePage,
+  })),
+);
+const UserManagementPage = lazy(() =>
+  import("./settings/UserManagementPage.js").then((module) => ({
+    default: module.UserManagementPage,
+  })),
+);
+const OrdersPage = lazy(() =>
+  import("./orders/OrdersPage.js").then((module) => ({
+    default: module.OrdersPage,
+  })),
+);
+const InvoicesPage = lazy(() =>
+  import("./invoices/InvoicesPage.js").then((module) => ({
+    default: module.InvoicesPage,
+  })),
+);
+const InvoiceEditorPage = lazy(() =>
+  import("./invoices/InvoiceEditorPage.js").then((module) => ({
+    default: module.InvoiceEditorPage,
+  })),
+);
+const OrderCreatePage = lazy(() =>
+  import("./orders/OrderCreatePage.js").then((module) => ({
+    default: module.OrderCreatePage,
+  })),
+);
+const ContentManagementPage = lazy(() =>
+  import("./settings/ContentManagementPage.js").then((module) => ({
+    default: module.ContentManagementPage,
+  })),
+);
 
 export function App() {
   const { data: session, isPending } = authClient.useSession();
   const dirty = useRef({ order: false, invoice: false });
-  const hasUnsavedChanges = useCallback(() => dirty.current.order || dirty.current.invoice, []);
-  const [initialPassword, setInitialPassword] = useState<PendingInitialPassword | null>(null);
+  const hasUnsavedChanges = useCallback(
+    () => dirty.current.order || dirty.current.invoice,
+    [],
+  );
+  const [initialPassword, setInitialPassword] =
+    useState<PendingInitialPassword | null>(null);
   const [orderDirty, setOrderDirty] = useState(false);
   const [orderBusy, setOrderBusy] = useState(true);
   const [orderIsCopy, setOrderIsCopy] = useState(false);
@@ -50,17 +97,21 @@ export function App() {
     setAccountingDirty(false);
     setOrderIsCopy(false);
   }, [onInvoiceUnsavedChange, onOrderDirtyChange]);
-  const { pathname, replacePath, navigatePath, confirmLeave } = useLocalNavigation(hasUnsavedChanges, clearDocumentState);
+  const { pathname, replacePath, navigatePath, confirmLeave } =
+    useLocalNavigation(hasUnsavedChanges, clearDocumentState);
   const [invoiceNumber, setInvoiceNumber] = useState<string>();
   const [totpPassword, setTotpPassword] = useState<string | undefined>();
   const [voluntaryTotpSetup, setVoluntaryTotpSetup] = useState(false);
   const [twoFactorRequired, setTwoFactorRequired] = useState(false);
   const route = resolveAdminRoute(pathname);
   const isAuthPath = pathname === "/login" || pathname === "/two-factor";
-  const isPasswordResetPath = pathname === "/forgot-password" || pathname === "/reset-password";
+  const isPasswordResetPath =
+    pathname === "/forgot-password" || pathname === "/reset-password";
   const isKnownPath = route !== null || isAuthPath || isPasswordResetPath;
 
-  useEffect(() => { setInvoiceNumber(undefined); }, [pathname]);
+  useEffect(() => {
+    setInvoiceNumber(undefined);
+  }, [pathname]);
 
   const onTwoFactorRequired = useCallback(() => {
     setTwoFactorRequired(true);
@@ -75,10 +126,20 @@ export function App() {
   useEffect(() => {
     if (isPending || !isKnownPath) return;
     if (!session && route) replacePath("/login");
-    if (!session && pathname === "/two-factor" && !twoFactorRequired) replacePath("/login");
+    if (!session && pathname === "/two-factor" && !twoFactorRequired)
+      replacePath("/login");
     if (session && isAuthPath) replacePath("/");
     if (session && route && pathname !== route.path) replacePath(route.path);
-  }, [isAuthPath, isKnownPath, isPending, pathname, replacePath, route, session, twoFactorRequired]);
+  }, [
+    isAuthPath,
+    isKnownPath,
+    isPending,
+    pathname,
+    replacePath,
+    route,
+    session,
+    twoFactorRequired,
+  ]);
 
   if (!isKnownPath) return <NotFoundPage onHome={() => replacePath("/")} />;
 
@@ -88,7 +149,11 @@ export function App() {
     (session && isAuthPath) ||
     (!session && pathname === "/two-factor" && !twoFactorRequired)
   ) {
-    return <Container sx={{ py: 10, display: "flex", justifyContent: "center" }}><CircularProgress /></Container>;
+    return (
+      <Container sx={{ py: 10, display: "flex", justifyContent: "center" }}>
+        <CircularProgress />
+      </Container>
+    );
   }
 
   if (initialPassword) {
@@ -105,11 +170,18 @@ export function App() {
   }
 
   if (totpPassword !== undefined) {
-    return <TotpSetupPage initialPassword={totpPassword} onComplete={() => window.location.reload()} />;
+    return (
+      <TotpSetupPage
+        initialPassword={totpPassword}
+        onComplete={() => window.location.reload()}
+      />
+    );
   }
 
-  if (pathname === "/forgot-password") return <ForgotPasswordPage onBack={() => replacePath("/login")} />;
-  if (pathname === "/reset-password") return <ResetPasswordPage onComplete={() => replacePath("/login")} />;
+  if (pathname === "/forgot-password")
+    return <ForgotPasswordPage onBack={() => replacePath("/login")} />;
+  if (pathname === "/reset-password")
+    return <ResetPasswordPage onComplete={() => replacePath("/login")} />;
 
   if (!session) {
     return (
@@ -126,21 +198,48 @@ export function App() {
 
   const user = session.user;
   if (user.blocked) {
-    return <AuthCard><Alert severity="error">Dieses Konto ist gesperrt.</Alert></AuthCard>;
+    return (
+      <AuthCard>
+        <Alert severity="error">Dieses Konto ist gesperrt.</Alert>
+      </AuthCard>
+    );
   }
   if (user.mustChangePassword) {
-    return <InitialPasswordChangePage onChanged={(password) => isTotpRequired(user.role) ? setTotpPassword(password) : window.location.reload()} />;
+    return (
+      <InitialPasswordChangePage
+        onChanged={(password) =>
+          isTotpRequired(user.role)
+            ? setTotpPassword(password)
+            : window.location.reload()
+        }
+      />
+    );
   }
   if (needsTotpSetup(user)) {
     return <TotpSetupPage onComplete={() => window.location.reload()} />;
   }
   if (voluntaryTotpSetup) {
-    return <TotpSetupPage optional onCancel={() => setVoluntaryTotpSetup(false)} onComplete={() => window.location.reload()} />;
+    return (
+      <TotpSetupPage
+        optional
+        onCancel={() => setVoluntaryTotpSetup(false)}
+        onComplete={() => window.location.reload()}
+      />
+    );
   }
   if (user.role !== "Admin" && user.role !== "Kundenberater") {
-    return <AuthCard><Alert severity="error">Dieses Konto ist für die Vega-Verwaltung nicht freigeschaltet.</Alert></AuthCard>;
+    return (
+      <AuthCard>
+        <Alert severity="error">
+          Dieses Konto ist für die Vega-Verwaltung nicht freigeschaltet.
+        </Alert>
+      </AuthCard>
+    );
   }
-  const staffUser: StaffUser = { ...user, twoFactorEnabled: user.twoFactorEnabled === true };
+  const staffUser: StaffUser = {
+    ...user,
+    twoFactorEnabled: user.twoFactorEnabled === true,
+  };
   if (!route) return <NotFoundPage onHome={() => replacePath("/")} />;
 
   const invoiceEditorProps = {
@@ -151,39 +250,61 @@ export function App() {
     onAccountingDirtyChange: setAccountingDirty,
     onInvoiceNumberChange: setInvoiceNumber,
   };
-  const page = route.adminOnly && user.role !== "Admin"
-    ? <Alert severity="error">Diese Route ist nur für Admins freigeschaltet.</Alert>
-    : route.profile
-      ? <ProfilePage user={staffUser} onSetupTotp={() => setVoluntaryTotpSetup(true)} />
-      : route.path === "/"
-        ? <OrdersPage navigate={navigatePath} />
-        : route.path === "/orders/archived"
-          ? <OrdersPage archived navigate={navigatePath} />
-        : route.path === "/invoices"
-          ? <InvoicesPage navigate={navigatePath} />
-        : route.path === "/invoices/archived"
-          ? <InvoicesPage archived navigate={navigatePath} />
-        : route.sourceOrderNumber !== undefined
-          ? <InvoiceEditorPage key={route.path} {...invoiceEditorProps} orderNumber={route.sourceOrderNumber} />
-        : route.path === "/invoices/new" || route.path === "/blanco"
-          ? <InvoiceEditorPage key={route.path} {...invoiceEditorProps} />
-        : route.path.startsWith("/invoices/")
-          ? <InvoiceEditorPage key={route.path} {...invoiceEditorProps} id={route.path.slice("/invoices/".length)} />
-        : route.path.startsWith("/edit/")
-        ? <Suspense fallback={<Container sx={{ py: 8, display: "flex", justifyContent: "center" }}><CircularProgress /></Container>}>
-            <OrderCreatePage key={route.path} navigate={navigatePath} onDirtyChange={onOrderDirtyChange} onBusyChange={setOrderBusy} onCopyChange={setOrderIsCopy} dirty={orderDirty} {...(route.path === "/edit/-1" ? {} : { orderNumber: Number(route.path.slice("/edit/".length)) })} />
-          </Suspense>
-        : route.settingsArea === "options"
-          ? <OptionsPage />
-          : route.path === "/maintenance"
-            ? <MaintenancePage />
-          : route.settingsArea === "content"
-            ? <Suspense fallback={<Container sx={{ py: 8, display: "flex", justifyContent: "center" }}><CircularProgress /></Container>}>
-                <ContentManagementPage route={route} />
-              </Suspense>
-            : route.settingsArea === "users"
-              ? <UserManagementPage currentUserId={user.id} />
-              : <RoutePlaceholderPage route={route} />;
+  const page =
+    route.adminOnly && user.role !== "Admin" ? (
+      <Alert severity="error">
+        Diese Route ist nur für Admins freigeschaltet.
+      </Alert>
+    ) : route.profile ? (
+      <ProfilePage
+        user={staffUser}
+        onSetupTotp={() => setVoluntaryTotpSetup(true)}
+      />
+    ) : route.path === "/" ? (
+      <OrdersPage navigate={navigatePath} />
+    ) : route.path === "/orders/archived" ? (
+      <OrdersPage archived navigate={navigatePath} />
+    ) : route.path === "/invoices" ? (
+      <InvoicesPage navigate={navigatePath} />
+    ) : route.path === "/invoices/archived" ? (
+      <InvoicesPage archived navigate={navigatePath} />
+    ) : route.sourceOrderNumber !== undefined ? (
+      <InvoiceEditorPage
+        key={route.path}
+        {...invoiceEditorProps}
+        orderNumber={route.sourceOrderNumber}
+      />
+    ) : route.path === "/invoices/new" || route.path === "/blanco" ? (
+      <InvoiceEditorPage key={route.path} {...invoiceEditorProps} />
+    ) : route.path.startsWith("/invoices/") ? (
+      <InvoiceEditorPage
+        key={route.path}
+        {...invoiceEditorProps}
+        id={route.path.slice("/invoices/".length)}
+      />
+    ) : route.path.startsWith("/edit/") ? (
+      <OrderCreatePage
+        key={route.path}
+        navigate={navigatePath}
+        onDirtyChange={onOrderDirtyChange}
+        onBusyChange={setOrderBusy}
+        onCopyChange={setOrderIsCopy}
+        dirty={orderDirty}
+        {...(route.path === "/edit/-1"
+          ? {}
+          : { orderNumber: Number(route.path.slice("/edit/".length)) })}
+      />
+    ) : route.settingsArea === "options" ? (
+      <OptionsPage />
+    ) : route.path === "/maintenance" ? (
+      <MaintenancePage />
+    ) : route.settingsArea === "content" ? (
+      <ContentManagementPage route={route} />
+    ) : route.settingsArea === "users" ? (
+      <UserManagementPage currentUserId={user.id} />
+    ) : (
+      <RoutePlaceholderPage route={route} />
+    );
 
   return (
     <AdminShell
@@ -196,11 +317,24 @@ export function App() {
       orderBusy={orderBusy}
       orderIsCopy={orderIsCopy}
       invoiceBusy={invoiceBusy}
-      invoiceDirty={invoiceDirty || pathname === "/invoices/new" || pathname === "/blanco" || route.sourceOrderNumber !== undefined}
+      invoiceDirty={
+        invoiceDirty ||
+        pathname === "/invoices/new" ||
+        pathname === "/blanco" ||
+        route.sourceOrderNumber !== undefined
+      }
       invoiceAccountingDirty={accountingDirty}
       invoiceNumber={invoiceNumber}
     >
-      {page}
+      <Suspense
+        fallback={
+          <Container sx={{ py: 8, display: "flex", justifyContent: "center" }}>
+            <CircularProgress />
+          </Container>
+        }
+      >
+        {page}
+      </Suspense>
     </AdminShell>
   );
 }

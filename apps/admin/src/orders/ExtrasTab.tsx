@@ -77,6 +77,7 @@ export function ExtrasTab({ value, onExtrasChange }: ExtrasTabProps) {
     indexInVisibleList: number,
     patch: Partial<OrderServiceInput>,
     clearCatalogSelection = false,
+    clearUnitPrice = false,
   ) {
     let visibleIndex = -1;
     const sourceIndex = extras.services.findIndex((service) => {
@@ -93,6 +94,7 @@ export function ExtrasTab({ value, onExtrasChange }: ExtrasTabProps) {
           delete updated.catalogId;
           delete updated.unitPrice;
         }
+        if (clearUnitPrice) delete updated.unitPrice;
         return updated;
       }),
     });
@@ -135,7 +137,7 @@ export function ExtrasTab({ value, onExtrasChange }: ExtrasTabProps) {
           },
           {
             kind: "service",
-            title: "Bohrarbeiten / Leistungen",
+            title: "Leistungen",
             itemLabel: "Leistung",
             addLabel: "Leistung hinzufügen",
           },
@@ -232,7 +234,7 @@ export function ExtrasTab({ value, onExtrasChange }: ExtrasTabProps) {
                     <Grid size={{ xs: 6, sm: 2 }}>
                       <TextField
                         type="number"
-                        label="Preis je Einheit (€)"
+                        label="Einzelpreis (€)"
                         value={
                           service.unitPrice ??
                           (service.catalogId === undefined
@@ -243,11 +245,14 @@ export function ExtrasTab({ value, onExtrasChange }: ExtrasTabProps) {
                                   item.kind === kind,
                               )?.price ?? ""))
                         }
-                        onChange={(event) =>
-                          updateService(kind, index, {
-                            unitPrice: Number(event.target.value),
-                          })
-                        }
+                        onChange={(event) => {
+                          if (event.target.value === "")
+                            updateService(kind, index, {}, false, true);
+                          else
+                            updateService(kind, index, {
+                              unitPrice: Number(event.target.value),
+                            });
+                        }}
                         slotProps={{
                           htmlInput: { min: 0, max: 1_000_000, step: 0.01 },
                         }}

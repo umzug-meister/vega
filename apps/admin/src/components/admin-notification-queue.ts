@@ -43,5 +43,6 @@ export function adminNotificationAutoHideDuration(
   severity: AdminNotificationSeverity,
 ) {
   if (severity === "error") return 20_000;
-  return severity === "success" ? 3_000 : null;
+  if (severity === "warning") return 15_000;
+  return 3_000;
 }

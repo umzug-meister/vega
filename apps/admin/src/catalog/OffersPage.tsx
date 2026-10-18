@@ -251,7 +251,7 @@ export function OffersPage() {
     const price = validPrice(value);
     if (price === null) {
       setOfferError(
-        "Bitte geben Sie einen gültigen Stundenpreis mit höchstens zwei Nachkommastellen ein.",
+        "Bitte geben Sie einen gültigen Einzelpreis mit höchstens zwei Nachkommastellen ein.",
       );
       return;
     }
@@ -280,7 +280,7 @@ export function OffersPage() {
       setOfferError(
         cause instanceof Error
           ? cause.message
-          : "Stundenpreis konnte nicht gespeichert werden.",
+          : "Einzelpreis konnte nicht gespeichert werden.",
       );
       await catalog.reload();
     }
@@ -333,7 +333,7 @@ export function OffersPage() {
         String(rowOffers[0]?.hourPrice ?? 0),
     );
     if (hourPrice === null) {
-      setOfferError("Bitte geben Sie zuerst einen gültigen Stundenpreis ein.");
+      setOfferError("Bitte geben Sie zuerst einen gültigen Einzelpreis ein.");
       return;
     }
     const ridingCosts = Number(truckRates[truckRateKey(trucks)] ?? 0);
@@ -415,7 +415,7 @@ export function OffersPage() {
                 >
                   Träger
                 </TableCell>
-                <TableCell align="right">Stundenpreis</TableCell>
+                <TableCell align="right">Einzelpreis</TableCell>
                 {hours.map((hour) => (
                   <TableCell key={hour} align="right">
                     {hour}
@@ -498,7 +498,7 @@ export function OffersPage() {
                               fullWidth
                               size="small"
                               type="number"
-                              aria-label={`Stundenpreis ${workers} Träger, ${trucks} LKW`}
+                              aria-label={`Einzelpreis ${workers} Träger, ${trucks} LKW`}
                               value={
                                 hourPriceDrafts[workerKey] ??
                                 rowDraft?.hourPrice ??

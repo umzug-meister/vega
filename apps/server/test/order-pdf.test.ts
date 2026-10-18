@@ -1,10 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { generateOrderPdf, orderPdfEditDate, orderPdfFilename } from "../src/pdf/order-pdf.js";
+import {
+  generateOrderPdf,
+  orderPdfEditDate,
+  orderPdfFilename,
+} from "../src/pdf/order-pdf.js";
 import { orderPdfFixture } from "./order-pdf-fixture.js";
 
 const now = new Date("2026-10-10T10:00:00Z");
-const streams = (pdf: Buffer) => [...pdf.toString("latin1").matchAll(/stream\n([\s\S]*?)\nendstream/g)].map((match) => match[1]!);
+const streams = (pdf: Buffer) =>
+  [...pdf.toString("latin1").matchAll(/stream\n([\s\S]*?)\nendstream/g)].map(
+    (match) => match[1]!,
+  );
 
 test("order PDF renders saved customer, positions and amounts with a valid attachment filename", () => {
   const pdf = generateOrderPdf(orderPdfFixture(), now);
@@ -13,8 +20,25 @@ test("order PDF renders saved customer, positions and amounts with a valid attac
   assert.equal(pageCount, 4);
   const content = pdf.toString("latin1");
   assert.match(content, /%%EOF\s*$/u);
-  for (const value of ["Ada", "Beispiel", "Sofa", "Bett", "Bohren", "Umzugskarton", "Halteverbot", "1.190,00", "119,00", "1.309,00"]) assert.ok(content.includes(value), value);
-  assert.equal(orderPdfFilename(orderPdfFixture()), "24.10.2026_Beispiel_1042_3+2x3.5_4_Std_1xHVZ.pdf");
+  for (const value of [
+    "Ada",
+    "Beispiel",
+    "Sofa",
+    "Bett",
+    "Bohren",
+    "Umzugskarton",
+    "Halteverbot",
+    "Leistungen",
+    "Einzelpreis",
+    "1.190,00",
+    "119,00",
+    "1.309,00",
+  ])
+    assert.ok(content.includes(value), value);
+  assert.equal(
+    orderPdfFilename(orderPdfFixture()),
+    "24.10.2026_Beispiel_1042_3+2x3.5_4_Std_1xHVZ.pdf",
+  );
 });
 
 test("historically archived and restored orders recover their last edit date from the journal", () => {
@@ -23,17 +47,48 @@ test("historically archived and restored orders recover their last edit date fro
   const updatedAt = new Date("2026-10-11T10:00:00Z");
   for (const action of ["ARCHIVED", "RESTORED"]) {
     const order = { createdAt, updatedAt };
-    assert.equal(orderPdfEditDate(order, { action, createdAt: updatedAt }, { createdAt: editedAt }), editedAt);
-    assert.equal(orderPdfEditDate(order, { action, createdAt: updatedAt }, null), createdAt);
-    const recovered = orderPdfEditDate(order, { action, createdAt: updatedAt }, { createdAt: editedAt });
-    assert.ok(generateOrderPdf(orderPdfFixture(), recovered).toString("latin1").includes("15.9.2026"));
+    assert.equal(
+      orderPdfEditDate(
+        order,
+        { action, createdAt: updatedAt },
+        { createdAt: editedAt },
+      ),
+      editedAt,
+    );
+    assert.equal(
+      orderPdfEditDate(order, { action, createdAt: updatedAt }, null),
+      createdAt,
+    );
+    const recovered = orderPdfEditDate(
+      order,
+      { action, createdAt: updatedAt },
+      { createdAt: editedAt },
+    );
+    assert.ok(
+      generateOrderPdf(orderPdfFixture(), recovered)
+        .toString("latin1")
+        .includes("15.9.2026"),
+    );
   }
-  assert.equal(orderPdfEditDate({ createdAt, updatedAt }, { action: "UPDATED", createdAt: updatedAt }, { createdAt: editedAt }), updatedAt);
-  assert.equal(orderPdfEditDate({ createdAt, updatedAt }, null, null), updatedAt);
+  assert.equal(
+    orderPdfEditDate(
+      { createdAt, updatedAt },
+      { action: "UPDATED", createdAt: updatedAt },
+      { createdAt: editedAt },
+    ),
+    updatedAt,
+  );
+  assert.equal(
+    orderPdfEditDate({ createdAt, updatedAt }, null, null),
+    updatedAt,
+  );
 });
 
 test("order PDF displays the supplied last-edit date rather than today's export date", () => {
-  const pdf = generateOrderPdf(orderPdfFixture(), new Date("2025-02-03T23:30:00Z")).toString("latin1");
+  const pdf = generateOrderPdf(
+    orderPdfFixture(),
+    new Date("2025-02-03T23:30:00Z"),
+  ).toString("latin1");
   assert.ok(pdf.includes("4.2.2025"));
   assert.ok(!pdf.includes("10.10.2026"));
 });
@@ -60,21 +115,39 @@ test("saved custom-item notes, own furniture lists and removed services are reta
   details.furniture.bulky = true;
   details.furniture.bulkyText = "Fluegel";
   details.furniture.ownItems = "Eigene Liste: Tisch und zwei Stuehle";
-  details.extras.services.push({ kind: "service", catalogId: 999, name: "Entfernter Katalogeintrag", quantity: 2 });
+  details.extras.services.push({
+    kind: "service",
+    catalogId: 999,
+    name: "Entfernter Katalogeintrag",
+    quantity: 2,
+  });
   details.basis.hours = 0;
   const pdf = generateOrderPdf(input, now).toString("latin1");
-  for (const text of ["Antike Vase", "Tresor", "Fluegel", "Eigene Liste", "Entfernter Katalogeintrag", "Gesamt:"]) assert.ok(pdf.includes(text), text);
+  for (const text of [
+    "Antike Vase",
+    "Tresor",
+    "Fluegel",
+    "Eigene Liste",
+    "Entfernter Katalogeintrag",
+    "Gesamt:",
+  ])
+    assert.ok(pdf.includes(text), text);
   assert.ok(!pdf.includes("Gesamtpreis f"));
 });
 
 test("long content paginates and every page has its own numbered footer", () => {
   const input = orderPdfFixture();
   input.data.note = "Zusatzinformation ".repeat(2000);
-  input.data.details!.furniture.items = Array.from({ length: 150 }, (_, i) => ({ name: `Moebel ${i}`, quantity: 1, category: "Wohnzimmer" }));
+  input.data.details!.furniture.items = Array.from({ length: 150 }, (_, i) => ({
+    name: `Moebel ${i}`,
+    quantity: 1,
+    category: "Wohnzimmer",
+  }));
   const pdf = generateOrderPdf(input, now);
   const count = pdf.toString("latin1").match(/\/Type \/Page\b/g)!.length;
   assert.ok(count > 4);
-  for (const [index, stream] of streams(pdf).slice(0, count).entries()) assert.ok(stream.includes(`1042 | Seite ${index + 1}/${count}`));
+  for (const [index, stream] of streams(pdf).slice(0, count).entries())
+    assert.ok(stream.includes(`1042 | Seite ${index + 1}/${count}`));
 });
 
 test("attachment filenames cannot contain paths or control characters", () => {

@@ -1,13 +1,28 @@
 import { Router, type Response } from "express";
-import type { CreateOrderInput, EmailDraft, InvoiceInput } from "@vega/domain";
+import type {
+  AdminInvoiceOrderOverview,
+  CreateOrderInput,
+  EmailDraft,
+  InvoiceInput,
+} from "@vega/domain";
 import type { AppConfig } from "../config.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { createConfiguredMailService } from "../mail/configured-mail-service.js";
 import { invoiceEmail } from "../mail/staff-email-templates.js";
-import { invalidEmail, mailNotConfigured, respondWithSendResult, respondWithStaffEmailStatus, sendStaffEmail, validateStaffEmailInput } from "../mail/staff-email-service.js";
+import {
+  invalidEmail,
+  mailNotConfigured,
+  respondWithSendResult,
+  respondWithStaffEmailStatus,
+  sendStaffEmail,
+  validateStaffEmailInput,
+} from "../mail/staff-email-service.js";
 import { prisma } from "../prisma.js";
 import { generateInvoicePdf, invoicePdfFilename } from "../pdf/invoice-pdf.js";
-import { orderDataWithRelations, orderRelations } from "../orders/order-relations.js";
+import {
+  orderDataWithRelations,
+  orderRelations,
+} from "../orders/order-relations.js";
 import { toInvoiceDto, validateInvoice } from "./invoice-input.js";
 import { loadSignatureName } from "../staff/signature-name.js";
 import {
@@ -20,29 +35,51 @@ import {
   updateInvoice,
 } from "./invoice-service.js";
 
-export function createInvoiceRouter(config: Pick<AppConfig, "mail"> = { mail: null }) {
+export function createInvoiceRouter(
+  config: Pick<AppConfig, "mail"> = { mail: null },
+) {
   const router = Router();
   router.get("/", async (req, res, next) => {
     try {
       const archived = req.query.archived === "true";
-      const search = typeof req.query.search === "string" ? req.query.search.trim().slice(0, 100) : "";
+      const search =
+        typeof req.query.search === "string"
+          ? req.query.search.trim().slice(0, 100)
+          : "";
       const page = pageInteger(req.query.page, 1);
       const pageSize = pageInteger(req.query.pageSize, 25);
-      if (!page || !pageSize || pageSize > 100 || (page - 1) * pageSize > 2_147_483_647) {
-        res.status(400).json({ error: { code: "INVALID_INVOICE_QUERY", message: "Ungültige Seitennummer oder Seitengröße (1–100)." } });
+      if (
+        !page ||
+        !pageSize ||
+        pageSize > 100 ||
+        (page - 1) * pageSize > 2_147_483_647
+      ) {
+        res
+          .status(400)
+          .json({
+            error: {
+              code: "INVALID_INVOICE_QUERY",
+              message: "Ungültige Seitennummer oder Seitengröße (1–100).",
+            },
+          });
         return;
       }
       const orderNumber = /^\d+$/u.test(search) ? Number(search) : undefined;
       const where: Prisma.InvoiceWhereInput = {
         archivedAt: archived ? { not: null } : null,
-        ...(search ? {
-          OR: [
-            { invoiceNumber: { contains: search } },
-            { customerNameSnapshot: { contains: search } },
-            ...(orderNumber !== undefined && Number.isSafeInteger(orderNumber) && orderNumber <= 2_147_483_647
-              ? [{ orderNumberSnapshot: orderNumber }] : []),
-          ],
-        } : {}),
+        ...(search
+          ? {
+              OR: [
+                { invoiceNumber: { contains: search } },
+                { customerNameSnapshot: { contains: search } },
+                ...(orderNumber !== undefined &&
+                Number.isSafeInteger(orderNumber) &&
+                orderNumber <= 2_147_483_647
+                  ? [{ orderNumberSnapshot: orderNumber }]
+                  : []),
+              ],
+            }
+          : {}),
       };
       const [invoices, total] = await Promise.all([
         prisma.invoice.findMany({
@@ -53,51 +90,106 @@ export function createInvoiceRouter(config: Pick<AppConfig, "mail"> = { mail: nu
         }),
         prisma.invoice.count({ where }),
       ]);
-      res.json({ data: { items: invoices.map(toInvoiceDto), total, page, pageSize } });
-    } catch (error) { next(error); }
+      res.json({
+        data: { items: invoices.map(toInvoiceDto), total, page, pageSize },
+      });
+    } catch (error) {
+      next(error);
+    }
   });
   router.get("/next-number", async (_req, res, next) => {
     try {
-      const sequence = await prisma.invoiceNumberSequence.findUniqueOrThrow({ where: { id: 1 }, select: { nextValue: true } });
+      const sequence = await prisma.invoiceNumberSequence.findUniqueOrThrow({
+        where: { id: 1 },
+        select: { nextValue: true },
+      });
       res.setHeader("Cache-Control", "no-store");
       res.json({ data: { nextValue: sequence.nextValue } });
-    } catch (error) { next(error); }
+    } catch (error) {
+      next(error);
+    }
   });
   router.get("/:id", async (req, res, next) => {
     try {
-      const invoice = await prisma.invoice.findUnique({ where: { id: req.params.id } });
+      const invoice = await prisma.invoice.findUnique({
+        where: { id: req.params.id },
+      });
       if (!invoice) return notFound(res);
-      res.json({ data: toInvoiceDto(invoice) });
-    } catch (error) { next(error); }
+      const order = invoice.orderId
+        ? await prisma.order.findUnique({
+            where: { id: invoice.orderId },
+            include: orderRelations,
+          })
+        : null;
+      const orderData = order ? orderDataWithRelations(order) : undefined;
+      res.json({
+        data: {
+          ...toInvoiceDto(invoice),
+          ...(order && orderData
+            ? { orderOverview: toOrderOverview(order.orderNumber, orderData) }
+            : {}),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
   });
   router.get("/:id/pdf", async (req, res, next) => {
     try {
-      const invoice = await prisma.invoice.findUnique({ where: { id: req.params.id } });
+      const invoice = await prisma.invoice.findUnique({
+        where: { id: req.params.id },
+      });
       if (!invoice) return notFound(res);
       const pdf = await generateInvoicePdf(invoice);
-      if (invoice.orderId) await recordInvoicePdfExport(invoice.orderId, String(res.locals.staffUser.name));
+      if (invoice.orderId)
+        await recordInvoicePdfExport(
+          invoice.orderId,
+          String(res.locals.staffUser.name),
+        );
       res.setHeader("Cache-Control", "no-store");
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(invoicePdfFilename(invoice))}`);
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename*=UTF-8''${encodeURIComponent(invoicePdfFilename(invoice))}`,
+      );
       res.status(200).send(pdf);
-    } catch (error) { next(error); }
+    } catch (error) {
+      next(error);
+    }
   });
   router.get("/:id/email-draft", async (req, res, next) => {
     try {
       const context = await loadInvoiceEmailContext(req.params.id);
       if (!context.ok) return context.respond(res);
       const { invoice, draft } = context;
-      const body: EmailDraft = { to: invoice.order?.customerEmail ?? "", subject: draft.subject, contentHtml: draft.contentHtml, attachmentNames: [invoicePdfFilename(invoice)] };
+      const body: EmailDraft = {
+        to: invoice.order?.customerEmail ?? "",
+        subject: draft.subject,
+        contentHtml: draft.contentHtml,
+        attachmentNames: [invoicePdfFilename(invoice)],
+      };
       res.setHeader("Cache-Control", "no-store");
       res.json({ data: body });
-    } catch (error) { next(error); }
+    } catch (error) {
+      next(error);
+    }
   });
   router.post("/:id/emails/status", async (req, res, next) => {
     try {
-      const invoice = await prisma.invoice.findUnique({ where: { id: req.params.id }, select: { id: true, orderId: true } });
+      const invoice = await prisma.invoice.findUnique({
+        where: { id: req.params.id },
+        select: { id: true, orderId: true },
+      });
       if (!invoice) return notFound(res);
-      await respondWithStaffEmailStatus(req, res, `invoice:${invoice.id}`, invoice.orderId ? { orderId: invoice.orderId } : {});
-    } catch (error) { next(error); }
+      await respondWithStaffEmailStatus(
+        req,
+        res,
+        `invoice:${invoice.id}`,
+        invoice.orderId ? { orderId: invoice.orderId } : {},
+      );
+    } catch (error) {
+      next(error);
+    }
   });
   router.post("/:id/emails", async (req, res, next) => {
     try {
@@ -108,19 +200,34 @@ export function createInvoiceRouter(config: Pick<AppConfig, "mail"> = { mail: nu
       const mailService = createConfiguredMailService(config);
       if (!mailService) return mailNotConfigured(res);
       const { invoice } = context;
-      const signatureName = await loadSignatureName(String(res.locals.staffUser.id));
-      const { outboxId, result } = await sendStaffEmail(mailService, `invoice:${invoice.id}`, input.value.idempotencyKey, async () => ({
-        ...(invoice.orderId ? { orderId: invoice.orderId } : {}),
-        kind: "INVOICE",
-        to: [input.value.to],
-        subject: input.value.subject,
-        contentHtml: input.value.contentHtml,
-        attachments: [{ filename: invoicePdfFilename(invoice), content: (await generateInvoicePdf(invoice)).toString("base64"), contentType: "application/pdf" }],
-        actorName: String(res.locals.staffUser.name),
-        signatureName,
-      }));
+      const signatureName = await loadSignatureName(
+        String(res.locals.staffUser.id),
+      );
+      const { outboxId, result } = await sendStaffEmail(
+        mailService,
+        `invoice:${invoice.id}`,
+        input.value.idempotencyKey,
+        async () => ({
+          ...(invoice.orderId ? { orderId: invoice.orderId } : {}),
+          kind: "INVOICE",
+          to: [input.value.to],
+          subject: input.value.subject,
+          contentHtml: input.value.contentHtml,
+          attachments: [
+            {
+              filename: invoicePdfFilename(invoice),
+              content: (await generateInvoicePdf(invoice)).toString("base64"),
+              contentType: "application/pdf",
+            },
+          ],
+          actorName: String(res.locals.staffUser.name),
+          signatureName,
+        }),
+      );
       respondWithSendResult(req, res, outboxId, result);
-    } catch (error) { next(error); }
+    } catch (error) {
+      next(error);
+    }
   });
   router.post("/", async (req, res, next) => {
     try {
@@ -136,12 +243,28 @@ export function createInvoiceRouter(config: Pick<AppConfig, "mail"> = { mail: nu
   router.get("/from-order/:orderNumber", async (req, res, next) => {
     try {
       const orderNumber = Number(req.params.orderNumber);
-      if (!Number.isSafeInteger(orderNumber) || orderNumber < 1) return notFound(res);
-      const order = await prisma.order.findUnique({ where: { orderNumber }, include: orderRelations });
+      if (!Number.isSafeInteger(orderNumber) || orderNumber < 1)
+        return notFound(res);
+      const order = await prisma.order.findUnique({
+        where: { orderNumber },
+        include: orderRelations,
+      });
       if (!order) return notFound(res);
       if (order.archivedAt) return archivedOrder(res);
-      const existing = await prisma.invoice.findUnique({ where: { orderId: order.id } });
-      if (existing) { res.status(409).json({ error: { code: "INVOICE_ALREADY_EXISTS", message: "Für diesen Auftrag existiert bereits eine Rechnung." } }); return; }
+      const existing = await prisma.invoice.findUnique({
+        where: { orderId: order.id },
+      });
+      if (existing) {
+        res
+          .status(409)
+          .json({
+            error: {
+              code: "INVOICE_ALREADY_EXISTS",
+              message: "Für diesen Auftrag existiert bereits eine Rechnung.",
+            },
+          });
+        return;
+      }
       const data = orderDataWithRelations(order);
       const customer = data.customer;
       const destination = data.to;
@@ -150,25 +273,50 @@ export function createInvoiceRouter(config: Pick<AppConfig, "mail"> = { mail: nu
         company: stringValue(customer?.company),
         customerName: order.customerName,
         customerStreet: stringValue(destination?.street),
-        customerPostalCity: [stringValue(destination?.postalCode), stringValue(destination?.city)].filter(Boolean).join(" "),
-        taxPercent: 19, text: "", entries: [], dueDates: [],
+        customerPostalCity: [
+          stringValue(destination?.postalCode),
+          stringValue(destination?.city),
+        ]
+          .filter(Boolean)
+          .join(" "),
+        taxPercent: 19,
+        text: "",
+        entries: [],
+        dueDates: [],
       };
       res.setHeader("Cache-Control", "no-store");
-      res.json({ data: input });
-    } catch (error) { next(error); }
+      res.json({
+        data: { ...input, orderOverview: toOrderOverview(orderNumber, data) },
+      });
+    } catch (error) {
+      next(error);
+    }
   });
   router.post("/from-order/:orderNumber", async (req, res, next) => {
     try {
       const orderNumber = Number(req.params.orderNumber);
-      if (!Number.isSafeInteger(orderNumber) || orderNumber < 1) return notFound(res);
+      if (!Number.isSafeInteger(orderNumber) || orderNumber < 1)
+        return notFound(res);
       const input = validateInvoice(req.body, true);
       if (!input.ok) return invalid(res, input.message);
-      const order = await prisma.order.findUnique({ where: { orderNumber }, select: { id: true, orderNumber: true, archivedAt: true } });
+      const order = await prisma.order.findUnique({
+        where: { orderNumber },
+        select: { id: true, orderNumber: true, archivedAt: true },
+      });
       if (!order) return notFound(res);
       if (order.archivedAt) return archivedOrder(res);
-      const existing = await prisma.invoice.findUnique({ where: { orderId: order.id } });
+      const existing = await prisma.invoice.findUnique({
+        where: { orderId: order.id },
+      });
       if (existing) {
-        res.status(409).json({ error: { code: "INVOICE_ALREADY_EXISTS", message: "Für diesen Auftrag existiert bereits eine Rechnung." } });
+        res
+          .status(409)
+          .json({
+            error: {
+              code: "INVOICE_ALREADY_EXISTS",
+              message: "Für diesen Auftrag existiert bereits eine Rechnung.",
+            },
+          });
         return;
       }
       const invoice = await createInvoice(input.value, order);
@@ -179,7 +327,15 @@ export function createInvoiceRouter(config: Pick<AppConfig, "mail"> = { mail: nu
         return notFound(res);
       }
       if (isUnique(error)) {
-        res.status(409).json({ error: { code: "INVOICE_CONFLICT", message: "Die Rechnungsnummer oder der Auftrag ist bereits einer Rechnung zugeordnet." } });
+        res
+          .status(409)
+          .json({
+            error: {
+              code: "INVOICE_CONFLICT",
+              message:
+                "Die Rechnungsnummer oder der Auftrag ist bereits einer Rechnung zugeordnet.",
+            },
+          });
         return;
       }
       next(error);
@@ -188,23 +344,53 @@ export function createInvoiceRouter(config: Pick<AppConfig, "mail"> = { mail: nu
   router.put("/:id", async (req, res, next) => {
     try {
       const revision: unknown = req.body?.revision;
-      if (typeof revision !== "number" || !Number.isInteger(revision) || revision < 0 || revision >= 2_147_483_647) {
-        return invalid(res, "Eine gültige Rechnungsrevision ist erforderlich. Bitte laden Sie die Rechnung neu.");
+      if (
+        typeof revision !== "number" ||
+        !Number.isInteger(revision) ||
+        revision < 0 ||
+        revision >= 2_147_483_647
+      ) {
+        return invalid(
+          res,
+          "Eine gültige Rechnungsrevision ist erforderlich. Bitte laden Sie die Rechnung neu.",
+        );
       }
       const input = validateInvoice(req.body);
       if (!input.ok) return invalid(res, input.message);
-      const existing = await prisma.invoice.findUnique({ where: { id: req.params.id } });
+      const existing = await prisma.invoice.findUnique({
+        where: { id: req.params.id },
+      });
       if (!existing) return notFound(res);
       if (existing.archivedAt) return archivedInvoice(res);
-      const invoice = await updateInvoice(existing.id, input.value, existing.invoiceNumber, revision);
+      const invoice = await updateInvoice(
+        existing.id,
+        input.value,
+        existing.invoiceNumber,
+        revision,
+      );
       res.json({ data: toInvoiceDto(invoice) });
     } catch (error) {
       if (isMissing(error) || error instanceof InvoiceUpdateConflict) {
-        const latest = await prisma.invoice.findUnique({ where: { id: req.params.id }, select: { archivedAt: true } });
+        const latest = await prisma.invoice.findUnique({
+          where: { id: req.params.id },
+          select: { archivedAt: true },
+        });
         if (!latest) return notFound(res);
-        res.status(409).json({ error: latest.archivedAt
-          ? { code: "INVOICE_ARCHIVED", message: "Archivierte Rechnungen müssen zuerst wiederhergestellt werden." }
-          : { code: "INVOICE_CONFLICT", message: "Die Rechnung wurde zwischenzeitlich geändert. Bitte laden Sie sie neu." } });
+        res
+          .status(409)
+          .json({
+            error: latest.archivedAt
+              ? {
+                  code: "INVOICE_ARCHIVED",
+                  message:
+                    "Archivierte Rechnungen müssen zuerst wiederhergestellt werden.",
+                }
+              : {
+                  code: "INVOICE_CONFLICT",
+                  message:
+                    "Die Rechnung wurde zwischenzeitlich geändert. Bitte laden Sie sie neu.",
+                },
+          });
         return;
       }
       if (isUnique(error)) return numberInUse(res);
@@ -232,23 +418,100 @@ export function createInvoiceRouter(config: Pick<AppConfig, "mail"> = { mail: nu
   return router;
 }
 async function loadInvoiceEmailContext(id: string) {
-  const invoice = await prisma.invoice.findUnique({ where: { id }, include: { order: { include: orderRelations } } });
+  const invoice = await prisma.invoice.findUnique({
+    where: { id },
+    include: { order: { include: orderRelations } },
+  });
   if (!invoice) return { ok: false as const, respond: notFound };
-  if (invoice.archivedAt) return { ok: false as const, respond: archivedInvoice };
-  const customer = invoice.order ? (orderDataWithRelations(invoice.order) as CreateOrderInput).customer : undefined;
-  return { ok: true as const, invoice, draft: invoiceEmail(invoice.invoiceNumber, customer, invoice.customerNameSnapshot) };
+  if (invoice.archivedAt)
+    return { ok: false as const, respond: archivedInvoice };
+  const customer = invoice.order
+    ? (orderDataWithRelations(invoice.order) as CreateOrderInput).customer
+    : undefined;
+  return {
+    ok: true as const,
+    invoice,
+    draft: invoiceEmail(
+      invoice.invoiceNumber,
+      customer,
+      invoice.customerNameSnapshot,
+    ),
+  };
 }
-function stringValue(value: unknown): string { return typeof value === "string" ? value : ""; }
-function notFound(res: Response) { res.status(404).json({ error: { code: "INVOICE_NOT_FOUND", message: "Rechnung nicht gefunden." } }); }
-function archivedOrder(res: Response) { res.status(409).json({ error: { code: "ORDER_ARCHIVED", message: "Archivierte Aufträge müssen vor der Rechnungserstellung wiederhergestellt werden." } }); }
-function invalid(res: Response, message: string) { res.status(400).json({ error: { code: "INVALID_INVOICE", message } }); }
-function archivedInvoice(res: Response) { res.status(409).json({ error: { code: "INVOICE_ARCHIVED", message: "Archivierte Rechnungen müssen zuerst wiederhergestellt werden." } }); }
-function numberInUse(res: Response) { res.status(409).json({ error: { code: "INVOICE_NUMBER_IN_USE", message: "Diese Rechnungsnummer wird bereits verwendet." } }); }
+function stringValue(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+function toOrderOverview(
+  orderNumber: number,
+  order: CreateOrderInput,
+): AdminInvoiceOrderOverview {
+  return {
+    orderNumber,
+    movingDate: order.movingDate,
+    conditions: order.details?.conditions ?? [],
+  };
+}
+function notFound(res: Response) {
+  res
+    .status(404)
+    .json({
+      error: { code: "INVOICE_NOT_FOUND", message: "Rechnung nicht gefunden." },
+    });
+}
+function archivedOrder(res: Response) {
+  res
+    .status(409)
+    .json({
+      error: {
+        code: "ORDER_ARCHIVED",
+        message:
+          "Archivierte Aufträge müssen vor der Rechnungserstellung wiederhergestellt werden.",
+      },
+    });
+}
+function invalid(res: Response, message: string) {
+  res.status(400).json({ error: { code: "INVALID_INVOICE", message } });
+}
+function archivedInvoice(res: Response) {
+  res
+    .status(409)
+    .json({
+      error: {
+        code: "INVOICE_ARCHIVED",
+        message:
+          "Archivierte Rechnungen müssen zuerst wiederhergestellt werden.",
+      },
+    });
+}
+function numberInUse(res: Response) {
+  res
+    .status(409)
+    .json({
+      error: {
+        code: "INVOICE_NUMBER_IN_USE",
+        message: "Diese Rechnungsnummer wird bereits verwendet.",
+      },
+    });
+}
 function pageInteger(value: unknown, fallback: number): number | undefined {
   if (value === undefined) return fallback;
   if (typeof value !== "string" || !/^\d+$/u.test(value)) return undefined;
   const number = Number(value);
   return Number.isSafeInteger(number) && number > 0 ? number : undefined;
 }
-function isMissing(error: unknown) { return typeof error === "object" && error !== null && "code" in error && error.code === "P2025"; }
-function isUnique(error: unknown) { return typeof error === "object" && error !== null && "code" in error && error.code === "P2002"; }
+function isMissing(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2025"
+  );
+}
+function isUnique(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2002"
+  );
+}

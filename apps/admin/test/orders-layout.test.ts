@@ -41,6 +41,12 @@ test("order cards use aligned responsive columns without squeezing list controls
       onFurnitureChange: () => {},
     }),
   );
+  assert.match(furniture, /align-items:stretch/u);
+  assert.equal(
+    [...furniture.matchAll(/align-items:stretch/gu)].length >= 4,
+    true,
+  );
+  assert.equal([...furniture.matchAll(/flex:1;/gu)].length, 4);
   assert.equal([...furniture.matchAll(/MuiGrid-grid-lg-4/gu)].length, 4);
   assert.equal([...furniture.matchAll(/MuiGrid-grid-lg-8/gu)].length, 1);
   assert.equal([...furniture.matchAll(/MuiGrid-grid-sm-6/gu)].length, 2);
@@ -59,6 +65,9 @@ test("order cards use aligned responsive columns without squeezing list controls
       onBasisChange: () => {},
     }),
   );
+  assert.equal([...basis.matchAll(/MuiGrid-grid-lg-4/gu)].length, 3);
+  assert.ok([...basis.matchAll(/align-items:stretch/gu)].length >= 4);
+  assert.equal([...basis.matchAll(/flex:1;/gu)].length, 3);
   assert.equal([...basis.matchAll(/MuiGrid-grid-md-6/gu)].length, 2);
   value.details.conditions = [
     { description: "Brutto", amount: 425, kind: "base" },

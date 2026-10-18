@@ -211,7 +211,7 @@ Alle Rechte werden im Backend geprüft. `Admin` hat alle Rechte; `Kundenberater`
   das fachliche Bearbeitungsdatum zu verändern. Es entsteht keine Historie.
 - Der Intake-Endpunkt `POST /api/orders` ist öffentlich und für abgeschlossene
   Staff-Sessions verwendbar. Er speichert validierte Kunden-, Mehrfachadress-,
-  Umzugsgut-, Zusatzleistungs-, Termin- und Konditionsdaten, vergibt die Nummer
+  Umzugsgut-, Zusatzleistungs-, Termin- und Positionsdaten, vergibt die Nummer
   serverseitig ab 1000 und liefert ausschließlich die neue Auftragsnummer zurück.
   Preisfelder sind bei anonymen Requests verboten; Staff-Preisangaben werden
   serverseitig typ- und wertebereichsgeprüft. Öffentliche Order-Reads bleiben
@@ -230,18 +230,18 @@ Alle Rechte werden im Backend geprüft. `Admin` hat alle Rechte; `Kundenberater`
   von der Trägerzahl) und Kilometerpreis mal Entfernung und LKW-Anzahl; der
   Kilometerbetrag wird auf das nächste Vielfache von 5 EUR gerundet. In München
   gilt der zentrale Anfahrtstarif pro LKW-Anzahl. Der Rabatt gilt nur für den
-  Basispreis. Fertige Konditionen werden
+  Basispreis. Fertige Positionen werden
   auf Cent gerundet und als Bruttobeträge summiert; die Rechnungsarithmetik
-  bleibt davon getrennt. Die Konditionskarte darf zusätzlich die
+  bleibt davon getrennt. Die Positionskarte darf zusätzlich die
   Bruttosumme informativ mit fest 19 % in Netto und MwSt. aufteilen
   (`Netto = Brutto / 1,19`); diese Anzeige ändert weder Orders noch
   Rechnungssteuersätze.
-- Berechnete Konditionen bleiben im Admin-Editor anpassbar. Erneutes Ersetzen
-  vorhandener Konditionen verlangt eine Bestätigung. Katalognormaländerungen
+- Berechnete Positionen bleiben im Admin-Editor anpassbar. Erneutes Ersetzen
+  vorhandener Positionen verlangt eine Bestätigung. Katalognormaländerungen
   ändern gespeicherte Preise nicht. Der serverseitige `pricingSnapshot` im
   bestehenden Order-JSON hält verwendete Katalog-/Tarifpreise, optionale
   positionsbezogene Staff-Einzelpreise und Berechnungsgrundlagen fest; die finalen Beträge liegen ausschließlich in den
-  Konditionen. Vorschau- und Katalogkonflikte liefern `409`. Orders ohne
+  Auftragspositionen (intern `details.conditions`). Vorschau- und Katalogkonflikte liefern `409`. Orders ohne
   Snapshot bleiben bearbeitbar und werden nicht nachträglich neu bepreist.
 - Preisrelevante fehlende Grundlagen, insbesondere eine unbekannte Entfernung
   für Nicht-München, blockieren nur die automatische Kalkulation. Manuelle
@@ -263,7 +263,8 @@ Alle Rechte werden im Backend geprüft. `Admin` hat alle Rechte; `Kundenberater`
   Sie enthält `orderNumberSnapshot`, `customerNameSnapshot`, Rechnungsnummer,
   Rechnungsadresse, Positionen, Fälligkeiten und fachliche Rechnungsfelder.
   Beim Order-Purge gilt `SET NULL` statt Cascade; Snapshots bleiben zum Suchen
-  bis Invoice-Purge.
+  bis Invoice-Purge. Positionspreise sind Brutto inklusive des ausgewählten
+  Rechnungssteuersatzes; die Rechnungssumme erhöht sie nicht nochmals um MwSt.
 - Rechnungsnummer ist von DB-ID und Auftragsnummer getrennt; einstellbarer Nummernkreis, editierbar, DB-seitig eindeutig.
 - `CreditNote` ist separater optionaler Beleg (höchstens einer je Rechnung;
   eindeutige frei gesetzte Geschäftsnummer wie im Bestand, kein erfundener
@@ -344,4 +345,9 @@ Alle Rechte werden im Backend geprüft. `Admin` hat alle Rechte; `Kundenberater`
 | Rechnung, Gutschrift, Mahnungsereignis | Admin-Archivierung und Restore; einheitlicher App-Purge 30 Tage nach Archivierung. Externe gesetzliche Archivierung bleibt Betreiberprozess und Go-live-Gate. |
 | Invoice PDF                            | bei Bedarf aus aktuellem DB-Stand; nicht persistent in App/GCS                                                                                                |
 
-Hostinger Cron läuft täglich, verarbeitet abgelaufene archivierte Datensätze und Mail-Retries. Purge ist transaktional/idempotent. Vor finaler Implementierung ist zu prüfen, ob Managed Node Cron eine CLI-Ausführung erlaubt; sonst wird ein kurzlebiger, signierter interner Trigger verwendet.
+Der zentrale Root-Einstieg `cron.js` verarbeitet täglich abgelaufene archivierte
+Datensätze und Mail-Retries. Jeder Purge-Delete ist auf `archivedAt` und
+`purgeAt <= now` beschränkt und damit idempotent; nach einem Teilfehler kann
+derselbe Lauf sicher erneut gestartet werden. Im Hostinger-Tarif ist der Aufruf
+von `node cron.js` vor Go-live nachzuweisen; es gibt keinen öffentlichen
+Purge-Endpunkt.

@@ -1,17 +1,25 @@
-# Hostinger-Cron: Mail-Outbox-Retry
+# Hostinger-Cron: Archivbereinigung und Mail-Outbox-Retry
 
 **Stand:** 2026-10-16
-**Geltung:** Retry für alle Mails der Outbox (Anfrage-Benachrichtigungen und In-App-Versand).
+**Geltung:** Order-/Finanzarchiv-Purges sowie Retry für alle Mails der Outbox
+(Anfrage-Benachrichtigungen und In-App-Versand).
 **Prinzip:** Öffentliche Anfragen werden sofort beantwortet (`201 { orderNumber }`);
 der Versand läuft zweistufig: Sofortversuch nach dem DB-Commit plus dieser
-Cron-Lauf als Retry für sicher wiederholbare Versuche. Keine öffentliche
-Wartungsroute, keine zweite Mail-App.
+Cron-Lauf als Retry für sicher wiederholbare Versuche. Derselbe Lauf entfernt
+abgelaufene archivierte Orders nach 60 Tagen und Finanzdatensätze nach 30 Tagen.
+Es gibt keinen öffentlichen Wartungsendpunkt und keinen zweiten Mail-Service.
 
 ## Was der Lauf tut
 
-- `apps/server/src/maintenance-cli.ts` lädt dieselbe Runtime-Konfiguration wie
-  die App und ruft `deliverDueOutboxMail()` auf (`PENDING`/`FAILED` mit
+- Der Root-Einstieg `cron.js` startet `apps/server/dist/cron.js`; dieser ruft
+  `deliverDueOutboxMail()` für `PENDING`/`FAILED` mit
   `nextAttemptAt <= now`, max. `MAIL_MAINTENANCE_LIMIT`, Default 25, Cap 200).
+- Derselbe Lauf löscht Orders mit `archivedAt` und fälligem `purgeAt` (60 Tage)
+  sowie archivierte Rechnungen, Gutschriften und Mahnungen mit fälligem
+  `purgeAt` (je 30 Tage). Wiederhergestellte Datensätze werden nicht gelöscht.
+  Abhängige Finanzdatensätze werden vor Rechnungen und Orders bearbeitet;
+  Rechnungs-Snapshots bleiben beim Order-Purge erhalten und GCS-Bilder werden
+  nicht aktiv gelöscht.
 - Erfolg (`204`, ohne Body) → `SENT` + genau ein `EmailEvent`, atomar mit
   ggf. Mahnungs-`sentAt` und Optionsangebots-Journal.
 - Sicher nicht gesendet und wiederholbar (z. B. fehlgeschlagener
@@ -23,7 +31,7 @@ Wartungsroute, keine zweite Mail-App.
   Diese Einträge werden **niemals automatisch erneut gesendet**.
   Auch ein eventuell bereits erfolgreicher, aber nicht bestätigter DB-Commit
   darf keinen zweiten Provideraufruf auslösen.
-- Verwaiste `SENDING`-Claims werden nach 70 Sekunden (10 Sekunden
+- Verwaiste `SENDING`-Claims werden nach 90 Sekunden (30 Sekunden
   Provider-Timeout plus 60 Sekunden Reserve) atomar auf `UNKNOWN` gesetzt.
   Der Claim bleibt damit auch nach Prozessabbruch sicher gesperrt.
 - Geloggt werden nur Zähler (`sent`, `failed`, `unknown`, `limit`), niemals Empfänger,
@@ -35,10 +43,8 @@ Wartungsroute, keine zweite Mail-App.
   Exit-Code `1` = Crash oder Mailtransport nicht
   konfiguriert.
 
-Noch **nicht** in diesem Lauf enthalten: Order-Purge (60 Tage),
-Finanz-Purge (30 Tage) und automatischer Providerabgleich.
-Purge bleibt offene Go-live-Arbeit; für `UNKNOWN` gibt es die unten
-beschriebene manuelle Recovery.
+Der automatische Providerabgleich ist nicht enthalten; für `UNKNOWN` gibt es
+die unten beschriebene manuelle Recovery.
 
 ## Versanddialog und Statusprüfung
 
@@ -61,10 +67,9 @@ ausdrücklich ein neuer Entwurf mit neuer Kennung gestartet werden.
    morgens Europe/Berlin). Wer schnellere Mail-Retries will, darf häufiger
    laufen lassen (z. B. stündlich); der Claim (`PENDING`/`FAILED` →
    `SENDING`, `attempts+1`) macht parallele Läufe idempotent.
-2. **Arbeitsverzeichnis:** das Vega-App-Verzeichnis (dort, wo nach dem
-   Deployment `apps/server/dist/maintenance-cli.js` liegt).
-3. **Befehl (nach `npm run build`):**
-   `node apps/server/dist/maintenance-cli.js`
+2. **Arbeitsverzeichnis:** Repository-Root des Vega-Deployments (mit
+  `package.json`, `cron.js` und `apps/server/dist/`).
+3. **Befehl (nach `npm run build`):** `node cron.js`.
 4. **Umgebung:** exakt dieselben serverseitigen Runtime-Variablen wie für den
    App-Prozess, mindestens:
    `DATABASE_URL`, `BETTER_AUTH_SECRET` (≥ 32 Zeichen), `APP_BASE_URL`,
@@ -75,11 +80,13 @@ ausdrücklich ein neuer Entwurf mit neuer Kennung gestartet werden.
 
 ## Verifikation (Release-Nachweis)
 
-1. Einmal manuell im Zielverzeichnis starten und die JSON-Zeile prüfen:
-   `{"event":"mail-maintenance","sent":N,"failed":M,"unknown":U,"limit":25}`.
+1. Einmal manuell im Zielverzeichnis starten und beide JSON-Zeilen prüfen:
+  `archive-maintenance` mit Purge-Zählern und `mail-maintenance` mit
+  `sent`, `failed`, `unknown` und `limit`.
 2. In der Datenbank prüfen, dass fällige `EmailOutbox`-Einträge auf `SENT`
    wechseln und genau ein `EmailEvent` je Eintrag entsteht.
-3. Cron-Protokoll des Hostings prüfen: regelmäßige `0`-Exits, keine `1`-Exits.
+3. Cron-Protokoll des Hostings prüfen: regelmäßige `0`-Exits, keine `1`-Exits;
+  Exit-Code `1` signalisiert einen Fehler in mindestens einem Teil-Lauf.
 4. Sicher wiederholbare Fehler (`FAILED` + `lastErrorCode`) beheben und
    den nächsten Lauf abwarten. `UNKNOWN` ausschließlich wie unten auflösen;
    Status oder Idempotency-Key nicht per SQL zurücksetzen.

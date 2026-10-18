@@ -103,7 +103,7 @@ test("Basis tab filters as quantities are entered and offers one-click selection
       "LKW 3,5",
       "Stunden",
       "Betrag",
-      "Stundenpreis",
+      "Einzelpreis",
       "Rabatt",
     ]) {
       const label = [...view.container.querySelectorAll("label")].find(
