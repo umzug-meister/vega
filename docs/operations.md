@@ -247,5 +247,5 @@ werden. Der Test ersetzt diese Freigabe-Gates nicht.
 ## Weitere Anleitungen
 
 - `hostinger-setup.md` – Schritt-für-Schritt-Deployment, Runtime-Variablen, SSH, Migrationen und Go-live-Checkliste
-- `hostinger-mail-cron.md` – Cron für Mail-Retries
+- `hostinger-mail-cron.md` – zentraler Hostinger-Cron für Archiv-Purges und Mail-Retries (`node cron.js`)
 - `gcs-bucket-setup.md` – GCS-Bucket, Lifecycle, CORS, Service Account

@@ -9,9 +9,8 @@ nachgewiesen werden (siehe [ADR 0008](./adr/0008-hostinger-deployment.md)).
 > **Wichtig:** Der lokale Build und die Tests belegen noch keinen erfolgreichen
 > Hostinger-Betrieb. Laut [Implementierungsstand](./implementation-status.md)
 > sind Provider-, Cron-, WordPress- und Archivierungs-Proofs weiterhin
-> Go-live-Arbeit. Rechnungs-/Gutschriftenaufbewahrung und die noch nicht
-> implementierten 60-/30-Tage-Purge-Läufe sind insbesondere vor Produktivdaten
-> zu klären.
+> Go-live-Arbeit. Die lokalen 60-/30-Tage-Purge-Läufe ersetzen weder den
+> Cron-Proof noch die externe gesetzliche Rechnungs-/Gutschriftenaufbewahrung.
 
 ## 1. Vorbereitungen
 
@@ -323,13 +322,14 @@ Nach dem Neustart:
    Fehlerfälle, Anhänge sowie Hostinger-Mail-API im realen Tarif verifizieren.
    Maintenance-Smoke-Test allein sendet keine Mail und beweist keine Zustellung.
 
-## 8. Hostinger-Cron für Mail-Retries einrichten
+## 8. Hostinger-Cron für Archiv-Purges und Mail-Retries einrichten
 
 Im hPanel einen Cron-Job anlegen, sofern der Tarif Node-CLI-Cron-Ausführung
 unterstützt:
 
 - **Arbeitsverzeichnis:** Repository-Root des Deployments;
-- **Befehl:** `node apps/server/dist/maintenance-cli.js`;
+- **Befehl:** `node cron.js` (einziger Vega-Cron-Einstieg; nicht zusätzlich
+   einzelne Maintenance-Dateien einplanen);
 - **Zeitplan:** mindestens täglich; für häufigere Retries z. B. stündlich;
 - **Umgebung:** dieselben serverseitigen Runtime-Werte wie für die App,
   insbesondere `DATABASE_URL`, `NODE_ENV`, `APP_BASE_URL`,
@@ -340,17 +340,18 @@ unterstützt:
 Cron-Umgebungen erben App-Variablen nicht zwingend. Nutze dafür hPanel-
 Runtime-/Cron-Secrets, wenn verfügbar; Secrets nicht in den Cron-Befehl
 schreiben. Vor Aktivierung den Befehl einmal manuell im Zielverzeichnis mit
-dem tatsächlichen Cron-Umgebungskontext ausführen. Erwartet wird eine
-JSON-Zeile mit Zählern wie `event`, `sent`, `failed`, `unknown` und `limit`.
-Exit-Code 0 bedeutet nur, dass der Lauf abgeschlossen wurde. `unknown > 0`
-erfordert Betreiberprüfung; solche Einträge werden nicht automatisch erneut
-versandt.
+dem tatsächlichen Cron-Umgebungskontext ausführen. Erwartet werden zwei
+JSON-Zeilen: `archive-maintenance` mit den Zählern für Orders, Rechnungen,
+Gutschriften und Mahnungen sowie `mail-maintenance` mit `sent`, `failed`,
+`unknown` und `limit`. Exit-Code 0 bedeutet nur, dass beide Läufe
+abgeschlossen wurden. `unknown > 0` erfordert Betreiberprüfung; solche
+Einträge werden nicht automatisch erneut versandt.
 
-Dieser CLI-Lauf bearbeitet **Mail-Retries**. Er führt keine Order- oder
-Finanzbeleg-Purges aus. Der in der Zielarchitektur verlangte tägliche
-60-/30-Tage-Purge ist laut aktuellem Implementierungsstand noch offene
-Go-live-Arbeit. Keinen zweiten Cron-Befehl dafür erfinden oder einen
-Mail-Cron als Purge-Nachweis werten. Siehe [Mail-Cron-Runbook](./hostinger-mail-cron.md).
+Dieser Lauf bearbeitet **Mail-Retries und Order-/Finanzbeleg-Purges**. Die
+Purges verarbeiten nur archivierte Datensätze, deren gespeichertes `purgeAt`
+erreicht ist; Order-Frist 60 Tage, Finanzfrist 30 Tage. Das Laufprotokoll
+beweist die Ausführung, aber nicht, dass ein Datensatz tatsächlich fällig war.
+Siehe [Cron-Runbook](./hostinger-mail-cron.md).
 
 ## 9. Release- und Go-live-Checkliste
 
@@ -371,8 +372,8 @@ Mail-Cron als Purge-Nachweis werten. Siehe [Mail-Cron-Runbook](./hostinger-mail-
       End-to-End getestet.
 - [ ] Cron-Verfügbarkeit und Mail-Retry-Lauf nachgewiesen; `UNKNOWN`-Verfahren
       bekannt.
-- [ ] Purge-Läufe für archivierte Aufträge (60 Tage) und Finanzbelege (30 Tage)
-      implementiert und verifiziert, bevor produktive Archivdaten entstehen.
+- [ ] `cron.js` im Hostinger-Tarif ausgeführt und Purges für archivierte Aufträge
+   (60 Tage) sowie Finanzbelege (30 Tage) mit fälligen Testdatensätzen verifiziert.
 - [ ] Externe gesetzliche Rechnungs-/Gutschriftenaufbewahrung sowie
       Backup-/Restore-Verantwortung mit den zuständigen Betreibern freigegeben.
 - [ ] Rollback-Prozess für App-Build und Datenbankmigrationen dokumentiert.

@@ -1,6 +1,6 @@
 # Implementierungsstand und offene Arbeit
 
-**Stand:** 2026-10-17
+**Stand:** 2026-10-18
 
 Konkretisiert `implementation-plan.md` §7; bei Konflikten gelten Plan und ADRs.
 
@@ -19,7 +19,8 @@ Konkretisiert `implementation-plan.md` §7; bei Konflikten gelten Plan und ADRs.
 | Bilder                 | JPEG-Komprimierung, GCS-Signed-POST, Byteprüfung, Claims, kurzlebige Leselinks.                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Rechnungen             | Admin-only Blanco-/Auftragsrechnungen, Nummernkreis, Archiv/Restore, Rechnungs-PDF.                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | Gutschriften/Mahnungen | Admin-only in Tabs des Rechnungseditors (Rechnung, 1.–3. Mahnung, Gutschrift): eine Gutschrift je Rechnung (Snapshot der Rechnung), Mahnstufen 1–3 nur in Reihenfolge (Standard: +10 Tage, 10 € Gebühr, Legacy-Texte), PDF im Legacy-Layout, Mailversand; Gutschrift mit eigenem Archiv/Restore, Mahnungen werden mit ihrer Rechnung archiviert und wiederhergestellt, nur die höchste Stufe ist endgültig löschbar; `ReminderEvent.sentAt` wird beim erfolgreichen Outbox-Versand gesetzt.                                                                |
-| Mail                   | Hostinger-Adapter, Outbox mit PDF-Anhängen und Retry-CLI, Anfrage-Benachrichtigung an Firma und Kunde, Versanddialoge für Angebot, „2 Angebote" (nur Kopien), Absage, Rechnung, Gutschrift und Mahnung.                                                                                                                                                                                                                                                                                                                                                    |
+| Mail                   | Hostinger-Adapter, Outbox mit PDF-Anhängen und Retries über `cron.js`, Anfrage-Benachrichtigung an Firma und Kunde, Versanddialoge für Angebot, „2 Angebote" (nur Kopien), Absage, Rechnung, Gutschrift und Mahnung.                                                                                                                                                                                                                                                                                                                                          |
+| Cron                   | Ein Root-Einstieg `cron.js` für 60-Tage-Order-Purge, 30-Tage-Finanz-Purge und Mail-Outbox-Retries; strukturierte Zähler, keine sensiblen Inhalte in Logs.                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Google Routes          | Admin-Depot-Rundreise mit automatischer Erst- und Adressänderungsberechnung (Blur) sowie manuellem Retry, gerundete Kilometer in den Entwurf.                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 ## Review-Korrekturen (lokal)
@@ -42,14 +43,13 @@ Konkretisiert `implementation-plan.md` §7; bei Konflikten gelten Plan und ADRs.
 
 ## Offene fachliche Arbeit
 
-1. **Purge-Läufe:** 60-Tage-Order-Purge und 30-Tage-Finanz-Purge idempotent per Cron.
-2. **E2E/Sicherheitsprüfung:** Order-/Copy-/Archive-/Mail-/PDF-Szenarien, IDOR,
+1. **E2E/Sicherheitsprüfung:** Order-/Copy-/Archive-/Mail-/PDF-Szenarien, IDOR,
    HTML-Mail-Editor, CORS, Rate-Limits, Uploads.
-3. **Offene Fachfrage:** Bestätigung der Mehrfachadress-Reihenfolge bei der Route.
+2. **Offene Fachfrage:** Bestätigung der Mehrfachadress-Reihenfolge bei der Route.
 
 ## Externe Release-Gates
 
-- Hostinger Managed Node 24, MySQL-Migrationen, Healthcheck, Runtime-Env und Cron
+- Hostinger Managed Node 24, MySQL-Migrationen, Healthcheck, Runtime-Env und `cron.js`
   in nichtproduktiver Umgebung.
 - Hostinger Mail API mit Testempfänger, HTML/Text, PDF-Anhang und Fehlerantworten.
 - WordPress-Loader/CORS/CSP, EU-GCS, Google Places/Routes mit echten Testzugängen.
