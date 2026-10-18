@@ -141,7 +141,7 @@ export const adminTheme = createTheme({
     },
     MuiGrid: {
       styleOverrides: {
-        root: { alignItems: "center" },
+        root: { alignItems: "stretch" },
       },
     },
     MuiIconButton: {

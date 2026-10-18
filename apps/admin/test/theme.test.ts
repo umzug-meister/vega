@@ -101,7 +101,7 @@ test("both app themes give icon buttons a consistent square target and text alig
   assert.match(html, /width:40px;height:40px;min-width:40px;min-height:40px/u);
 });
 
-test("admin grid containers center their children vertically by default", () => {
+test("admin grid containers stretch their children vertically by default", () => {
   const html = renderToStaticMarkup(
     createElement(
       ThemeProvider,
@@ -113,7 +113,7 @@ test("admin grid containers center their children vertically by default", () => 
       ),
     ),
   );
-  assert.match(html, /align-items:center/u);
+  assert.match(html, /align-items:stretch/u);
 
   const customerHtml = renderToStaticMarkup(
     createElement(
