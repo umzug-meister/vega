@@ -48,6 +48,30 @@ Express konfiguriert. Rücknahme: die Ein-Hop-Einstellung entfernen.
 Unbekannte/doppelte Optionen, Timeouts `0` und `sslaccept=accept_invalid_certs`
 werden abgewiesen. Credentials in der URL prozentkodieren.
 
+## GCS-Produktion: CLI-Setup und Credential-Ablage
+
+Produktionsbucket: `vega-eu-images`, Projekt: `housemoving-1527875558789`,
+Service Account:
+`vega-server-gcs-prod@housemoving-1527875558789.iam.gserviceaccount.com`.
+
+Die ausführbaren Befehle stehen zentral in
+[GCS-Bucket-Setup](./gcs-bucket-setup.md):
+
+- Schritte 1–5: `gcloud`-Prüfungen, APIs, Bucket, Lifecycle, Produktions-CORS und
+  bucketbezogene IAM-Rollen statt Klickanleitung.
+- Schritt 6: SSH/SCP auf Port 65002 für Schlüsselablage außerhalb des Deployments,
+  Verzeichnisrechte 700 und Dateirechte 600.
+- Schritt 7: serverseitige Hostinger-Variablen und App-Neustart.
+- Schritt 8: dokumentierter Cloud-Konfigurationsstand und offene Upload-Abnahme.
+
+Zielpfad des Schlüssels:
+`/home/u959171828/.config/vega/gcs-prod-service-account.json`.
+Die Managed-App muss diesen Pfad sehen und lesen können; erfolgreicher SSH-
+Zugriff allein weist das nicht nach. Keine Credentials in Git, Webroot,
+Build-Artefakte oder Logs legen. SSH-`export` konfiguriert nicht die Managed-App.
+Am 2026-10-18 wurden CORS und die beiden Bucket-Rollen gesetzt und geprüft;
+Credential-Übertragung und End-to-End-Upload bleiben separat nachzuweisen.
+
 ## Datenbank
 
 Lokal läuft **MariaDB 10.11.19** per Docker Compose auf `127.0.0.1:3307`.

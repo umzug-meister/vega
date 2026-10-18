@@ -14,15 +14,39 @@ Bucket-Konfiguration und lehnt den Betrieb sonst mit
 
 ## Schritt 1 – APIs aktivieren
 
-In der Google Cloud Console unter _APIs & Services_:
+Die `gcloud`-Befehle auf dem lokalen Rechner mit autorisiertem Betreiberkonto
+ausführen, nicht in der Hostinger-SSH-Shell:
 
-- **Cloud Storage API** aktivieren.
-- **IAM Service Account Credentials API** aktivieren (für die Schlüssel-
-  verwaltung des Service Accounts).
+```sh
+gcloud auth list --filter=status:ACTIVE --format='value(account)'
+gcloud config get-value project
+gcloud services enable storage.googleapis.com iamcredentials.googleapis.com \
+  --project=housemoving-1527875558789
+```
+
+Bei fehlender Anmeldung zuerst `gcloud auth login` ausführen. Die API-Aktivierung
+ist ein Einrichtungsschritt; sie wurde im unten protokollierten Lauf nicht
+ausgeführt. IAM Credentials wird für keyless Signierung/Impersonation benötigt,
+nicht für das lokale Signieren mit einem vorhandenen JSON-Schlüssel.
 
 ## Schritt 2 – Bucket anlegen
 
-Console → Cloud Storage → _Buckets_ → _Create_:
+Der Produktionsbucket `vega-eu-images` besteht bereits. Zuerst prüfen:
+
+```sh
+gcloud storage buckets describe gs://vega-eu-images --format=json
+```
+
+Nur für eine neue Installation, wenn der Bucket noch nicht existiert:
+
+```sh
+gcloud storage buckets create gs://vega-eu-images \
+  --project=housemoving-1527875558789 \
+  --location=europe-west3 --default-storage-class=STANDARD \
+  --uniform-bucket-level-access --public-access-prevention
+```
+
+Ein bestehender Standort lässt sich nicht nachträglich ändern. Zielwerte:
 
 | Feld           | Wert                                                                                          |
 | -------------- | --------------------------------------------------------------------------------------------- |
@@ -41,11 +65,17 @@ egal): `EU`, `EUR4`, `EUROPE-WEST1`, `EUROPE-WEST3`, `EUROPE-WEST4`,
 
 ## Schritt 3 – Lifecycle-Regel (genau eine, unbedingt)
 
-Bucket → _Lifecycle_ → _Add rule_:
+Vorhandene Regeln zuerst mit `buckets describe` prüfen. Die folgende Änderung
+ersetzt die gesamte Lifecycle-Konfiguration; beim bestehenden Produktionsbucket
+ist die gewünschte Regel bereits vorhanden:
 
-- **Action:** Delete objects
-- **Condition:** Age = **180** Tage; keine weitere Bedingung (kein Prefix,
-  kein `IsLive` usw.)
+```sh
+cat > /tmp/vega-gcs-lifecycle.json <<'EOF'
+{"rule":[{"action":{"type":"Delete"},"condition":{"age":180}}]}
+EOF
+gcloud storage buckets update gs://vega-eu-images \
+  --lifecycle-file=/tmp/vega-gcs-lifecycle.json
+```
 
 Das Backend verlangt **genau eine** unbedingte Delete-Regel mit
 `age: 180`. Jede zusätzliche Lifecycle-Regel (auch eine Staging-
@@ -53,23 +83,20 @@ Bereinigungsregel) führt zu `UNSAFE_BUCKET_CONFIGURATION`. Verwaiste
 Staging-Objekte werden daher nicht vorzeitig gelöscht; ihre Bereinigung
 erfolgt ausschließlich über die 180-Tage-Regel.
 
-// TODO hier
-
 ## Schritt 4 – CORS für Signed-POST-Uploads
 
-Bucket → CORS-Konfiguration, z. B. per `gcloud`. `gcloud storage buckets
+`gcloud storage buckets
 update` erwartet eine JSON-Datei über `--cors-file`; `--cors=...` ist kein
 gültiges Flag. Die CORS-Datei muss ein JSON-Array mit einem Eintrag pro Regel
 sein:
 
 ```bash
-cat > /tmp/vega-gcs-cors.json <<'EOF'
+cat > /tmp/vega-prod-gcs-cors-20261018.json <<'EOF'
 [
   {
     "origin": [
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "http://localhost:5175"
+      "https://vega.umzugruckzuck24.de",
+      "https://umzugruckzuck24.de"
     ],
     "method": ["GET", "POST", "HEAD"],
     "responseHeader": ["Content-Type", "x-goog-*"],
@@ -78,18 +105,18 @@ cat > /tmp/vega-gcs-cors.json <<'EOF'
 ]
 EOF
 
-gcloud storage buckets update gs://vega-eu-images-dev \
-  --cors-file=/tmp/vega-gcs-cors.json
+gcloud storage buckets update gs://vega-eu-images \
+  --cors-file=/tmp/vega-prod-gcs-cors-20261018.json
 ```
 
 - Für lokale Entwicklung die exakten Origins verwenden, einschließlich Scheme
   und Port. `localhost` und `127.0.0.1` sind verschiedene Origins; letzteres
   muss zusätzlich eingetragen werden, wenn der Browser damit geöffnet wird.
-- Die obigen localhost-Origins sind ausschließlich für einen Dev-/Staging-Bucket.
-  Im Produktionsbucket nur die exakten WordPress-/Formular-Origins (Scheme +
-  Host, ggf. Port) eintragen; keine Wildcard-Origin.
+- Die obigen HTTPS-Origins gelten für die Vega-App und die WordPress-Website.
+  Lokale Origins ausschließlich in einem separaten Dev-/Staging-Bucket
+  freigeben; keine Wildcard-Origin verwenden.
 - Die CORS-Konfiguration anschließend prüfen, z. B. mit
-  `gcloud storage buckets describe gs://vega-eu-images-dev`.
+  `gcloud storage buckets describe gs://vega-eu-images`.
 - Der tatsächliche CORS-Proof mit echtem Provider ist Teil von A0 und in
   `proof-01-integration-compatibility.md` als offen dokumentiert.
 
@@ -100,47 +127,57 @@ verwenden, z. B. `vega-server-gcs-dev` im Dev-Projekt und
 `vega-server-gcs-prod` im Produktionsprojekt. So erhält der Dev-Server keinen
 Zugriff auf Produktionsbilder.
 
-1. Console → **IAM & Admin → Service Accounts → Create service account**.
-   Namen und ID vergeben, z. B. `vega-server-gcs-dev`. Eine Beschreibung wie
-   „Vega-Serverzugriff auf den Dev-Bildbucket“ hilft bei der Zuordnung.
-2. Im optionalen Schritt **Grant this service account access to project** keine
-   Projektrolle vergeben. Abschließen und die E-Mail-Adresse des Service
-   Accounts kopieren.
-3. **Cloud Storage → Buckets → `vega-eu-images-dev` → Permissions → Grant
-   access** öffnen. Die kopierte Service-Account-E-Mail als Principal
-   hinzufügen und **beide** Rollen direkt auf diesem Bucket zuweisen:
-   **Storage Object Admin** für Lesen/Schreiben/Kopieren von Objekten sowie
-   **Storage Legacy Bucket Reader** für `storage.buckets.get` (der Server liest
-   damit die Bucket-Metadaten, um Region, Public-Access-Prevention,
-   Uniform-Bucket-Level-Access und Lifecycle-Regel zu prüfen). Nur
-   `Storage Object Admin` reicht für diese Bucket-Metadatenabfrage nicht aus
-   und führt zu `403 storage.buckets.get denied`. Nicht stattdessen Rollen auf
-   Projektebene vergeben. Falls die Console-Rollensuche die Rolle nicht
-   anbietet, kann die Bucket-Bindung mit der vordefinierten Rollen-ID gesetzt
-   werden (Service-Account-Adresse ersetzen):
+Der Produktions-Service-Account besteht bereits. Prüfen und die beiden
+Bucket-Rollen zuweisen (diese Rollenbindungen wurden am 2026-10-18 ausgeführt):
 
-   ```sh
-   gcloud storage buckets add-iam-policy-binding gs://vega-eu-images-dev \
-     --member=serviceAccount:vega-server-gcs-dev@DEINE_DEV_PROJEKT_ID.iam.gserviceaccount.com \
-     --role=roles/storage.legacyBucketReader
-   ```
+```sh
+gcloud iam service-accounts describe \
+  vega-server-gcs-prod@housemoving-1527875558789.iam.gserviceaccount.com \
+  --project=housemoving-1527875558789 --format='yaml(email,disabled)'
 
-   Die Rollen-ID `roles/storage.legacyBucketReader` ist die vordefinierte
-   **Storage Legacy Bucket Reader**-Rolle und enthält `storage.buckets.get`.
+gcloud storage buckets add-iam-policy-binding gs://vega-eu-images \
+  --member=serviceAccount:vega-server-gcs-prod@housemoving-1527875558789.iam.gserviceaccount.com \
+  --role=roles/storage.objectAdmin --format=json
 
-4. Authentifizierung bevorzugt ohne herunterladbaren Schlüssel einrichten,
-   sofern die Serverumgebung Workload Identity/ADC unterstützt. Für einen
-   lokalen Dev-Server oder Hostinger, wenn keine solche Integration verfügbar
-   ist, kann ein JSON-Schlüssel erforderlich sein: Service Account → **Keys →
-   Add key → Create new key → JSON**. Datei direkt an einem sicheren Ort
-   außerhalb des Repositorys speichern, z. B. unter
-   `~/.config/vega/gcs-dev-service-account.json`; restriktive Dateirechte
-   setzen. Google zeigt den privaten Schlüssel nur beim Erstellen zum Download
-   an. Verlorene Schlüssel nicht aus Backups/Chats kopieren, sondern einen
-   neuen erstellen und den alten nach Umstellung löschen.
-5. Wenn **Create new key** durch eine Organisationsrichtlinie gesperrt ist,
-   nicht versuchen, diese zu umgehen. Projektadministrator fragen, ob eine
-   genehmigte keyless-Identität verfügbar ist oder eine Ausnahme benötigt wird.
+gcloud storage buckets add-iam-policy-binding gs://vega-eu-images \
+  --member=serviceAccount:vega-server-gcs-prod@housemoving-1527875558789.iam.gserviceaccount.com \
+  --role=roles/storage.legacyBucketReader --format=json
+
+gcloud storage buckets get-iam-policy gs://vega-eu-images --format=json
+```
+
+Keine zusätzlichen Projektrollen vergeben. `Storage Object Admin` erlaubt
+Objektzugriffe; `Storage Legacy Bucket Reader` ergänzt die für die
+Bucket-Sicherheitsprüfung benötigte Berechtigung `storage.buckets.get`.
+
+Nur falls ein neuer Service Account benötigt wird:
+
+```sh
+gcloud iam service-accounts create vega-server-gcs-prod \
+  --project=housemoving-1527875558789 --display-name='Vega GCS Produktion'
+```
+
+Keyless ADC bevorzugen, sofern Hostinger es unterstützt. Wenn stattdessen ein
+JSON-Schlüssel benötigt wird, einen vorhandenen Schlüssel sicher verwenden oder
+gezielt einen neuen erzeugen. Folgende Befehle wurden noch nicht ausgeführt;
+sie erzeugen einen echten langlebigen Schlüssel. Vorhandene Datei nicht
+überschreiben und nicht bei jedem Deployment neue Schlüssel erzeugen:
+
+```sh
+mkdir -p "$HOME/.config/vega"
+chmod 700 "$HOME/.config/vega"
+(
+  umask 077
+  gcloud iam service-accounts keys create \
+    "$HOME/.config/vega/gcs-prod-service-account.json" \
+    --iam-account=vega-server-gcs-prod@housemoving-1527875558789.iam.gserviceaccount.com \
+    --project=housemoving-1527875558789
+)
+chmod 600 "$HOME/.config/vega/gcs-prod-service-account.json"
+```
+
+Organisationsrichtlinien nicht umgehen. Bei gesperrter Schlüsselerstellung
+einen genehmigten Authentifizierungsweg mit dem Projektadministrator klären.
 
 Für Produktion dieselben Schritte mit eigenem Produktions-Service-Account und
 Produktionsbucket wiederholen. Niemals den Dev-Schlüssel für Produktion nutzen.
@@ -148,7 +185,46 @@ Keine Schlüsseldateien oder Zugangsdaten in das Repository, in Vite-Builds,
 Tests, Logs oder Beispiele legen und Schlüssel weder in Chat noch Tickets
 kopieren.
 
-## Schritt 6 – Runtime-Konfiguration des Servers
+## Schritt 6 – Schlüssel per SSH/SCP auf Hostinger ablegen
+
+Auf dem lokalen Rechner ausführen. SSH-Passwörter ausschließlich interaktiv im
+Terminal eingeben. Host-Key-Fingerprint beim ersten Kontakt unabhängig prüfen;
+keine Host-Key-Prüfung abschalten. Der Zielpfad liegt außerhalb von Repository,
+`public_html`, `nodejs` und `hbuilds` und wird nicht mit dem Deployment ersetzt.
+
+```sh
+ssh -p 65002 u959171828@82.25.96.74 \
+  'umask 077; mkdir -p "$HOME/.config/vega" && chmod 700 "$HOME/.config/vega"'
+
+scp -P 65002 "$HOME/.config/vega/gcs-prod-service-account.json" \
+  u959171828@82.25.96.74:.config/vega/gcs-prod-service-account.json
+
+ssh -p 65002 u959171828@82.25.96.74 \
+  'chmod 600 "$HOME/.config/vega/gcs-prod-service-account.json" && test -s "$HOME/.config/vega/gcs-prod-service-account.json" && printf "Credential-Datei vorhanden: %s/.config/vega/gcs-prod-service-account.json\n" "$HOME"'
+```
+
+Vor einem erneuten Upload prüfen, ob am Ziel bereits ein produktiver Schlüssel
+liegt; eine Rotation ausdrücklich planen. Kein `cat` oder Kopieren des
+Schlüsselinhalts in Chat/Logs. Diese Übertragung ist noch nicht nachgewiesen.
+Die SSH-Prüfung bestätigt nur Dateiexistenz, nicht den Zugriff des Managed-App-
+Prozesses. Bei isoliertem App-Dateisystem einen unterstützten Secret-Mount mit
+Hostinger klären, nicht in den Webroot ausweichen.
+
+## Schritt 7 – Runtime-Konfiguration des Servers
+
+In Hostingers serverseitiger App-Konfiguration hinterlegen (kein SSH-`export`:
+SSH-Variablen werden nicht automatisch vom verwalteten App-Prozess übernommen):
+
+```text
+GCS_BUCKET=vega-eu-images
+GOOGLE_CLOUD_PROJECT=housemoving-1527875558789
+GOOGLE_APPLICATION_CREDENTIALS=/home/u959171828/.config/vega/gcs-prod-service-account.json
+```
+
+Den absoluten Pfad anhand der obigen SSH-Ausgabe bestätigen. App anschließend
+über Hostinger neu starten; keinen zweiten Server in der SSH-Shell starten.
+Für das Setzen von Managed-App-Variablen/Neustart liegt hier kein verifizierter
+SSH-CLI-Befehl vor, daher bleiben diese Schritte in hPanel.
 
 Die Konfiguration in `apps/server/src/config.ts` erwartet:
 
@@ -181,7 +257,23 @@ Ohne `GCS_BUCKET` bleibt der Upload-Service bewusst deaktiviert (siehe
 Implementierungsplan, A8). Die Bucket-Prüfung läuft alle 5 Minuten erneut
 beim ersten Upload.
 
-## Schritt 7 – Verifikation (Abnahme-Check)
+## Schritt 8 – Verifikation (Abnahme-Check)
+
+Am 2026-10-18 ausgeführt und nachgelesen: Produktions-CORS und beide
+Bucket-Rollenbindungen. Bereits vorhanden: `EUROPE-WEST3`, Public Access
+Prevention `enforced`, Uniform Bucket-Level Access und genau eine
+180-Tage-Delete-Regel. Soft Delete war mit sieben Tagen aktiv und wurde nicht
+geändert; gelöschte Objekte bleiben währenddessen wiederherstellbar.
+
+Die tatsächlich ausgeführte abschließende Konfigurationsprüfung:
+
+```sh
+gcloud storage buckets describe gs://vega-eu-images \
+  --format='yaml(name,location,cors_config,lifecycle_config,public_access_prevention,uniform_bucket_level_access,soft_delete_policy)'
+```
+
+Noch offen sind Credential-Bereitstellung, Zugriff aus dem Hostinger-App-Prozess
+und vollständiger Browser-/Upload-Proof:
 
 1. Server starten und Upload-Sitzung anfordern: keine
    503-Antwort `UNSAFE_BUCKET_CONFIGURATION`.
