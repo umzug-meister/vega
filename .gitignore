@@ -11,3 +11,4 @@ apps/*/dist/
 packages/*/dist/
 apps/server/src/generated/prisma/
 key.json
+prod.env
