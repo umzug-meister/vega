@@ -92,8 +92,11 @@ Details: [Betrieb und Konfiguration](./operations.md#datenbank).
 
    Installation und Build bleiben getrennt; es gibt keinen Root-`postinstall`-
    Build. `.npmrc` installiert mit `include=dev` die Build-Werkzeuge auch bei
-   `NODE_ENV=production`. Der explizite Build führt keine Migrationen aus und
-   startet keinen Server. Falls weitere Befehlsfelder vorhanden sind, gilt:
+   `NODE_ENV=production`. **Temporäre Erstinstallation:** Der Build führt aktuell
+   nach den Frontend-Builds zusätzlich Migrationen, Erstadmin-Seed und den
+   katalogersetzenden Legacy-Import mit `--apply` aus.
+   Diese Erweiterung nach dem einmaligen Deployment wieder entfernen.
+   Er startet keinen Server. Falls weitere Befehlsfelder vorhanden sind, gilt:
 
    ```sh
    npm ci
@@ -111,6 +114,29 @@ Details: [Betrieb und Konfiguration](./operations.md#datenbank).
    Build-Lauf im Log erscheint, die Build-Einstellungen prüfen und nötigenfalls
    mit Hostinger klären. Die tatsächlich
    unterstützte Start-/Build-Konfiguration vor Go-live dokumentieren.
+
+### Einmalige Einrichtung über den Build-Befehl
+
+Für die einmalige Erstinstallation ist **`npm run build`** vorübergehend um
+Migrationen, Erstadmin-Seed und Legacy-Katalogimport erweitert. Der Befehl baut
+zuerst die App, rollt dann Migrationen aus, führt den Erstadmin-Seed aus und
+importiert zuletzt den Legacy-Katalog mit `--apply`.
+Bei einem Fehler stoppt die Kette. Auch lokale Builds ändern damit die
+konfigurierte Datenbank; bis zum Revert nicht als reinen Build ausführen.
+
+Voraussetzung ist, dass die Build-Umgebung die Zieldatenbank erreicht und
+`DATABASE_URL`, `INITIAL_ADMIN_EMAIL` und `INITIAL_ADMIN_PASSWORD` sicher als
+Umgebungsvariablen erhält. Das ist im tatsächlichen Hostinger-Lauf zu prüfen;
+die App-Runtime-Variablen sind nicht zwingend auch Build-Variablen. Keine
+Secrets in das Befehlsfeld schreiben. Eine bestehende Datenbank vorher sichern.
+Schemaänderungen werden bei einem späteren Deploymentfehler nicht automatisch
+zurückgerollt.
+
+Nach Erfolg die temporäre Erweiterung des Build-Skripts per Commit-Revert entfernen,
+`INITIAL_ADMIN_EMAIL` und `INITIAL_ADMIN_PASSWORD` entfernen und die App neu
+starten. **Achtung:** Jeder Build bis zum Revert ersetzt den aktuellen Katalog
+erneut und benötigt Zugriff auf die Legacy-API. Ein Commit-Revert macht bereits
+erfolgte Datenbankänderungen nicht rückgängig.
 
 ### Fehler: `Entry file not found`
 
