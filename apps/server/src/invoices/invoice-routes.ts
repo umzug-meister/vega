@@ -24,7 +24,7 @@ import {
   orderRelations,
 } from "../orders/order-relations.js";
 import { toInvoiceDto, validateInvoice } from "./invoice-input.js";
-import { loadSignatureName } from "../staff/signature-name.js";
+import { loadSignature } from "../staff/signature-name.js";
 import {
   archiveInvoice,
   createInvoice,
@@ -54,14 +54,12 @@ export function createInvoiceRouter(
         pageSize > 100 ||
         (page - 1) * pageSize > 2_147_483_647
       ) {
-        res
-          .status(400)
-          .json({
-            error: {
-              code: "INVALID_INVOICE_QUERY",
-              message: "Ungültige Seitennummer oder Seitengröße (1–100).",
-            },
-          });
+        res.status(400).json({
+          error: {
+            code: "INVALID_INVOICE_QUERY",
+            message: "Ungültige Seitennummer oder Seitengröße (1–100).",
+          },
+        });
         return;
       }
       const orderNumber = /^\d+$/u.test(search) ? Number(search) : undefined;
@@ -200,9 +198,7 @@ export function createInvoiceRouter(
       const mailService = createConfiguredMailService(config);
       if (!mailService) return mailNotConfigured(res);
       const { invoice } = context;
-      const signatureName = await loadSignatureName(
-        String(res.locals.staffUser.id),
-      );
+      const signature = await loadSignature(String(res.locals.staffUser.id));
       const { outboxId, result } = await sendStaffEmail(
         mailService,
         `invoice:${invoice.id}`,
@@ -221,7 +217,7 @@ export function createInvoiceRouter(
             },
           ],
           actorName: String(res.locals.staffUser.name),
-          signatureName,
+          ...signature,
         }),
       );
       respondWithSendResult(req, res, outboxId, result);
@@ -255,14 +251,12 @@ export function createInvoiceRouter(
         where: { orderId: order.id },
       });
       if (existing) {
-        res
-          .status(409)
-          .json({
-            error: {
-              code: "INVOICE_ALREADY_EXISTS",
-              message: "Für diesen Auftrag existiert bereits eine Rechnung.",
-            },
-          });
+        res.status(409).json({
+          error: {
+            code: "INVOICE_ALREADY_EXISTS",
+            message: "Für diesen Auftrag existiert bereits eine Rechnung.",
+          },
+        });
         return;
       }
       const data = orderDataWithRelations(order);
@@ -309,14 +303,12 @@ export function createInvoiceRouter(
         where: { orderId: order.id },
       });
       if (existing) {
-        res
-          .status(409)
-          .json({
-            error: {
-              code: "INVOICE_ALREADY_EXISTS",
-              message: "Für diesen Auftrag existiert bereits eine Rechnung.",
-            },
-          });
+        res.status(409).json({
+          error: {
+            code: "INVOICE_ALREADY_EXISTS",
+            message: "Für diesen Auftrag existiert bereits eine Rechnung.",
+          },
+        });
         return;
       }
       const invoice = await createInvoice(input.value, order);
@@ -327,15 +319,13 @@ export function createInvoiceRouter(
         return notFound(res);
       }
       if (isUnique(error)) {
-        res
-          .status(409)
-          .json({
-            error: {
-              code: "INVOICE_CONFLICT",
-              message:
-                "Die Rechnungsnummer oder der Auftrag ist bereits einer Rechnung zugeordnet.",
-            },
-          });
+        res.status(409).json({
+          error: {
+            code: "INVOICE_CONFLICT",
+            message:
+              "Die Rechnungsnummer oder der Auftrag ist bereits einer Rechnung zugeordnet.",
+          },
+        });
         return;
       }
       next(error);
@@ -376,21 +366,19 @@ export function createInvoiceRouter(
           select: { archivedAt: true },
         });
         if (!latest) return notFound(res);
-        res
-          .status(409)
-          .json({
-            error: latest.archivedAt
-              ? {
-                  code: "INVOICE_ARCHIVED",
-                  message:
-                    "Archivierte Rechnungen müssen zuerst wiederhergestellt werden.",
-                }
-              : {
-                  code: "INVOICE_CONFLICT",
-                  message:
-                    "Die Rechnung wurde zwischenzeitlich geändert. Bitte laden Sie sie neu.",
-                },
-          });
+        res.status(409).json({
+          error: latest.archivedAt
+            ? {
+                code: "INVOICE_ARCHIVED",
+                message:
+                  "Archivierte Rechnungen müssen zuerst wiederhergestellt werden.",
+              }
+            : {
+                code: "INVOICE_CONFLICT",
+                message:
+                  "Die Rechnung wurde zwischenzeitlich geändert. Bitte laden Sie sie neu.",
+              },
+        });
         return;
       }
       if (isUnique(error)) return numberInUse(res);
@@ -452,46 +440,37 @@ function toOrderOverview(
   };
 }
 function notFound(res: Response) {
-  res
-    .status(404)
-    .json({
-      error: { code: "INVOICE_NOT_FOUND", message: "Rechnung nicht gefunden." },
-    });
+  res.status(404).json({
+    error: { code: "INVOICE_NOT_FOUND", message: "Rechnung nicht gefunden." },
+  });
 }
 function archivedOrder(res: Response) {
-  res
-    .status(409)
-    .json({
-      error: {
-        code: "ORDER_ARCHIVED",
-        message:
-          "Archivierte Aufträge müssen vor der Rechnungserstellung wiederhergestellt werden.",
-      },
-    });
+  res.status(409).json({
+    error: {
+      code: "ORDER_ARCHIVED",
+      message:
+        "Archivierte Aufträge müssen vor der Rechnungserstellung wiederhergestellt werden.",
+    },
+  });
 }
 function invalid(res: Response, message: string) {
   res.status(400).json({ error: { code: "INVALID_INVOICE", message } });
 }
 function archivedInvoice(res: Response) {
-  res
-    .status(409)
-    .json({
-      error: {
-        code: "INVOICE_ARCHIVED",
-        message:
-          "Archivierte Rechnungen müssen zuerst wiederhergestellt werden.",
-      },
-    });
+  res.status(409).json({
+    error: {
+      code: "INVOICE_ARCHIVED",
+      message: "Archivierte Rechnungen müssen zuerst wiederhergestellt werden.",
+    },
+  });
 }
 function numberInUse(res: Response) {
-  res
-    .status(409)
-    .json({
-      error: {
-        code: "INVOICE_NUMBER_IN_USE",
-        message: "Diese Rechnungsnummer wird bereits verwendet.",
-      },
-    });
+  res.status(409).json({
+    error: {
+      code: "INVOICE_NUMBER_IN_USE",
+      message: "Diese Rechnungsnummer wird bereits verwendet.",
+    },
+  });
 }
 function pageInteger(value: unknown, fallback: number): number | undefined {
   if (value === undefined) return fallback;

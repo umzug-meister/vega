@@ -34,6 +34,30 @@ test("customer tab omits the generated creation timestamp", () => {
   assert.doesNotMatch(html, /Erstellt:/u);
 });
 
+test("customer tab shows the customer's visit request beneath costs assumption", () => {
+  const html = renderCustomerTab({
+    ...createEmptyOrder(),
+    visitWanted: true,
+  });
+  const costsAssumptionLabel = html.indexOf("Kostenübernahme durch Arbeitsamt");
+  const visitNotice = html.indexOf(
+    "Der Kunde möchte wegen eines kostenlosen Besichtigungstermins kontaktiert werden.",
+  );
+
+  assert.notEqual(costsAssumptionLabel, -1);
+  assert.notEqual(visitNotice, -1);
+  assert.ok(visitNotice > costsAssumptionLabel);
+});
+
+test("customer tab hides the visit request when the customer did not ask for contact", () => {
+  const html = renderCustomerTab({
+    ...createEmptyOrder(),
+    visitWanted: false,
+  });
+
+  assert.doesNotMatch(html, /kostenlosen Besichtigungstermins kontaktiert/u);
+});
+
 test("order source menu omits legacy Express, furniture-list and Umzug Ruck Zuck entries", async () => {
   const view = await mount(
     React.createElement(CustomerTab, {

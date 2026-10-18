@@ -34,6 +34,52 @@ test("order cards use aligned responsive columns without squeezing list controls
     }),
   );
   assert.equal([...addresses.matchAll(/MuiGrid-grid-md-6/gu)].length, 2);
+  assert.equal([...addresses.matchAll(/MuiGrid-grid-xl-6/gu)].length, 2);
+  const fourAddresses = render(
+    createElement(AddressesTab, {
+      value: {
+        ...value,
+        details: {
+          ...value.details,
+          showSecondaryFrom: true,
+          secondaryFrom: createEmptyOrder().from,
+          showSecondaryTo: true,
+          secondaryTo: createEmptyOrder().to,
+        },
+      },
+      update: () => {},
+      onDetailsChange: () => {},
+    }),
+  );
+  assert.equal([...fourAddresses.matchAll(/MuiGrid-grid-md-6/gu)].length, 4);
+  assert.equal([...fourAddresses.matchAll(/MuiGrid-grid-xl-3/gu)].length, 4);
+  assert.equal([...addresses.matchAll(/MuiGrid-grid-xl-6/gu)].length, 2);
+  const allAddressCards = render(
+    createElement(AddressesTab, {
+      value: {
+        ...value,
+        details: {
+          ...value.details,
+          showSecondaryFrom: true,
+          secondaryFrom: createEmptyOrder().from,
+          showSecondaryTo: true,
+          secondaryTo: createEmptyOrder().to,
+        },
+      },
+      update: () => {},
+      onDetailsChange: () => {},
+    }),
+  );
+  assert.equal([...allAddressCards.matchAll(/MuiGrid-grid-md-6/gu)].length, 4);
+  assert.equal([...allAddressCards.matchAll(/MuiGrid-grid-xl-3/gu)].length, 4);
+  for (const label of [
+    "Beladestelle",
+    "2. Beladestelle",
+    "Entladestelle",
+    "2. Entladestelle",
+  ]) {
+    assert.ok(allAddressCards.includes(label), label);
+  }
   const furniture = render(
     createElement(FurnitureTab, {
       value,

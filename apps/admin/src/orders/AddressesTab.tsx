@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import {
   AddOutlined,
   CompareArrowsOutlined,
@@ -11,20 +11,68 @@ import {
   IconButton,
   Paper,
   Stack,
-  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
-import type { OrderDetailsInput } from "@vega/domain";
+import type { OrderDetailsInput, OrderRouteSnapshotInput } from "@vega/domain";
 import { AddressFields } from "./AddressFields.js";
 import { createEmptyAddress, type OrderFormValue } from "./order-form-types.js";
 import { RouteDistance } from "./RouteDistance.js";
+
+function AddressCard({
+  title,
+  color,
+  actions,
+  value,
+  onChange,
+  onRouteFieldBlur,
+  xlSize,
+  showApartmentDetails = true,
+}: {
+  title: string;
+  color: "error.main" | "primary.main";
+  actions: ReactNode;
+  value: OrderFormValue["from"];
+  onChange: (address: Partial<OrderFormValue["from"]>) => void;
+  onRouteFieldBlur: () => void;
+  xlSize: number;
+  showApartmentDetails?: boolean;
+}) {
+  return (
+    <Grid size={{ xs: 12, md: 6, xl: xlSize }}>
+      <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, height: "100%" }}>
+        <Stack spacing={2}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <Typography component="h2" variant="h6" color={color}>
+              {title}
+            </Typography>
+            {actions}
+          </Box>
+          <AddressFields
+            title=""
+            value={value}
+            showApartmentDetails={showApartmentDetails}
+            onRouteFieldBlur={onRouteFieldBlur}
+            onChange={onChange}
+          />
+        </Stack>
+      </Paper>
+    </Grid>
+  );
+}
 
 interface AddressesTabProps {
   value: OrderFormValue;
   update: (patch: Partial<OrderFormValue>) => void;
   onDetailsChange: (details: OrderDetailsInput) => void;
-  /** False while the order is still loading; suppresses automatic route calculation. */
+  onRouteCalculated?: (snapshot: OrderRouteSnapshotInput) => void;
+  /** False while the order is still loading; suppresses automatic calculation. */
   ready?: boolean;
 }
 
@@ -32,10 +80,11 @@ export function AddressesTab({
   value,
   update,
   onDetailsChange,
+  onRouteCalculated,
   ready = true,
 }: AddressesTabProps) {
   const { details } = value;
-  // Bumped when a route-relevant field loses focus so RouteDistance recalculates a changed address.
+  // Bumped when a route-relevant field or active stop changes.
   const [routeBlurToken, setRouteBlurToken] = useState(0);
   const signalRouteBlur = useCallback(
     () => setRouteBlurToken((token) => token + 1),
@@ -54,9 +103,7 @@ export function AddressesTab({
           showSecondaryFrom: true,
         });
       }
-      return;
-    }
-    if (details.showSecondaryTo) {
+    } else if (details.showSecondaryTo) {
       const { secondaryTo: _removed, ...rest } = details;
       onDetailsChange({ ...rest, showSecondaryTo: false });
     } else {
@@ -66,205 +113,162 @@ export function AddressesTab({
         showSecondaryTo: true,
       });
     }
+    signalRouteBlur();
   }
 
   function exchange(kind: "from" | "to") {
     if (kind === "from" && details.secondaryFrom) {
       onDetailsChange({ ...details, secondaryFrom: value.from });
       update({ from: details.secondaryFrom });
+      signalRouteBlur();
     } else if (kind === "to" && details.secondaryTo) {
       onDetailsChange({ ...details, secondaryTo: value.to });
       update({ to: details.secondaryTo });
+      signalRouteBlur();
     }
   }
+
+  const activeAddressCount =
+    2 + Number(details.showSecondaryFrom) + Number(details.showSecondaryTo);
+  const wideColumns = Math.max(3, Math.floor(12 / activeAddressCount));
 
   return (
     <Stack spacing={2}>
       <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
         <Stack spacing={1.5}>
           <Typography component="h2" variant="h6">
-            Entfernung
+            Fahrstrecke
           </Typography>
-          <TextField
-            type="number"
-            label="Entfernung in km"
-            value={details.distanceKm}
-            onChange={(event) =>
-              onDetailsChange({
-                ...details,
-                distanceKm: Math.max(0, Number(event.target.value)),
-                distanceSource: "manual",
-              })
-            }
-            slotProps={{ htmlInput: { min: 0, max: 10000, step: 1 } }}
-          />
           <RouteDistance
             value={value}
             blurToken={routeBlurToken}
             ready={ready}
-            onDistance={(distanceKm) =>
+            onRoute={(routeSnapshot) => {
               onDetailsChange({
                 ...details,
-                distanceKm,
+                distanceKm: routeSnapshot.distanceKm,
                 distanceSource: "route",
-              })
-            }
+                routeSnapshot,
+              });
+              onRouteCalculated?.(routeSnapshot);
+            }}
           />
         </Stack>
       </Paper>
+
       <Grid container spacing={2} sx={{ alignItems: "stretch" }}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Paper
-            variant="outlined"
-            sx={{ p: { xs: 2, sm: 3 }, height: "100%" }}
-          >
-            <Stack spacing={2}>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
+        <AddressCard
+          title={details.showSecondaryFrom ? "1. Beladestelle" : "Beladestelle"}
+          color="error.main"
+          value={value.from}
+          onRouteFieldBlur={signalRouteBlur}
+          xlSize={wideColumns}
+          onChange={(from) => update({ from: { ...value.from, ...from } })}
+          actions={
+            <Tooltip title="Beladestelle hinzufügen">
+              <IconButton
+                onClick={() => toggleSecondary("from")}
+                aria-label="Weitere Beladestelle umschalten"
               >
-                <Typography component="h2" variant="h6" color="error.main">
-                  {details.showSecondaryFrom
-                    ? "1. Beladestelle"
-                    : "Beladestelle"}
-                </Typography>
-                <Tooltip
-                  title={
-                    details.showSecondaryFrom
-                      ? "2. Beladestelle entfernen"
-                      : "Beladestelle hinzufügen"
-                  }
-                >
+                <AddOutlined />
+              </IconButton>
+            </Tooltip>
+          }
+        />
+        {details.showSecondaryFrom && details.secondaryFrom && (
+          <AddressCard
+            title="2. Beladestelle"
+            color="error.main"
+            value={details.secondaryFrom}
+            onRouteFieldBlur={signalRouteBlur}
+            xlSize={wideColumns}
+            onChange={(secondaryFrom) => {
+              const current = details.secondaryFrom;
+              if (current)
+                onDetailsChange({
+                  ...details,
+                  secondaryFrom: { ...current, ...secondaryFrom },
+                });
+            }}
+            actions={
+              <Stack direction="row" spacing={0.5}>
+                <Tooltip title="1. und 2. Beladestelle tauschen">
                   <IconButton
-                    color={details.showSecondaryFrom ? "error" : "success"}
+                    onClick={() => exchange("from")}
+                    aria-label="Beladestellen tauschen"
+                  >
+                    <CompareArrowsOutlined />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="2. Beladestelle entfernen">
+                  <IconButton
                     onClick={() => toggleSecondary("from")}
-                    aria-label="Weitere Beladestelle umschalten"
+                    aria-label="Zweite Beladestelle entfernen"
                   >
-                    {details.showSecondaryFrom ? (
-                      <RemoveOutlined />
-                    ) : (
-                      <AddOutlined />
-                    )}
+                    <RemoveOutlined />
                   </IconButton>
                 </Tooltip>
-              </Box>
-              <AddressFields
-                title=""
-                value={value.from}
-                onRouteFieldBlur={signalRouteBlur}
-                onChange={(from) =>
-                  update({ from: { ...value.from, ...from } })
-                }
-              />
-              {details.showSecondaryFrom && details.secondaryFrom && (
-                <>
-                  <Box sx={{ display: "flex", justifyContent: "center" }}>
-                    <Tooltip title="1. und 2. Beladestelle tauschen">
-                      <IconButton
-                        onClick={() => exchange("from")}
-                        aria-label="Beladestellen tauschen"
-                      >
-                        <CompareArrowsOutlined />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                  <AddressFields
-                    title="2. Beladestelle"
-                    value={details.secondaryFrom}
-                    onRouteFieldBlur={signalRouteBlur}
-                    onChange={(secondaryFrom) => {
-                      const current = details.secondaryFrom;
-                      if (current)
-                        onDetailsChange({
-                          ...details,
-                          secondaryFrom: { ...current, ...secondaryFrom },
-                        });
-                    }}
-                  />
-                </>
-              )}
-            </Stack>
-          </Paper>
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Paper
-            variant="outlined"
-            sx={{ p: { xs: 2, sm: 3 }, height: "100%" }}
-          >
-            <Stack spacing={2}>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
+              </Stack>
+            }
+          />
+        )}
+        <AddressCard
+          title={details.showSecondaryTo ? "1. Entladestelle" : "Entladestelle"}
+          color="primary.main"
+          value={value.to}
+          showApartmentDetails={false}
+          onRouteFieldBlur={signalRouteBlur}
+          xlSize={wideColumns}
+          onChange={(to) => update({ to: { ...value.to, ...to } })}
+          actions={
+            <Tooltip title="Entladestelle hinzufügen">
+              <IconButton
+                onClick={() => toggleSecondary("to")}
+                aria-label="Weitere Entladestelle umschalten"
               >
-                <Typography component="h2" variant="h6" color="primary.main">
-                  {details.showSecondaryTo
-                    ? "1. Entladestelle"
-                    : "Entladestelle"}
-                </Typography>
-                <Tooltip
-                  title={
-                    details.showSecondaryTo
-                      ? "2. Entladestelle entfernen"
-                      : "Entladestelle hinzufügen"
-                  }
-                >
+                <AddOutlined />
+              </IconButton>
+            </Tooltip>
+          }
+        />
+        {details.showSecondaryTo && details.secondaryTo && (
+          <AddressCard
+            title="2. Entladestelle"
+            color="primary.main"
+            value={details.secondaryTo}
+            showApartmentDetails={false}
+            onRouteFieldBlur={signalRouteBlur}
+            xlSize={wideColumns}
+            onChange={(secondaryTo) => {
+              const current = details.secondaryTo;
+              if (current)
+                onDetailsChange({
+                  ...details,
+                  secondaryTo: { ...current, ...secondaryTo },
+                });
+            }}
+            actions={
+              <Stack direction="row" spacing={0.5}>
+                <Tooltip title="1. und 2. Entladestelle tauschen">
                   <IconButton
-                    color={details.showSecondaryTo ? "error" : "success"}
-                    onClick={() => toggleSecondary("to")}
-                    aria-label="Weitere Entladestelle umschalten"
+                    onClick={() => exchange("to")}
+                    aria-label="Entladestellen tauschen"
                   >
-                    {details.showSecondaryTo ? (
-                      <RemoveOutlined />
-                    ) : (
-                      <AddOutlined />
-                    )}
+                    <CompareArrowsOutlined />
                   </IconButton>
                 </Tooltip>
-              </Box>
-              <AddressFields
-                title=""
-                value={value.to}
-                showApartmentDetails={false}
-                onRouteFieldBlur={signalRouteBlur}
-                onChange={(to) => update({ to: { ...value.to, ...to } })}
-              />
-              {details.showSecondaryTo && details.secondaryTo && (
-                <>
-                  <Box sx={{ display: "flex", justifyContent: "center" }}>
-                    <Tooltip title="1. und 2. Entladestelle tauschen">
-                      <IconButton
-                        onClick={() => exchange("to")}
-                        aria-label="Entladestellen tauschen"
-                      >
-                        <CompareArrowsOutlined />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                  <AddressFields
-                    title="2. Entladestelle"
-                    value={details.secondaryTo}
-                    showApartmentDetails={false}
-                    onRouteFieldBlur={signalRouteBlur}
-                    onChange={(secondaryTo) => {
-                      const current = details.secondaryTo;
-                      if (current)
-                        onDetailsChange({
-                          ...details,
-                          secondaryTo: { ...current, ...secondaryTo },
-                        });
-                    }}
-                  />
-                </>
-              )}
-            </Stack>
-          </Paper>
-        </Grid>
+                <Tooltip title="2. Entladestelle entfernen">
+                  <IconButton
+                    onClick={() => toggleSecondary("to")}
+                    aria-label="Zweite Entladestelle entfernen"
+                  >
+                    <RemoveOutlined />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+            }
+          />
+        )}
       </Grid>
     </Stack>
   );

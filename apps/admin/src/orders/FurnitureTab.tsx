@@ -545,7 +545,6 @@ export function FurnitureTab({
                       <Grid size={{ xs: 2, sm: 1 }}>
                         <IconButton
                           size="small"
-                          color="error"
                           aria-label="Möbelposition löschen"
                           onClick={() =>
                             updateFurniture({

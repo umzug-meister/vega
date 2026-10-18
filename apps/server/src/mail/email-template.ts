@@ -12,17 +12,31 @@ p { margin-block-start: 0.6rem; margin-block-end: 0.6rem; } table { width: 100%;
 .image-container { text-align: center; padding: 10px; } .image { max-width: 100%; height: auto; } .container { max-width: 700px; margin: 0 auto; background: #ececed3b; } .content, .footer { padding: 0.8rem; }
 .footer { color: #a8a8a8; background-color: #363636; font-size: 0.8rem; } .footer a { color: #a8a8a8; } .footer a:hover { color: #ffffff; } .rating { color: #ea5b27; } .centered { text-align: center; }
 .ql-align-right { text-align: right; } .ql-align-center { text-align: center; }
-</style></head><body><div class="container"><div class="image-container"><img class="image" alt="Umzug Ruck Zuck" src="https://umzugruckzuck24.de/wp-content/uploads/2026/06/Logo-147.svg" /></div><div class="content">{{content}}<br /><p>Freundliche Grüße, <br />{{signature}}Ihr Umzug Ruck Zuck Team.</p></div><div class="footer"><p class="centered">Mobil: 0176 101 719 90</p><p class="centered">Telefon: 089 306 429 72</p><p class="centered"><a href="https://umzugruckzuck24.de">umzugruckzuck24.de</a></p><p class="centered">© Umzug Ruck Zuck. Alle Rechte vorbehalten.</p></div></div></body></html>`;
+</style></head><body><div class="container"><div class="image-container"><img class="image" style="width: 360px" alt="Umzug Ruck Zuck" src="https://umzugruckzuck24.de/wp-content/uploads/2026/06/Logo-147.svg" /></div><div class="content">{{content}}<br /><p>Freundliche Grüße, <br />{{signature}}Ihr Umzug Ruck Zuck Team.</p></div><div class="footer"><p class="centered">Mobil: 0176 101 719 90</p><p class="centered">Telefon: 089 306 429 72</p><p class="centered"><a href="https://umzugruckzuck24.de">umzugruckzuck24.de</a></p><p class="centered">© Umzug Ruck Zuck. Alle Rechte vorbehalten.</p></div></div></body></html>`;
 
 export function escapeHtml(value: string): string {
-  return value.replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]!);
+  return value.replace(
+    /[&<>'"]/g,
+    (character) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[
+        character
+      ]!,
+  );
 }
 
 /** `signatureName` is the sending staff member's name shown above the team greeting. */
-export function renderEmailLayout(contentHtml: string, signatureName?: string | null): string {
-  const signature = signatureName?.trim() ? `${escapeHtml(signatureName.trim())}<br />` : "";
+export function renderEmailLayout(
+  contentHtml: string,
+  signatureName?: string | null,
+  signatureColor: "#000000" | "#28527A" | "#CB722F" = "#000000",
+): string {
+  const name = signatureName?.trim();
+  const signature = `<span style="color:${signatureColor}">Freundliche Grüße, <br />${name ? `${escapeHtml(name)}<br />` : ""}Ihr Umzug Ruck Zuck Team.</span>`;
   // Function replacers: `$` sequences in user content must not be interpreted as patterns.
-  return EMAIL_LAYOUT.replace("{{signature}}", () => signature).replace("{{content}}", () => sanitizeEmailHtml(contentHtml));
+  return EMAIL_LAYOUT.replace(
+    "Freundliche Grüße, <br />{{signature}}Ihr Umzug Ruck Zuck Team.",
+    () => signature,
+  ).replace("{{content}}", () => sanitizeEmailHtml(contentHtml));
 }
 
 /**
@@ -37,12 +51,41 @@ export function renderEmailLayout(contentHtml: string, signatureName?: string | 
  * double-unescape attacker input.
  */
 // colgroup/col/th and colspan/rowspan are emitted by the admin rich-text table extension.
-const EMAIL_ALLOWED_TAGS = ["a", "b", "br", "col", "colgroup", "div", "em", "h1", "h2", "h3", "i", "li", "ol", "p", "span", "strong", "table", "tbody", "td", "th", "thead", "tr", "u", "ul"];
+const EMAIL_ALLOWED_TAGS = [
+  "a",
+  "b",
+  "br",
+  "col",
+  "colgroup",
+  "div",
+  "em",
+  "h1",
+  "h2",
+  "h3",
+  "i",
+  "li",
+  "ol",
+  "p",
+  "span",
+  "strong",
+  "table",
+  "tbody",
+  "td",
+  "th",
+  "thead",
+  "tr",
+  "u",
+  "ul",
+];
 
 export function sanitizeEmailHtml(html: string): string {
   return sanitizeHtml(html, {
     allowedTags: EMAIL_ALLOWED_TAGS,
-    allowedAttributes: { a: ["href"], td: ["colspan", "rowspan"], th: ["colspan", "rowspan"] },
+    allowedAttributes: {
+      a: ["href"],
+      td: ["colspan", "rowspan"],
+      th: ["colspan", "rowspan"],
+    },
     allowedSchemes: ["http", "https", "mailto"],
     allowProtocolRelative: false,
   });
@@ -55,7 +98,11 @@ export function htmlToPlainText(html: string): string {
   return text.replace(/\n{3,}/g, "\n\n").trim();
 }
 
-export function passwordResetEmail(url: string): { subject: string; contentHtml: string; text: string } {
+export function passwordResetEmail(url: string): {
+  subject: string;
+  contentHtml: string;
+  text: string;
+} {
   const safeUrl = escapeHtml(url);
   return {
     subject: "Passwort zurücksetzen",

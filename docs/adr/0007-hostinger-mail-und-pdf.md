@@ -30,6 +30,12 @@
   (`User.signatureName`). Er wird beim Einreihen in `EmailOutbox.signatureName`
   übernommen und im Grußblock der Mailhülle über „Ihr Umzug Ruck Zuck Team“
   gesetzt. Ohne Signaturnamen bleibt der Standardgruß.
+- Mitarbeitende wählen zusätzlich Schwarz (`#000000`, Standard), Vega-Blau
+  (`#28527A`) oder Orange (`#CB722F`) als Signaturfarbe. Der erlaubte Farbwert wird in
+  `User.signatureColor` gespeichert und beim Einreihen in
+  `EmailOutbox.signatureColor` eingefroren, damit Retry-Mails dieselbe Farbe
+  behalten. Die Farbe wird auf den vollständigen Grußblock einschließlich
+  Signaturname und Teamname angewendet.
 
 ## Folgen
 

@@ -155,12 +155,12 @@ export function offerEmail(input: {
   const html = [
     `<p>Bitte halten Sie bei Rückfragen folgende Nummer bereit: <strong>${referenceNumber}</strong></p>`,
     `<p>${escapeHtml(salutationLine(data.customer))}</p>`,
-    `<p>Vielen Dank für Ihre Anfrage. Gerne übernehmen wir Ihren Umzug <strong>${escapeHtml(appointment(data))}</strong> und freuen uns, Ihnen folgende Positionen anbieten zu können.</p>`,
+    `<p>vielen Dank für Ihre Anfrage. Gerne übernehmen wir Ihren Umzug <strong>${escapeHtml(appointment(data))}</strong><br/>und freuen uns, Ihnen folgende Positionen anbieten zu können.</p>`,
     volume > 0
-      ? `<p>Berechnetes Umzugsvolumen: ${escapeHtml(amount(volume))} m³</p>`
+      ? `<p><strong>Berechnetes Umzugsvolumen: ${escapeHtml(amount(volume))} m³</strong></p>`
       : "",
     `<p><strong>Unser Kostenvoranschlag ist bis zum ${offerValidUntil(now)} gültig.</strong> ${secondOption ? "Im Anhang finden Sie beide Aufträge." : "Im Anhang finden Sie den Auftrag."}</p>`,
-    "<p><strong>Sollten Sie unser Angebot annehmen und die Durchführung des Umzugs beauftragen wollen, bitten wir Sie um eine kurze Bestätigung per E-Mail.</strong> Das Unterschreiben des Auftrages ist hierfür nicht erforderlich.</p>",
+    "<p><strong>Sollten Sie unser Angebot annehmen, bitten wir Sie um eine kurze Bestätigung per E-Mail.</strong> Das Unterschreiben des Auftrages ist hierfür nicht erforderlich.</p>",
     secondOption ? "<h2>1. Option</h2>" : "",
     optionHtml(option),
     secondOption ? `<h2>2. Option</h2>${optionHtml(secondOption)}` : "",

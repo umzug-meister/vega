@@ -1,0 +1,5 @@
+ALTER TABLE `user`
+  ADD COLUMN `signatureColor` VARCHAR(7) NOT NULL DEFAULT '#000000';
+
+ALTER TABLE `emailOutbox`
+  ADD COLUMN `signatureColor` VARCHAR(7) NULL;

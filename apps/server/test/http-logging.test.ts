@@ -144,7 +144,16 @@ test("unexpected server failures remain visible without serializing error messag
     reached = true;
     throw Object.assign(
       new Error(confidential, { cause: new Error(confidential) }),
-      { body: confidential, password: confidential },
+      {
+        code: "P2002",
+        meta: {
+          modelName: "Order",
+          target: ["orderNumber"],
+          arguments: confidential,
+        },
+        body: confidential,
+        password: confidential,
+      },
     );
   });
   context.after(() => {
@@ -161,6 +170,17 @@ test("unexpected server failures remain visible without serializing error messag
   const failure = records.find((record) => record.msg === "request failed");
   assert.equal(failure?.code, "INTERNAL_SERVER_ERROR");
   assert.equal(failure?.level, 50);
+  assert.equal(failure?.errorName, "Error");
+  assert.equal(failure?.errorCode, "P2002");
+  assert.deepEqual(failure?.prismaMeta, {
+    modelName: "Order",
+    target: ["orderNumber"],
+  });
+  assert.ok(
+    failure?.errorFrames?.some((frame: string) =>
+      frame.startsWith("apps/server/src/"),
+    ),
+  );
   assert.ok(records.every((record) => record.level >= 40));
   assert.ok(records.every((record) => record.msg !== "request completed"));
   assert.ok(!logs.join("").includes(confidential));

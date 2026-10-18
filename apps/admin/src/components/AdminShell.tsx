@@ -679,9 +679,7 @@ export function AdminShell({
                     <ListItemIcon>
                       <FormatListNumberedOutlined />
                     </ListItemIcon>
-                    {!sidebarCollapsed && (
-                      <ListItemText primary="Aufträge" />
-                    )}
+                    {!sidebarCollapsed && <ListItemText primary="Aufträge" />}
                   </ListItemButton>
                   {isAdmin && (
                     <ListItemButton

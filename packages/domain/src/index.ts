@@ -108,6 +108,20 @@ export interface OrderConditionInput {
     | "packaging";
 }
 
+export interface OrderRouteLegInput {
+  distanceKm: number;
+  durationMinutes: number;
+}
+
+export interface OrderRouteSnapshotInput {
+  calculatedAt: string;
+  origin: string;
+  addresses: string[];
+  distanceKm: number;
+  durationMinutes: number;
+  legs: OrderRouteLegInput[];
+}
+
 export interface OrderPricingSnapshot {
   version: 1;
   calculatedAt: string;
@@ -147,6 +161,7 @@ export interface OrderDetailsInput {
   showSecondaryTo: boolean;
   distanceKm: number;
   distanceSource?: "manual" | "route";
+  routeSnapshot?: OrderRouteSnapshotInput;
   furniture: {
     volume: number;
     volumeComplete?: boolean;

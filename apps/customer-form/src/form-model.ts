@@ -159,9 +159,7 @@ export function initialDraft(): FormDraft {
   };
 }
 export function suggestVisit(draft: FormDraft) {
-  return (
-    draft.from.movementObject === "Haus" || Number(draft.from.roomsNumber) >= 4
-  );
+  return draft.from.movementObject === "Haus";
 }
 export function validateStep(draft: FormDraft, step: number): string | null {
   const missing = (label: string) =>

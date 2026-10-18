@@ -25,10 +25,26 @@ async function editor(
   {
     fresh = false,
     initialData = input,
+    routeConfig = { origin: null, available: false },
+    routeResult = {
+      distanceKm: 12,
+      durationMinutes: 30,
+      legs: [
+        { distanceKm: 4, durationMinutes: 10 },
+        { distanceKm: 4, durationMinutes: 10 },
+        { distanceKm: 4, durationMinutes: 10 },
+      ],
+    },
     write,
   }: {
     fresh?: boolean;
     initialData?: CreateOrderInput;
+    routeConfig?: { origin: string | null; available: boolean };
+    routeResult?: {
+      distanceKm: number;
+      durationMinutes: number;
+      legs: Array<{ distanceKm: number; durationMinutes: number }>;
+    };
     write: (body: Record<string, unknown>, method: string) => Response;
   },
 ) {
@@ -38,6 +54,10 @@ async function editor(
     "fetch",
     async (url: string | URL | Request, init?: RequestInit) => {
       const path = String(url);
+      if (path === "/api/admin/routes/config")
+        return json({ data: routeConfig });
+      if (path === "/api/admin/routes/distance")
+        return json({ data: routeResult });
       if (init?.method === "PUT" || init?.method === "POST") {
         return write(
           JSON.parse(String(init.body)) as Record<string, unknown>,
@@ -55,8 +75,6 @@ async function editor(
           },
         });
       if (path.endsWith("/family")) return json({ data: { items: [] } });
-      if (path === "/api/admin/routes/config")
-        return json({ data: { origin: null, available: false } });
       return json({ data: [] });
     },
   );
@@ -118,6 +136,78 @@ async function editor(
   assert.ok(firstName && save);
   return { ...view, firstName, save, events };
 }
+
+test("automatically calculated route distances and durations are persisted on the order", async (context) => {
+  const initialData: CreateOrderInput = {
+    ...input,
+    details: createEmptyOrder().details,
+  };
+  const writes: Array<{ body: Record<string, unknown>; method: string }> = [];
+  const view = await editor(context, {
+    initialData,
+    routeConfig: { origin: "Depot 1, 80331 München", available: true },
+    routeResult: {
+      distanceKm: 12,
+      durationMinutes: 31,
+      legs: [
+        { distanceKm: 4, durationMinutes: 10 },
+        { distanceKm: 4, durationMinutes: 11 },
+        { distanceKm: 4, durationMinutes: 10 },
+      ],
+    },
+    write: (body, method) => {
+      writes.push({ body, method });
+      const data = { ...body };
+      delete data.revision;
+      return json({
+        data: {
+          orderNumber: 1000,
+          revision: 8,
+          data,
+          archivedAt: null,
+          isCopy: false,
+        },
+      });
+    },
+  });
+
+  await view.flush();
+
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0]?.method, "PUT");
+  assert.equal(writes[0]?.body.revision, 7);
+  const details = writes[0]?.body.details as CreateOrderInput["details"];
+  assert.equal(details?.distanceKm, 12);
+  assert.equal(details?.distanceSource, "route");
+  assert.deepEqual(
+    {
+      distanceKm: details?.routeSnapshot?.distanceKm,
+      durationMinutes: details?.routeSnapshot?.durationMinutes,
+      legs: details?.routeSnapshot?.legs,
+      origin: details?.routeSnapshot?.origin,
+      addresses: details?.routeSnapshot?.addresses,
+    },
+    {
+      distanceKm: 12,
+      durationMinutes: 31,
+      legs: [
+        { distanceKm: 4, durationMinutes: 10 },
+        { distanceKm: 4, durationMinutes: 11 },
+        { distanceKm: 4, durationMinutes: 10 },
+      ],
+      origin: "Depot 1, 80331 München",
+      addresses: [
+        "First street 1, 80331 Munich",
+        "Second street 2, 80333 Munich",
+      ],
+    },
+  );
+  assert.ok(Number.isFinite(Date.parse(details!.routeSnapshot!.calculatedAt)));
+  assert.equal(
+    view.container.querySelector("[data-dirty]")?.getAttribute("data-dirty"),
+    "false",
+  );
+});
 
 test("order conflict keeps the edited fields, dirty state and original expected revision", async (context) => {
   const requests: Record<string, unknown>[] = [];
@@ -268,6 +358,77 @@ test("saving an order drops service and packing rows missing a name or unit pric
     view.container.querySelector("output")?.getAttribute("data-dirty"),
     "false",
   );
+});
+
+test("saving an order removes blank furniture rows and keeps named furniture", async (context) => {
+  const initialData: CreateOrderInput = {
+    ...input,
+    details: {
+      ...createEmptyOrder().details,
+      furniture: {
+        ...createEmptyOrder().details.furniture,
+        items: [
+          { name: "  ", quantity: 1, volume: 0 },
+          { name: "Sofa", quantity: 1, volume: 2 },
+          { name: "", quantity: 2, volume: 0 },
+        ],
+      },
+    },
+  };
+  let savedFurniture: unknown;
+  const view = await editor(context, {
+    initialData,
+    write: (body) => {
+      savedFurniture = (body.details as CreateOrderInput["details"])!.furniture
+        .items;
+      const savedData = { ...body };
+      delete savedData.revision;
+      return json({
+        data: { orderNumber: 1000, revision: 8, data: savedData },
+      });
+    },
+  });
+
+  await view.click(view.save);
+
+  assert.deepEqual(savedFurniture, [{ name: "Sofa", quantity: 1, volume: 2 }]);
+  assert.equal(
+    view.container.querySelector("output")?.getAttribute("data-dirty"),
+    "false",
+  );
+});
+
+test("saving an order removes unnamed furniture rows and preserves named rows", async (context) => {
+  const initialData: CreateOrderInput = {
+    ...input,
+    details: {
+      ...createEmptyOrder().details,
+      furniture: {
+        ...createEmptyOrder().details.furniture,
+        items: [
+          { name: " ", quantity: 1, volume: 0 },
+          { name: "Sofa", quantity: 1, volume: 2 },
+        ],
+      },
+    },
+  };
+  let savedItems: unknown;
+  const view = await editor(context, {
+    initialData,
+    write: (body) => {
+      savedItems = (body.details as CreateOrderInput["details"])!.furniture
+        .items;
+      const savedData = { ...body };
+      delete savedData.revision;
+      return json({
+        data: { orderNumber: 1000, revision: 8, data: savedData },
+      });
+    },
+  });
+
+  await view.click(view.save);
+
+  assert.deepEqual(savedItems, [{ name: "Sofa", quantity: 1, volume: 2 }]);
 });
 
 test("saving changed pricing inputs warns to review and recalculate order positions", async (context) => {

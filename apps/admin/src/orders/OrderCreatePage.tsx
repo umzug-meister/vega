@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Stack } from "@mui/material";
 import type {
   AdminOrderDetail,
@@ -6,6 +6,7 @@ import type {
   CreateOrderResult,
   OrderDetailsInput,
   OrderPricingPreview,
+  OrderRouteSnapshotInput,
 } from "@vega/domain";
 import { AdminAlert as Alert } from "../components/AdminNotifications.js";
 import { useAdminNotification } from "../components/AdminNotifications.js";
@@ -51,6 +52,12 @@ export function orderForSave(value: OrderFormValue): OrderFormValue {
     ...value,
     details: {
       ...value.details,
+      furniture: {
+        ...value.details.furniture,
+        items: value.details.furniture.items.filter(
+          (item) => item.name.trim().length > 0,
+        ),
+      },
       extras: {
         ...value.details.extras,
         services: value.details.extras.services.filter(
@@ -89,6 +96,7 @@ export function OrderCreatePage({
   orderNumber,
 }: OrderCreatePageProps) {
   const [value, setValue] = useState(createEmptyOrder);
+  const valueRef = useRef(value);
   const [activeTab, setActiveTab] = useState(0);
   const [busy, setBusy] = useState(false);
   const [pricingBusy, setPricingBusy] = useState(false);
@@ -97,6 +105,8 @@ export function OrderCreatePage({
   const [loading, setLoading] = useState(orderNumber !== undefined);
   const [loadFailed, setLoadFailed] = useState(false);
   const [revision, setRevision] = useState<number | null>(null);
+  const revisionRef = useRef<number | null>(null);
+  const routeSaveInFlight = useRef(false);
 
   useEffect(() => {
     onBusyChange(loading || busy || loadFailed);
@@ -108,6 +118,7 @@ export function OrderCreatePage({
     setLoading(true);
     setLoadFailed(false);
     setRevision(null);
+    revisionRef.current = null;
     setError(null);
     void fetch(`/api/admin/orders/${orderNumber}`, {
       credentials: "same-origin",
@@ -133,7 +144,10 @@ export function OrderCreatePage({
           return;
         }
         setRevision(body.data.revision);
-        setValue(toFormValue(body.data.data));
+        revisionRef.current = body.data.revision;
+        const loaded = toFormValue(body.data.data);
+        valueRef.current = loaded;
+        setValue(loaded);
         onCopyChange?.(body.data.isCopy);
         onDirtyChange(false);
       })
@@ -152,17 +166,88 @@ export function OrderCreatePage({
   }, [navigate, onCopyChange, onDirtyChange, orderNumber]);
 
   function update(patch: Partial<OrderFormValue>) {
-    setValue((current) => ({ ...current, ...patch }));
+    const next = { ...valueRef.current, ...patch };
+    valueRef.current = next;
+    setValue(next);
     onDirtyChange(true);
   }
 
   function updateDetails(details: OrderDetailsInput) {
-    setValue((current) => ({ ...current, details }));
+    const next = { ...valueRef.current, details };
+    valueRef.current = next;
+    setValue(next);
     onDirtyChange(true);
   }
 
+  async function persistRouteSnapshot(snapshot: OrderRouteSnapshotInput) {
+    const current = valueRef.current;
+    const next: OrderFormValue = {
+      ...current,
+      details: {
+        ...current.details,
+        distanceKm: snapshot.distanceKm,
+        distanceSource: "route",
+        routeSnapshot: snapshot,
+      },
+    };
+    valueRef.current = next;
+    setValue(next);
+    onDirtyChange(true);
+
+    // New orders have no server record yet; their route snapshot is included in
+    // the initial order save. Existing orders persist every recalculated route.
+    const expectedRevision = revisionRef.current;
+    if (orderNumber === undefined || expectedRevision === null) return;
+    if (routeSaveInFlight.current) return;
+
+    routeSaveInFlight.current = true;
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/orders/${orderNumber}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ ...next, revision: expectedRevision }),
+      });
+      const body = (await response.json()) as {
+        data?: AdminOrderDetail;
+        error?: {
+          message?: string;
+          issues?: Array<{ field: string; message: string }>;
+        };
+      };
+      if (!response.ok || !body.data) {
+        const message =
+          body.error?.issues?.map((issue) => issue.message).join(" · ") ||
+          body.error?.message ||
+          "Die berechnete Fahrstrecke konnte nicht gespeichert werden.";
+        setError(message);
+        return;
+      }
+      revisionRef.current = body.data.revision;
+      setRevision(body.data.revision);
+      if (valueRef.current === next) {
+        const saved = toFormValue(body.data.data);
+        valueRef.current = saved;
+        setValue(saved);
+        onDirtyChange(false);
+      }
+      notify("success", "Fahrstrecke und Fahrzeiten wurden gespeichert.");
+    } catch (reason) {
+      setError(
+        reason instanceof Error && !(reason instanceof TypeError)
+          ? reason.message
+          : "Die berechnete Fahrstrecke konnte nicht gespeichert werden. Bitte speichern Sie den Auftrag erneut.",
+      );
+    } finally {
+      routeSaveInFlight.current = false;
+      setBusy(false);
+    }
+  }
+
   async function save(): Promise<boolean> {
-    const saveValue = orderForSave(value);
+    const saveValue = orderForSave(valueRef.current);
     const pricingNeedsReview = hasPricingInputsChanged(saveValue);
     const response = await fetch(
       orderNumber === undefined
@@ -217,7 +302,10 @@ export function OrderCreatePage({
     } else {
       const saved = body.data as AdminOrderDetail;
       setRevision(saved.revision);
-      setValue(toFormValue(saved.data));
+      revisionRef.current = saved.revision;
+      const savedValue = toFormValue(saved.data);
+      valueRef.current = savedValue;
+      setValue(savedValue);
       onDirtyChange(false);
       notify(
         pricingNeedsReview ? "warning" : "success",
@@ -261,11 +349,16 @@ export function OrderCreatePage({
         )
       )
         return;
-      setValue((current) => ({
-        ...current,
+      const next = {
+        ...valueRef.current,
         pricingSnapshot: preview.pricingSnapshot,
-        details: { ...current.details, conditions: preview.conditions },
-      }));
+        details: {
+          ...valueRef.current.details,
+          conditions: preview.conditions,
+        },
+      };
+      valueRef.current = next;
+      setValue(next);
       onDirtyChange(true);
       notify(
         "success",
@@ -393,6 +486,7 @@ export function OrderCreatePage({
             ready={!loading}
             update={update}
             onDetailsChange={updateDetails}
+            onRouteCalculated={persistRouteSnapshot}
           />
         </div>
         <div
