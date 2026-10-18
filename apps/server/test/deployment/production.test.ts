@@ -16,7 +16,7 @@ test("built single-process deployment serves API, both frontends and absolute lo
   assert.ok(address && typeof address !== "string");
   const port = address.port;
   await new Promise<void>((resolve, reject) => probe.close((error) => error ? reject(error) : resolve()));
-  const child = spawn(process.execPath, ["apps/server/dist/main.js"], {
+  const child = spawn(process.execPath, ["server.js"], {
     cwd: root, stdio: ["ignore", "pipe", "pipe"],
     env: {
       ...process.env, NODE_ENV: "production", HOST: "127.0.0.1", PORT: String(port),

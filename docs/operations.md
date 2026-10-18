@@ -8,31 +8,31 @@ Betriebswissen für Entwicklung und Hostinger-Betrieb. Fachregeln stehen in
 Alle Werte sind serverseitige Runtime-Variablen (Vorlage: `.env.example`). Keine
 Domains oder Secrets in Vite-Builds.
 
-| Variable | Zweck |
-|---|---|
-| `DATABASE_URL` | MySQL/MariaDB-URL für Prisma-CLI und Server |
-| `APP_BASE_URL`, `BETTER_AUTH_URL` | Öffentliche Basis-URL der App |
-| `BETTER_AUTH_SECRET` | Zufälliges Secret, mindestens 32 Zeichen (`openssl rand -base64 32`) |
-| `BETTER_AUTH_TRUSTED_ORIGINS` | Exakte Admin-Origins |
-| `CORS_ALLOWED_ORIGINS` | Exakte Origins inkl. WordPress/Kundenformular; in Produktion HTTPS |
-| `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD` | Nur für den einmaligen Seed, danach entfernen |
-| `HOSTINGER_MAIL_API_TOKEN`, `HOSTINGER_MAILBOX_RESOURCE_ID` | Mailversand; ohne sie antwortet Versand mit `503 MAIL_NOT_CONFIGURED` |
-| `HOSTINGER_MAIL_API_BASE_URL` | Optional, Standard `https://api.mail.hostinger.com` |
-| `GOOGLE_MAPS_API_KEY` | Places-Proxy und Admin-Route; ohne Key bleibt manuelle Eingabe |
-| `GCS_BUCKET`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_APPLICATION_CREDENTIALS` | Bild-Uploads (siehe `gcs-bucket-setup.md`) |
+| Variable                                                               | Zweck                                                                 |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `DATABASE_URL`                                                         | MySQL/MariaDB-URL für Prisma-CLI und Server                           |
+| `APP_BASE_URL`, `BETTER_AUTH_URL`                                      | Öffentliche Basis-URL der App                                         |
+| `BETTER_AUTH_SECRET`                                                   | Zufälliges Secret, mindestens 32 Zeichen (`openssl rand -base64 32`)  |
+| `BETTER_AUTH_TRUSTED_ORIGINS`                                          | Exakte Admin-Origins                                                  |
+| `CORS_ALLOWED_ORIGINS`                                                 | Exakte Origins inkl. WordPress/Kundenformular; in Produktion HTTPS    |
+| `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD`                        | Nur für den einmaligen Seed, danach entfernen                         |
+| `HOSTINGER_MAIL_API_TOKEN`, `HOSTINGER_MAILBOX_RESOURCE_ID`            | Mailversand; ohne sie antwortet Versand mit `503 MAIL_NOT_CONFIGURED` |
+| `HOSTINGER_MAIL_API_BASE_URL`                                          | Optional, Standard `https://api.mail.hostinger.com`                   |
+| `GOOGLE_MAPS_API_KEY`                                                  | Places-Proxy und Admin-Route; ohne Key bleibt manuelle Eingabe        |
+| `GCS_BUCKET`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_APPLICATION_CREDENTIALS` | Bild-Uploads (siehe `gcs-bucket-setup.md`)                            |
 
 `localhost` und `127.0.0.1` sind unterschiedliche Origins. Der Kundenformular-Origin
 gehört nur in `CORS_ALLOWED_ORIGINS`. Nach Änderungen an `.env` den Server neu starten.
 
 ### `DATABASE_URL`-Optionen
 
-| Option | Verhalten |
-|---|---|
-| `connection_limit` | Standard 5 |
-| `connect_timeout` | Sekunden, Standard 5 |
-| `pool_timeout` | Sekunden, Standard 10 |
-| `sslaccept=strict` | TLS mit Zertifikatsprüfung |
-| `sslcert` | Pfad zur CA-Datei; aktiviert TLS |
+| Option             | Verhalten                        |
+| ------------------ | -------------------------------- |
+| `connection_limit` | Standard 5                       |
+| `connect_timeout`  | Sekunden, Standard 5             |
+| `pool_timeout`     | Sekunden, Standard 10            |
+| `sslaccept=strict` | TLS mit Zertifikatsprüfung       |
+| `sslcert`          | Pfad zur CA-Datei; aktiviert TLS |
 
 Unbekannte/doppelte Optionen, Timeouts `0` und `sslaccept=accept_invalid_certs`
 werden abgewiesen. Credentials in der URL prozentkodieren.
@@ -132,6 +132,14 @@ den Mailreset nutzen – ohne Mailversand ist das ein Betriebsblocker, kein Grun
 für einen neuen Seed.
 
 ## Tests
+
+Nach `npm ci` baut ein separates `npm run build` Prisma-Client, Domain,
+Server und beide Frontends; kein automatischer Root-`postinstall`-Build.
+Build-Tools werden über `.npmrc`
+(`include=dev`) auch bei einer Produktionsinstallation installiert. Hostingers
+Express-Eingabedatei ist die versionierte Root-Datei `server.js`; `npm start`
+nutzt denselben Einstieg. Keine Builds oder Migrationen beim Serverstart.
+Details: [Hostinger-Setup](./hostinger-setup.md#3-nodejs-app-und-quellcode-bereitstellen).
 
 ```sh
 npm run typecheck && npm run lint && npm test && npm run build

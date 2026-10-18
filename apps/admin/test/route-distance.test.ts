@@ -594,16 +594,21 @@ test("destination address hides apartment details that customers do not provide"
 
 test("zero rooms-to-relocate defaults to an empty numeric field", async (context) => {
   context.mock.method(globalThis, "fetch", async () => json({ data: [] }));
-  const app = await mount(React.createElement(AddressFields, {
-    title: "Beladestelle",
-    value: completeOrder().from,
-    onChange: () => {},
-  }));
+  const app = await mount(
+    React.createElement(AddressFields, {
+      title: "Beladestelle",
+      value: completeOrder().from,
+      onChange: () => {},
+    }),
+  );
   try {
-    const label = [...app.container.querySelectorAll(".MuiInputLabel-root")]
-      .find((entry) => entry.textContent?.trim() === "Zimmer zum Umziehen");
+    const label = [
+      ...app.container.querySelectorAll(".MuiInputLabel-root"),
+    ].find((entry) => entry.textContent?.trim() === "Zimmer zum Umziehen");
     assert.ok(label);
-    const input = app.container.querySelector<HTMLInputElement>(`#${label.htmlFor}`);
+    const input = app.container.querySelector<HTMLInputElement>(
+      `#${label.htmlFor}`,
+    );
     assert.ok(input);
     assert.equal(input.value, "");
   } finally {
@@ -619,29 +624,47 @@ test("house address shows the customer-form floor choices as multi-select toggle
       movementObject: "Haus" as const,
       stockwerke: ["EG"],
     });
-    return React.createElement(React.Fragment, null,
+    return React.createElement(
+      React.Fragment,
+      null,
       React.createElement(AddressFields, {
         title: "Beladestelle",
         value: address,
-        onChange: (patch) => setAddress((current) => ({ ...current, ...patch })),
+        onChange: (patch) =>
+          setAddress((current) => ({ ...current, ...patch })),
       }),
-      React.createElement("output", { "data-testid": "selected-floors" }, address.stockwerke?.join(",")),
+      React.createElement(
+        "output",
+        { "data-testid": "selected-floors" },
+        address.stockwerke?.join(","),
+      ),
     );
   }
 
   const app = await mount(React.createElement(HouseHarness));
   try {
-    assert.ok(app.container.querySelector('[aria-label="Stockwerke auswählen"]'));
+    assert.ok(
+      app.container.querySelector('[aria-label="Stockwerke auswählen"]'),
+    );
     for (const floor of ["UG", "EG", "1.OG", "2.OG"]) {
       assert.ok(app.container.querySelector(`[aria-label="${floor}"]`));
     }
-    assert.equal(app.container.querySelector('label[for]')?.textContent?.includes("Etage"), false);
+    assert.equal(
+      app.container.querySelector("label[for]")?.textContent?.includes("Etage"),
+      false,
+    );
     assert.equal(app.container.querySelectorAll("[role=combobox]").length, 4);
 
-    const upperFloor = app.container.querySelector<HTMLButtonElement>('[aria-label="1.OG"]');
+    const upperFloor = app.container.querySelector<HTMLButtonElement>(
+      '[aria-label="1.OG"]',
+    );
     assert.ok(upperFloor);
     await app.click(upperFloor);
-    assert.equal(app.container.querySelector('[data-testid="selected-floors"]')?.textContent, "EG,1.OG");
+    assert.equal(
+      app.container.querySelector('[data-testid="selected-floors"]')
+        ?.textContent,
+      "EG,1.OG",
+    );
   } finally {
     await app.cleanup();
   }
