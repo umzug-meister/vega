@@ -10,6 +10,11 @@ import {
 import { consumePublicApiRateLimit } from "../src/public-rate-limit.js";
 import { prisma } from "../src/prisma.js";
 import { createApp } from "../src/app.js";
+import {
+  BETTER_AUTH_CLIENT_IP_HEADER,
+  createAuth,
+  forwardTrustedClientIpToBetterAuth,
+} from "../src/auth-config.js";
 import { loadConfig } from "../src/config.js";
 
 function staffApp(
@@ -83,6 +88,40 @@ test("app trusts exactly one hop and derives the limiter IP from the rightmost f
   const direct = await fetch(`${base}/proxy-test`);
   assert.equal(direct.status, 200);
   assert.deepEqual(await direct.json(), { ip: "127.0.0.1" });
+});
+
+test("Better Auth receives the Express-resolved IP through an overwritten internal header", async (context) => {
+  const config = loadConfig({
+    NODE_ENV: "test",
+    BETTER_AUTH_SECRET: "test-only-secret-for-vega-auth-tests-32-chars",
+  });
+  const auth = createAuth(config);
+  assert.deepEqual(auth.options.advanced?.ipAddress?.ipAddressHeaders, [
+    BETTER_AUTH_CLIENT_IP_HEADER,
+  ]);
+
+  const app = express();
+  app.set("trust proxy", 1);
+  app.use("/api/auth", forwardTrustedClientIpToBetterAuth);
+  app.get("/api/auth/ip-test", (req, res) => {
+    res.json({ ip: req.headers[BETTER_AUTH_CLIENT_IP_HEADER] });
+  });
+  const { server, base } = await listen(app);
+  context.after(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      }),
+  );
+
+  const response = await fetch(`${base}/api/auth/ip-test`, {
+    headers: {
+      "X-Forwarded-For": "192.0.2.99, 198.51.100.10",
+      "X-Vega-Auth-Client-IP": "203.0.113.99",
+    },
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ip: "198.51.100.10" });
 });
 
 test("admin limiter allows traffic below quota and returns 429 with retry info above it", async (context) => {

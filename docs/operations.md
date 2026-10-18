@@ -29,11 +29,16 @@ gehört nur in `CORS_ALLOWED_ORIGINS`. Nach Änderungen an `.env` den Server neu
 Betreiberentscheidung vom 2026-10-18: Express verwendet ausdrücklich
 `app.set("trust proxy", 1)` vor Routern und Rate-Limits. Diese Einstellung gilt
 auch lokal. Ohne `X-Forwarded-For` bleibt die Socket-Adresse maßgeblich;
-mit Header verwendet Express die rechteste Adresse als `req.ip`.
+mit Header verwendet Express die rechteste Adresse als `req.ip`. Vor den
+Better-Auth-Routen überschreibt Vega `x-vega-auth-client-ip` mit genau diesem
+Express-Wert; Better Auth nutzt ausschließlich diesen Header für IP-basiertes
+Rate-Limiting. Ein vom Client gesendeter Header gleichen Namens wird ignoriert.
 
 Nach Änderungen der Hosting-/Proxy-Konfiguration die Client-IP-Ermittlung und
-Rate-Limits im Zielbetrieb erneut prüfen. Better Auth wird unabhängig von
-Express konfiguriert. Rücknahme: die Ein-Hop-Einstellung entfernen.
+Rate-Limits im Zielbetrieb erneut prüfen. Die Ein-Hop-Einstellung nur ändern,
+wenn Hostingers Proxy-Kette verifiziert wurde; andernfalls könnten Clients ihre
+IP-Rate-Limits umgehen oder gemeinsam limitiert werden. Rücknahme: die
+Ein-Hop-Einstellung entfernen und den Better-Auth-Forwarding-Header deaktivieren.
 
 ### `DATABASE_URL`-Optionen
 

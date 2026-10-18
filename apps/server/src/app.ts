@@ -9,7 +9,10 @@ import { pinoHttp, type Options as HttpLogOptions } from "pino-http";
 import { APIError } from "better-auth/api";
 import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
 import { isValidEmailAddress } from "@vega/domain";
-import { createAuth } from "./auth-config.js";
+import {
+  createAuth,
+  forwardTrustedClientIpToBetterAuth,
+} from "./auth-config.js";
 import { requireAdmin, requireCompletedStaff } from "./auth-middleware.js";
 import {
   createAdminRateLimit,
@@ -125,6 +128,9 @@ export function createApp(
     }),
   );
 
+  // Resolve the IP with Express's explicitly trusted one-hop proxy policy.
+  // Always overwrite any client-supplied value before Better Auth reads it.
+  app.use("/api/auth", forwardTrustedClientIpToBetterAuth);
   // Better Auth must receive the unconsumed request stream before express.json().
   app.all("/api/auth/*splat", toNodeHandler(auth));
   app.use(express.json({ limit: "1mb" }));
