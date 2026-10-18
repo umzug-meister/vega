@@ -41,7 +41,7 @@
     "test": "tsx --import ./apps/server/test/setup.ts --test apps/server/test/*.test.ts apps/admin/test/*.test.ts apps/customer-form/test/*.test.ts",
     "test:database": "tsx --test --test-concurrency=1 apps/server/test/database/*.test.ts",
     "test:deployment": "tsx --test apps/server/test/deployment/*.test.ts",
-    "cron": "node cron.js",
+    "cron": "node scripts/cron.js",
     "start": "node server.js"
   },
   "devDependencies": {

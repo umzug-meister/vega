@@ -328,8 +328,8 @@ Im hPanel einen Cron-Job anlegen, sofern der Tarif Node-CLI-Cron-Ausführung
 unterstützt:
 
 - **Arbeitsverzeichnis:** Repository-Root des Deployments;
-- **Befehl:** `node cron.js` (einziger Vega-Cron-Einstieg; nicht zusätzlich
-   einzelne Maintenance-Dateien einplanen);
+- **Befehl:** `node scripts/cron.js` (einziger Vega-Cron-Einstieg; nicht zusätzlich
+  einzelne Maintenance-Dateien einplanen);
 - **Zeitplan:** mindestens täglich; für häufigere Retries z. B. stündlich;
 - **Umgebung:** dieselben serverseitigen Runtime-Werte wie für die App,
   insbesondere `DATABASE_URL`, `NODE_ENV`, `APP_BASE_URL`,
@@ -372,8 +372,8 @@ Siehe [Cron-Runbook](./hostinger-mail-cron.md).
       End-to-End getestet.
 - [ ] Cron-Verfügbarkeit und Mail-Retry-Lauf nachgewiesen; `UNKNOWN`-Verfahren
       bekannt.
-- [ ] `cron.js` im Hostinger-Tarif ausgeführt und Purges für archivierte Aufträge
-   (60 Tage) sowie Finanzbelege (30 Tage) mit fälligen Testdatensätzen verifiziert.
+- [ ] `scripts/cron.js` im Hostinger-Tarif ausgeführt und Purges für archivierte Aufträge
+      (60 Tage) sowie Finanzbelege (30 Tage) mit fälligen Testdatensätzen verifiziert.
 - [ ] Externe gesetzliche Rechnungs-/Gutschriftenaufbewahrung sowie
       Backup-/Restore-Verantwortung mit den zuständigen Betreibern freigegeben.
 - [ ] Rollback-Prozess für App-Build und Datenbankmigrationen dokumentiert.

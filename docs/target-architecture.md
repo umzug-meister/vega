@@ -345,9 +345,9 @@ Alle Rechte werden im Backend geprüft. `Admin` hat alle Rechte; `Kundenberater`
 | Rechnung, Gutschrift, Mahnungsereignis | Admin-Archivierung und Restore; einheitlicher App-Purge 30 Tage nach Archivierung. Externe gesetzliche Archivierung bleibt Betreiberprozess und Go-live-Gate. |
 | Invoice PDF                            | bei Bedarf aus aktuellem DB-Stand; nicht persistent in App/GCS                                                                                                |
 
-Der zentrale Root-Einstieg `cron.js` verarbeitet täglich abgelaufene archivierte
+Der zentrale Einstieg `scripts/cron.js` verarbeitet täglich abgelaufene archivierte
 Datensätze und Mail-Retries. Jeder Purge-Delete ist auf `archivedAt` und
 `purgeAt <= now` beschränkt und damit idempotent; nach einem Teilfehler kann
 derselbe Lauf sicher erneut gestartet werden. Im Hostinger-Tarif ist der Aufruf
-von `node cron.js` vor Go-live nachzuweisen; es gibt keinen öffentlichen
+von `node scripts/cron.js` vor Go-live nachzuweisen; es gibt keinen öffentlichen
 Purge-Endpunkt.

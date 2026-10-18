@@ -11,7 +11,7 @@ Es gibt keinen öffentlichen Wartungsendpunkt und keinen zweiten Mail-Service.
 
 ## Was der Lauf tut
 
-- Der Root-Einstieg `cron.js` startet `apps/server/dist/cron.js`; dieser ruft
+- Der Einstieg `scripts/cron.js` startet `apps/server/dist/cron.js`; dieser ruft
   `deliverDueOutboxMail()` für `PENDING`/`FAILED` mit
   `nextAttemptAt <= now`, max. `MAIL_MAINTENANCE_LIMIT`, Default 25, Cap 200).
 - Derselbe Lauf löscht Orders mit `archivedAt` und fälligem `purgeAt` (60 Tage)
@@ -68,8 +68,8 @@ ausdrücklich ein neuer Entwurf mit neuer Kennung gestartet werden.
    laufen lassen (z. B. stündlich); der Claim (`PENDING`/`FAILED` →
    `SENDING`, `attempts+1`) macht parallele Läufe idempotent.
 2. **Arbeitsverzeichnis:** Repository-Root des Vega-Deployments (mit
-  `package.json`, `cron.js` und `apps/server/dist/`).
-3. **Befehl (nach `npm run build`):** `node cron.js`.
+   `package.json`, `scripts/cron.js` und `apps/server/dist/`).
+3. **Befehl (nach `npm run build`):** `node scripts/cron.js`.
 4. **Umgebung:** exakt dieselben serverseitigen Runtime-Variablen wie für den
    App-Prozess, mindestens:
    `DATABASE_URL`, `BETTER_AUTH_SECRET` (≥ 32 Zeichen), `APP_BASE_URL`,
@@ -81,12 +81,12 @@ ausdrücklich ein neuer Entwurf mit neuer Kennung gestartet werden.
 ## Verifikation (Release-Nachweis)
 
 1. Einmal manuell im Zielverzeichnis starten und beide JSON-Zeilen prüfen:
-  `archive-maintenance` mit Purge-Zählern und `mail-maintenance` mit
-  `sent`, `failed`, `unknown` und `limit`.
+   `archive-maintenance` mit Purge-Zählern und `mail-maintenance` mit
+   `sent`, `failed`, `unknown` und `limit`.
 2. In der Datenbank prüfen, dass fällige `EmailOutbox`-Einträge auf `SENT`
    wechseln und genau ein `EmailEvent` je Eintrag entsteht.
 3. Cron-Protokoll des Hostings prüfen: regelmäßige `0`-Exits, keine `1`-Exits;
-  Exit-Code `1` signalisiert einen Fehler in mindestens einem Teil-Lauf.
+   Exit-Code `1` signalisiert einen Fehler in mindestens einem Teil-Lauf.
 4. Sicher wiederholbare Fehler (`FAILED` + `lastErrorCode`) beheben und
    den nächsten Lauf abwarten. `UNKNOWN` ausschließlich wie unten auflösen;
    Status oder Idempotency-Key nicht per SQL zurücksetzen.

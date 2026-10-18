@@ -8,7 +8,7 @@
     "dev": "cd ../.. && tsx watch apps/server/src/main.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
-    "cron": "node ../../cron.js",
+    "cron": "node ../../scripts/cron.js",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc -p tsconfig.foundation-tests.json"
   },
   "dependencies": {

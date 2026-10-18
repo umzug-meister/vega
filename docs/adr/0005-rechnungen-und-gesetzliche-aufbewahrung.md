@@ -100,8 +100,8 @@ Ein bearbeiteter DB-Datensatz kann den früher ausgestellten PDF-Stand nicht rek
   Wiederherstellen der Rechnung archiviert bzw. stellt alle ihre Mahnungen
   mit derselben 30-Tage-Frist wieder her.
   `ReminderEvent.sentAt` setzt ausschließlich der erfolgreiche Outbox-Versand.
-- Die 30-Tage-Finanzbereinigung läuft über den zentralen Root-Einstieg
-  `cron.js`; Hostinger-Ausführung und externe Archivintegration bleiben offen.
+- Die 30-Tage-Finanzbereinigung läuft über den zentralen Einstieg
+  `scripts/cron.js`; Hostinger-Ausführung und externe Archivintegration bleiben offen.
   Dieser ADR-Vorbehalt ist daher unverändert ein Produktiv-Release-Gate.
 
 ## Referenzen

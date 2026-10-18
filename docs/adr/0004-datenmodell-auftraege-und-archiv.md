@@ -36,7 +36,7 @@ Archivieren erfolgt explizit. Restore stoppt die 60-Tage-Frist; erneutes Archivi
 - Das Journal hält Anlage, Anpassung, Kopie, Archivierung, Wiederherstellung und
   Rechnungs-PDF-Export fest. Öffentliche Anfragen verwenden als Akteur `-`;
   Feld-Diffs werden nicht gespeichert.
-- Der tägliche 60-Tage-Purge läuft über den zentralen Root-Einstieg `cron.js`;
+- Der tägliche 60-Tage-Purge läuft über den zentralen Einstieg `scripts/cron.js`;
   die tatsächliche Ausführung im Hostinger-Tarif bleibt ein Release-Proof.
 - Adress- und Positionskerne liegen in `OrderAddress`/`OrderPosition`;
   Anlage, Änderung, Kopie und Read verwenden diese Beziehungen transaktional.
