@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "main": "server.js",
   "engines": {
     "node": ">=24 <25",
     "npm": ">=11"
@@ -40,7 +41,7 @@
     "test": "tsx --import ./apps/server/test/setup.ts --test apps/server/test/*.test.ts apps/admin/test/*.test.ts apps/customer-form/test/*.test.ts",
     "test:database": "tsx --test --test-concurrency=1 apps/server/test/database/*.test.ts",
     "test:deployment": "tsx --test apps/server/test/deployment/*.test.ts",
-    "start": "npm run start --workspace @vega/server"
+    "start": "node server.js"
   },
   "devDependencies": {
     "@types/jsdom": "30.0.0",

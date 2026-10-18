@@ -133,6 +133,14 @@ für einen neuen Seed.
 
 ## Tests
 
+Nach `npm ci` baut ein separates `npm run build` Prisma-Client, Domain,
+Server und beide Frontends; kein automatischer Root-`postinstall`-Build.
+Build-Tools werden über `.npmrc`
+(`include=dev`) auch bei einer Produktionsinstallation installiert. Hostingers
+Express-Eingabedatei ist die versionierte Root-Datei `server.js`; `npm start`
+nutzt denselben Einstieg. Keine Builds oder Migrationen beim Serverstart.
+Details: [Hostinger-Setup](./hostinger-setup.md#3-nodejs-app-und-quellcode-bereitstellen).
+
 ```sh
 npm run typecheck && npm run lint && npm test && npm run build
 npm run test:deployment   # nach build: startet den kompilierten Server

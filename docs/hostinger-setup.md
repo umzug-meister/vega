@@ -75,8 +75,25 @@ Details: [Betrieb und Konfiguration](./operations.md#datenbank).
 3. Das **Repository-Root** als Arbeits-/Projektverzeichnis verwenden. Das ist
    das Verzeichnis mit `package.json`, `package-lock.json`, `apps/` und
    `prisma/`.
-4. In hPanel bzw. dem App-Deployment folgende Install-/Build-/Startbefehle
-   konfigurieren, sofern die Oberfläche diese Felder anbietet:
+4. Als Framework **Express.js** auswählen, nicht React/Vite. In der Ansicht
+   „Build- und Ausgabeeinstellungen“ diese Werte eintragen:
+
+   | Einstellung | Wert |
+   |---|---|
+   | Build command | `npm run build` |
+   | Package manager | `npm` |
+   | Output directory | `.` |
+   | Entry file | `server.js` |
+
+   Die versionierte Root-Einstiegsdatei lädt `apps/server/dist/main.js`.
+   Das gesamte Projekt bleibt als Output erhalten: Der Server braucht auch
+   die beiden Frontend-Builds und die Workspace-Pakete. Nicht nur einen
+   einzelnen `dist`-Ordner ausgeben.
+
+   Installation und Build bleiben getrennt; es gibt keinen Root-`postinstall`-
+   Build. `.npmrc` installiert mit `include=dev` die Build-Werkzeuge auch bei
+   `NODE_ENV=production`. Der explizite Build führt keine Migrationen aus und
+   startet keinen Server. Falls weitere Befehlsfelder vorhanden sind, gilt:
 
    ```sh
    npm ci
@@ -89,9 +106,21 @@ Details: [Betrieb und Konfiguration](./operations.md#datenbank).
    Kundenformular gemeinsam. Der Startbefehl ist `npm start`; nicht separat
    Vite-Dev-Server starten. Der Prozess muss den von Hostinger bereitgestellten
    `PORT` verwenden können (Vega verwendet `PORT` oder standardmäßig `3000`).
-5. Wenn hPanel Build und Start nicht getrennt behandelt oder Node 24 nicht
-   anbietet, Deployment hier anhalten und den Tarif mit Hostinger klären. Die
-   tatsächlich unterstützte Start-/Build-Konfiguration vor Go-live dokumentieren.
+5. Wenn Node 24 nicht verfügbar ist oder nach der Installation kein
+   Build-Lauf im Log erscheint, die Build-Einstellungen prüfen und nötigenfalls
+   mit Hostinger klären. Die tatsächlich
+   unterstützte Start-/Build-Konfiguration vor Go-live dokumentieren.
+
+### Fehler: `Entry file not found`
+
+Repository-Root `./`, Framework Express.js und Eingabedatei `server.js` prüfen.
+Die Änderung muss im deployten Git-Commit enthalten sein. Ein `dist`-Verzeichnis
+ist nicht versioniert und existiert erst nach `npm run build`. Im Log
+müssen `prisma generate`, TypeScript und beide Vite-Builds
+erfolgreich durchlaufen. Erst danach startet `server.js`.
+Eine npm-Warnung zu einem nicht freigegebenen `core-js`-Postinstall ist nicht
+die Ursache für eine fehlende Eingabedatei; dafür keine pauschale
+Installationsskript-Freigabe erteilen.
 
 ## 4. Runtime-Variablen in hPanel setzen
 
