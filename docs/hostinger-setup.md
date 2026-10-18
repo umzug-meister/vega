@@ -92,11 +92,9 @@ Details: [Betrieb und Konfiguration](./operations.md#datenbank).
 
    Installation und Build bleiben getrennt; es gibt keinen Root-`postinstall`-
    Build. `.npmrc` installiert mit `include=dev` die Build-Werkzeuge auch bei
-   `NODE_ENV=production`. **Temporäre Erstinstallation:** Der Build führt aktuell
-   nach den Frontend-Builds zusätzlich Migrationen, Erstadmin-Seed und den
-   katalogersetzenden Legacy-Import mit `--apply` aus.
-   Diese Erweiterung nach dem einmaligen Deployment wieder entfernen.
-   Er startet keinen Server. Falls weitere Befehlsfelder vorhanden sind, gilt:
+   `NODE_ENV=production`. Der normale Build führt keine Migrationen, keinen
+   Seed und keinen Legacy-Import aus und startet keinen Server.
+   Falls weitere Befehlsfelder vorhanden sind, gilt:
 
    ```sh
    npm ci
@@ -115,28 +113,35 @@ Details: [Betrieb und Konfiguration](./operations.md#datenbank).
    mit Hostinger klären. Die tatsächlich
    unterstützte Start-/Build-Konfiguration vor Go-live dokumentieren.
 
-### Einmalige Einrichtung über den Build-Befehl
+### Erfolgreiche Erstinstallation über den Build-Befehl (2026-10-18)
 
-Für die einmalige Erstinstallation ist **`npm run build`** vorübergehend um
-Migrationen, Erstadmin-Seed und Legacy-Katalogimport erweitert. Der Befehl baut
-zuerst die App, rollt dann Migrationen aus, führt den Erstadmin-Seed aus und
-importiert zuletzt den Legacy-Katalog mit `--apply`.
-Bei einem Fehler stoppt die Kette. Auch lokale Builds ändern damit die
-konfigurierte Datenbank; bis zum Revert nicht als reinen Build ausführen.
+Der Betreiber hat die Erstinstallation am 2026-10-18 als erfolgreich bestätigt.
+Da in der SSH-Shell Node/npm nicht verfügbar waren, erfolgte die Einrichtung
+im Node-Build-Prozess von hPanel. Der dortige Build command blieb
+`npm run build`; lediglich das Root-Build-Skript wurde für dieses Deployment
+vorübergehend erweitert:
 
-Voraussetzung ist, dass die Build-Umgebung die Zieldatenbank erreicht und
-`DATABASE_URL`, `INITIAL_ADMIN_EMAIL` und `INITIAL_ADMIN_PASSWORD` sicher als
-Umgebungsvariablen erhält. Das ist im tatsächlichen Hostinger-Lauf zu prüfen;
-die App-Runtime-Variablen sind nicht zwingend auch Build-Variablen. Keine
-Secrets in das Befehlsfeld schreiben. Eine bestehende Datenbank vorher sichern.
-Schemaänderungen werden bei einem späteren Deploymentfehler nicht automatisch
-zurückgerollt.
+1. Prisma-Client generieren, TypeScript prüfen, Server und beide Frontends bauen.
+2. `npm run db:migrate:deploy` ausführen.
+3. `npm run db:seed` für den Erstadmin ausführen.
+4. `npm run db:import-legacy-catalog -- --apply` ausführen.
 
-Nach Erfolg die temporäre Erweiterung des Build-Skripts per Commit-Revert entfernen,
-`INITIAL_ADMIN_EMAIL` und `INITIAL_ADMIN_PASSWORD` entfernen und die App neu
-starten. **Achtung:** Jeder Build bis zum Revert ersetzt den aktuellen Katalog
-erneut und benötigt Zugriff auf die Legacy-API. Ein Commit-Revert macht bereits
-erfolgte Datenbankänderungen nicht rückgängig.
+Die Schritte waren mit `&&` verkettet, sodass ein Fehler die weiteren Schritte
+verhindert hätte. Die benötigten Werte `DATABASE_URL`, `INITIAL_ADMIN_EMAIL`
+und `INITIAL_ADMIN_PASSWORD` wurden der Build-Umgebung serverseitig
+bereitgestellt; keine Secret-Werte gehören in Befehle oder Dokumentation.
+Die erfolgreiche Einrichtung ersetzt keinen vollständigen Go-live-/Provider-Proof.
+
+Die temporäre Erweiterung ist wieder entfernt: `npm run build` baut nur die
+Anwendung. Vor dem nächsten Deployment diese bereinigte Version bereitstellen.
+`INITIAL_ADMIN_EMAIL` und `INITIAL_ADMIN_PASSWORD` anschließend im hPanel
+entfernen und die App neu starten. Initialpasswort ändern und TOTP einrichten.
+
+**Nicht als regulären Releaseprozess wiederholen:** Der Legacy-Import ersetzt
+den aktuellen Katalog. Künftige Migrationen sind separat und gezielt im
+Node-Deploymentprozess auszuführen; Seed und Import gehören nicht dazu.
+Vor Datenbankänderungen eine Sicherung erstellen. Ein fehlgeschlagenes
+Deployment oder ein Commit-Revert macht Datenbankänderungen nicht rückgängig.
 
 ### Fehler: `Entry file not found`
 

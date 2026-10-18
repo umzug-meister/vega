@@ -32,7 +32,7 @@
     "db:import-legacy-catalog": "tsx prisma/import-legacy-catalog.ts",
     "auth:generate-schema": "auth generate --config apps/server/src/auth.ts --adapter prisma --output prisma/schema.prisma",
     "auth:recover-admin": "tsx prisma/recover-admin.ts",
-    "build": "npm run db:generate && npm run typecheck && npm run build:server && npm run build:frontends && npm run db:migrate:deploy && npm run db:seed && npm run db:import-legacy-catalog -- --apply",
+    "build": "npm run db:generate && npm run typecheck && npm run build:server && npm run build:frontends",
     "build:domain": "npm run build --workspace @vega/domain",
     "build:server": "npm run build --workspace @vega/server",
     "build:frontends": "npm run build --workspace @vega/admin && npm run build --workspace @vega/customer-form",
