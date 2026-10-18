@@ -848,6 +848,127 @@ function validateDetails(
             message: "Ungültige Entfernungsquelle.",
           }),
           undefined);
+  const rawRouteSnapshot = value.routeSnapshot;
+  let routeSnapshot: OrderDetailsInput["routeSnapshot"];
+  if (rawRouteSnapshot !== undefined) {
+    const routePath = "details.routeSnapshot";
+    if (!allowStaffPricing) {
+      issues.push({
+        field: routePath,
+        message:
+          "Routenberechnungen sind nur für angemeldete Mitarbeiter verfügbar.",
+      });
+    } else if (!isRecord(rawRouteSnapshot)) {
+      issues.push({ field: routePath, message: "Ungültiger Routensnapshot." });
+    } else {
+      const { calculatedAt, origin, addresses, legs } = rawRouteSnapshot;
+      const totalDistanceKm = numeric(
+        rawRouteSnapshot,
+        "distanceKm",
+        `${routePath}.distanceKm`,
+        issues,
+        { required: true, max: 10000 },
+      );
+      const totalDurationMinutes = numeric(
+        rawRouteSnapshot,
+        "durationMinutes",
+        `${routePath}.durationMinutes`,
+        issues,
+        { required: true, max: 166667 },
+      );
+      const validTimestamp =
+        typeof calculatedAt === "string" &&
+        calculatedAt.length <= 40 &&
+        Number.isFinite(Date.parse(calculatedAt));
+      const validOrigin =
+        typeof origin === "string" &&
+        origin.trim().length > 0 &&
+        origin.length <= 300;
+      const validAddresses =
+        Array.isArray(addresses) &&
+        addresses.length >= 2 &&
+        addresses.length <= 4 &&
+        addresses.every(
+          (address) =>
+            typeof address === "string" &&
+            address.trim().length > 0 &&
+            address.length <= 400,
+        );
+      const validLegs =
+        Array.isArray(legs) &&
+        validAddresses &&
+        legs.length === addresses.length + 1 &&
+        legs.length <= 5;
+      if (!validTimestamp)
+        issues.push({
+          field: `${routePath}.calculatedAt`,
+          message: "Ungültiger Berechnungszeitpunkt.",
+        });
+      if (!validOrigin)
+        issues.push({
+          field: `${routePath}.origin`,
+          message: "Ungültiger Betriebsstandort.",
+        });
+      if (!validAddresses)
+        issues.push({
+          field: `${routePath}.addresses`,
+          message: "Ungültige Routenadressen.",
+        });
+      const normalizedLegs: NonNullable<
+        OrderDetailsInput["routeSnapshot"]
+      >["legs"] = [];
+      if (!validLegs)
+        issues.push({
+          field: `${routePath}.legs`,
+          message: "Ungültige Routenabschnitte.",
+        });
+      else
+        legs.forEach((leg, index) => {
+          const legPath = `${routePath}.legs.${index}`;
+          if (!isRecord(leg)) {
+            issues.push({
+              field: legPath,
+              message: "Ungültiger Routenabschnitt.",
+            });
+            return;
+          }
+          const distanceKm = numeric(
+            leg,
+            "distanceKm",
+            `${legPath}.distanceKm`,
+            issues,
+            { required: true, max: 10000 },
+          );
+          const durationMinutes = numeric(
+            leg,
+            "durationMinutes",
+            `${legPath}.durationMinutes`,
+            issues,
+            { required: true, max: 166667 },
+          );
+          if (distanceKm !== undefined && durationMinutes !== undefined)
+            normalizedLegs.push({ distanceKm, durationMinutes });
+        });
+      if (
+        validTimestamp &&
+        validOrigin &&
+        validAddresses &&
+        validLegs &&
+        totalDistanceKm !== undefined &&
+        totalDurationMinutes !== undefined &&
+        normalizedLegs.length === legs.length
+      ) {
+        routeSnapshot = {
+          calculatedAt,
+          origin: origin.trim(),
+          addresses: addresses.map((address) => address.trim()),
+          distanceKm: totalDistanceKm,
+          durationMinutes: totalDurationMinutes,
+          legs: normalizedLegs,
+        };
+      }
+    }
+  }
   if (!allowStaffPricing && distanceSource !== undefined) {
     issues.push({
       field: "details.distanceSource",
@@ -906,6 +1027,7 @@ function validateDetails(
     showSecondaryTo,
     distanceKm,
     ...(distanceSource !== undefined ? { distanceSource } : {}),
+    ...(routeSnapshot !== undefined ? { routeSnapshot } : {}),
     furniture,
     extras,
     basis,

@@ -162,12 +162,19 @@ test("email input pattern rejects malformed addresses while accepting ordinary o
     assert.equal(pattern.test(email), false, email);
   }
 });
-test("visit recommendation is shown for houses and four or more rooms", () => {
+test("visit recommendation is shown only when moving out of a house", () => {
   const draft = completeDraft();
-  assert.equal(suggestVisit(draft), true);
+  assert.equal(draft.from.movementObject, "Wohnung");
+  assert.equal(suggestVisit(draft), false);
+  draft.from.roomsNumber = "4";
+  assert.equal(suggestVisit(draft), false);
   draft.from.roomsNumber = "3";
   assert.equal(suggestVisit(draft), false);
   draft.from.movementObject = "Haus";
+  assert.equal(suggestVisit(draft), true);
+  draft.from.roomsNumber = "1";
+  assert.equal(suggestVisit(draft), true);
+  draft.to.movementObject = "Wohnung";
   assert.equal(suggestVisit(draft), true);
 });
 test("payload carries every active field and never sends prices or public image URLs", () => {
@@ -210,7 +217,7 @@ test("payload carries every active field and never sends prices or public image 
   assert.equal(validation.ok, true, JSON.stringify(validation));
   assert.deepEqual(validateCustomerFormInput(payload), []);
   assert.equal(payload.movingDate, draft.dateFrom);
-  assert.equal(payload.visitWanted, true);
+  assert.equal(payload.visitWanted, false);
   assert.equal(payload.privacyAccepted, true);
   assert.equal(payload.from.kitchenWidth, 4);
   assert.equal(payload.details?.furniture.volume, 7.5);

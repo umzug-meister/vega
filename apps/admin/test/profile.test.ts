@@ -41,6 +41,16 @@ test("profile uses five visible cards without tabs and keeps separate forms and 
       html,
       /<input[^>]*placeholder="z\. B\. Max Meier"[^>]*maxLength="100"|<input[^>]*maxLength="100"[^>]*placeholder="z\. B\. Max Meier"/u,
     );
+    assert.match(html, /Signaturfarbe/u);
+    assert.match(html, /Schwarz/u);
+    assert.match(html, /Blau/u);
+    assert.match(html, /Orange/u);
+    assert.doesNotMatch(html, /Blau \(#28527A\)|Orange \(#CB722F\)/u);
+    assert.match(html, /value="#000000"/u);
+    assert.match(html, /value="#28527A"/u);
+    assert.match(html, /value="#CB722F"/u);
+    assert.match(html, /aria-label="Live-Vorschau der Signatur"/u);
+    assert.match(html, />Ihr Name<\/p>/u);
     assert.match(html, /Neues Passwort wiederholen/u);
     assert.match(
       html,

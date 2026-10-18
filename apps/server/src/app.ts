@@ -40,7 +40,8 @@ import { createRouteRouter } from "./maps/route-routes.js";
 import { createAdminPlacesRouter } from "./maps/admin-places-routes.js";
 import { createStaffRouter } from "./staff/staff-routes.js";
 import {
-  loadSignatureName,
+  loadSignature,
+  validateSignatureColor,
   validateSignatureName,
 } from "./staff/signature-name.js";
 
@@ -81,9 +82,9 @@ export function createApp(
             url: safeRequestPath(String(req.url ?? "")),
           }),
           res: (res) => ({ statusCode: res.statusCode }),
-          // Error messages, stacks and enumerable properties can contain submitted
-          // JSON, Prisma query arguments or provider credentials.
-          err: () => ({ type: "Error" }),
+          // Never serialize messages, causes or arbitrary properties: they can
+          // contain submitted JSON, Prisma arguments or provider credentials.
+          err: (error) => errorDiagnostics(error),
         },
       },
       dependencies.logStream,
@@ -356,7 +357,7 @@ export function createApp(
       const staffUser = res.locals.staffUser as { id: string };
       res.setHeader("Cache-Control", "no-store");
       res.json({
-        data: { signatureName: await loadSignatureName(staffUser.id) },
+        data: await loadSignature(staffUser.id),
       });
     } catch (error) {
       next(error);
@@ -368,19 +369,30 @@ export function createApp(
       const input = validateSignatureName(
         (req.body as { signatureName?: unknown } | undefined)?.signatureName,
       );
+      const color = validateSignatureColor(
+        (req.body as { signatureColor?: unknown } | undefined)?.signatureColor,
+      );
       if (!input.ok) {
         res.status(400).json({
           error: { code: "INVALID_SIGNATURE_NAME", message: input.message },
         });
         return;
       }
+      if (!color.ok) {
+        res.status(400).json({
+          error: { code: "INVALID_SIGNATURE_COLOR", message: color.message },
+        });
+        return;
+      }
       const staffUser = res.locals.staffUser as { id: string };
       await prisma.user.update({
         where: { id: staffUser.id },
-        data: { signatureName: input.value },
+        data: { signatureName: input.value, signatureColor: color.value },
       });
       res.setHeader("Cache-Control", "no-store");
-      res.json({ data: { signatureName: input.value } });
+      res.json({
+        data: { signatureName: input.value, signatureColor: color.value },
+      });
     } catch (error) {
       next(error);
     }
@@ -612,6 +624,7 @@ import(${JSON.stringify(asset)}).catch(() => { root.textContent = "Das Umzugsfor
       code: failure.code,
       statusCode: failure.status,
       requestId,
+      ...(failure.status >= 500 ? errorDiagnostics(error) : {}),
     };
     if (failure.status < 500) req.log.warn(metadata, "request rejected");
     else req.log.error(metadata, "request failed");
@@ -622,6 +635,91 @@ import(${JSON.stringify(asset)}).catch(() => { root.textContent = "Das Umzugsfor
   app.use(errorHandler);
 
   return app;
+}
+
+function errorDiagnostics(error: unknown): {
+  errorName?: string;
+  errorCode?: string;
+  prismaMeta?: { modelName?: string; target?: string[] };
+  errorFrames?: string[];
+} {
+  if (typeof error !== "object" || error === null) return {};
+  const value = error as {
+    name?: unknown;
+    code?: unknown;
+    meta?: unknown;
+    stack?: unknown;
+  };
+  const diagnostics: ReturnType<typeof errorDiagnostics> = {};
+
+  if (
+    typeof value.name === "string" &&
+    /^[A-Za-z][A-Za-z0-9_.]{0,79}$/u.test(value.name)
+  ) {
+    diagnostics.errorName = value.name;
+  }
+
+  if (typeof value.code === "string" && isSafeDiagnosticCode(value.code)) {
+    diagnostics.errorCode = value.code;
+  }
+
+  if (
+    diagnostics.errorCode?.startsWith("P") &&
+    typeof value.meta === "object" &&
+    value.meta !== null
+  ) {
+    const meta = value.meta as { modelName?: unknown; target?: unknown };
+    const prismaMeta: NonNullable<typeof diagnostics.prismaMeta> = {};
+    if (
+      typeof meta.modelName === "string" &&
+      /^[A-Za-z][A-Za-z0-9_]{0,63}$/u.test(meta.modelName)
+    ) {
+      prismaMeta.modelName = meta.modelName;
+    }
+    const target =
+      typeof meta.target === "string" ? [meta.target] : meta.target;
+    if (
+      Array.isArray(target) &&
+      target.length <= 16 &&
+      target.every(
+        (entry): entry is string =>
+          typeof entry === "string" &&
+          /^[A-Za-z][A-Za-z0-9_]{0,63}$/u.test(entry),
+      )
+    ) {
+      prismaMeta.target = target;
+    }
+    if (Object.keys(prismaMeta).length > 0) diagnostics.prismaMeta = prismaMeta;
+  }
+
+  if (typeof value.stack === "string") {
+    const frames = value.stack
+      .split("\n")
+      .slice(1)
+      .flatMap((line) => {
+        const match = line.match(
+          /(?:^|[/\\])apps[/\\]server[/\\](?:src|dist)[/\\]([^()]+?):(\d+):(\d+)\)?\s*$/u,
+        );
+        return match
+          ? [
+              `apps/server/${match[0].includes("/dist/") ? "dist" : "src"}/${match[1]}:${match[2]}:${match[3]}`,
+            ]
+          : [];
+      });
+    if (frames.length > 0)
+      diagnostics.errorFrames = [...new Set(frames)].slice(0, 8);
+  }
+
+  return diagnostics;
+}
+
+function isSafeDiagnosticCode(code: string): boolean {
+  return (
+    /^P\d{4}$/u.test(code) ||
+    /^ER_[A-Z0-9_]{1,60}$/u.test(code) ||
+    /^ERR_[A-Z0-9_]{1,60}$/u.test(code) ||
+    /^E[A-Z0-9_]{3,60}$/u.test(code)
+  );
 }
 
 function safeRequestPath(url: string): string {

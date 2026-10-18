@@ -60,6 +60,9 @@ authentifizierte Admin-API für Admin/Kundenberater mit abgeschlossener
 gerundet auf ganze Kilometer in den ungespeicherten Entwurf. Ein einziger
 serverseitiger `GOOGLE_MAPS_API_KEY` deckt Places API (New) und Routes API ab
 (bewusste Betreiberentscheidung: gemeinsame Quoten, keine getrennte Rotation).
+Unmittelbar aufeinanderfolgende gleiche Adressen werden vor dem Provideraufruf
+zusammengefasst und nachher als Null-Kilometer-/Null-Minuten-Abschnitt
+wiederhergestellt; die übrigen Streckenabschnitte werden normal berechnet.
 Der echte Google-/Hostinger-Provider-Proof bleibt offen.
 
 ## Ergänzung automatische Streckenberechnung (2026-10-17)

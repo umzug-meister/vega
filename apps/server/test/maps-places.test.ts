@@ -699,6 +699,120 @@ test("admin route calculation uses the depot round trip and rounds the provider 
   });
 });
 
+test("admin route calculation inserts a zero leg for identical consecutive pickup and dropoff addresses", async (context) => {
+  mockRateLimit(context, 1);
+  mockSettings(context, "Betrieb Teststraße 1, 80331 München");
+  const config = loadConfig({
+    BETTER_AUTH_SECRET: SECRET,
+    GOOGLE_MAPS_API_KEY: "maps-secret-key",
+  });
+  const app = express();
+  withLog(app);
+  app.use(express.json());
+  app.use(((req, res, next) => {
+    res.locals.staffUser = { id: "staff-1" };
+    next();
+  }) as express.RequestHandler);
+  app.use("/api/admin/routes", createRouteRouter(config));
+  let providerCalls = 0;
+  mockFetch(context, async (_url, init) => {
+    providerCalls++;
+    const body = JSON.parse(String(init?.body)) as {
+      origin: { address: string };
+      destination: { address: string };
+      intermediates?: Array<{ address: string }>;
+    };
+    assert.equal(body.origin.address, "Betrieb Teststraße 1, 80331 München");
+    assert.equal(
+      body.destination.address,
+      "Betrieb Teststraße 1, 80331 München",
+    );
+    assert.deepEqual(
+      body.intermediates?.map(({ address }) => address),
+      ["Gleiche Adresse 1, 80333 München"],
+    );
+    return Response.json({
+      routes: [
+        {
+          distanceMeters: 9000,
+          duration: "900s",
+          legs: [
+            { distanceMeters: 5000, duration: "480s" },
+            { distanceMeters: 4000, duration: "420s" },
+          ],
+        },
+      ],
+    });
+  });
+  const { server, base } = await listen(app);
+  close(server, context);
+
+  const response = await fetch(`${base}/api/admin/routes/distance`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      addresses: [
+        "Gleiche Adresse 1, 80333 München",
+        " gleiche   adresse 1, 80333 münchen ",
+      ],
+    }),
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).data, {
+    distanceKm: 9,
+    durationMinutes: 15,
+    legs: [
+      { distanceKm: 5, durationMinutes: 8 },
+      { distanceKm: 0, durationMinutes: 0 },
+      { distanceKm: 4, durationMinutes: 7 },
+    ],
+  });
+  assert.equal(providerCalls, 1);
+});
+
+test("admin route calculation returns zero legs without calling Google when every stop is the depot", async (context) => {
+  mockRateLimit(context, 1);
+  mockSettings(context, "Depot 1, 80331 München");
+  const config = loadConfig({
+    BETTER_AUTH_SECRET: SECRET,
+    GOOGLE_MAPS_API_KEY: "maps-secret-key",
+  });
+  const app = express();
+  withLog(app);
+  app.use(express.json());
+  app.use(((req, res, next) => {
+    res.locals.staffUser = { id: "staff-1" };
+    next();
+  }) as express.RequestHandler);
+  app.use("/api/admin/routes", createRouteRouter(config));
+  let providerCalls = 0;
+  mockFetch(context, async () => {
+    providerCalls++;
+    return Response.json({ routes: [] });
+  });
+  const { server, base } = await listen(app);
+  close(server, context);
+
+  const response = await fetch(`${base}/api/admin/routes/distance`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      addresses: ["Depot 1, 80331 München", " depot 1, 80331 münchen "],
+    }),
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).data, {
+    distanceKm: 0,
+    durationMinutes: 0,
+    legs: [
+      { distanceKm: 0, durationMinutes: 0 },
+      { distanceKm: 0, durationMinutes: 0 },
+      { distanceKm: 0, durationMinutes: 0 },
+    ],
+  });
+  assert.equal(providerCalls, 0);
+});
+
 test("admin route calculation rejects bad stops, missing setup and unusable provider answers", async (context) => {
   mockRateLimit(context, 1);
   mockSettings(context, "Betrieb Teststraße 1, 80331 München");

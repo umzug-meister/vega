@@ -24,6 +24,16 @@ Domains oder Secrets in Vite-Builds.
 `localhost` und `127.0.0.1` sind unterschiedliche Origins. Der Kundenformular-Origin
 gehört nur in `CORS_ALLOWED_ORIGINS`. Nach Änderungen an `.env` den Server neu starten.
 
+### Fehlerlogs und Diagnose
+
+Unerwartete Serverfehler werden mit `requestId`, Route/Methode, HTTP-Status,
+Fehlerklasse und – sofern vorhanden – einem streng geprüften Infrastrukturcode
+protokolliert. Prisma-Fehler ergänzen nur Tabellen-/Feldnamen und Quellpositionen
+innerhalb des Servercodes. Fehlernachrichten, Stack-Text, `cause`, SQL-Argumente,
+Request-Bodies, Tokens, E-Mail-Inhalte und beliebige Fehler-Properties werden
+nicht geloggt. Für die Diagnose Antwort-`requestId` und Logeintrag korrelieren;
+keine sensiblen Werte nachträglich in Logs aufnehmen.
+
 ### Hostinger-Reverse-Proxy
 
 Betreiberentscheidung vom 2026-10-18: Express verwendet ausdrücklich
@@ -149,6 +159,21 @@ mit `409` abgewiesen.
 ## Erstadmin
 
 `npm run db:seed` legt einmalig `root_user` mit `INITIAL_ADMIN_EMAIL` und
+
+## Signaturfarbe
+
+Die Signaturfarbe wird im Mitarbeiterprofil gewählt. Unterstützt werden
+Schwarz (`#000000`, Standard), Blau (`#28527A`) und Orange (`#CB722F`). Die
+Farbe wird mit jeder E-Mail in der Outbox gespeichert, damit ein späterer Retry
+dieselbe Signaturdarstellung verwendet. Die Vorschau im Profil reagiert direkt
+auf Änderungen an Name und Farbauswahl.
+
+### Migration
+
+Die Migration `20261018100000_user_signature_color` ergänzt den Benutzer und
+die E-Mail-Outbox. Bestehende Benutzer erhalten den schwarzen Standardwert;
+bereits eingereihte Nachrichten ohne Farbsnapshot werden beim Versand ebenfalls
+schwarz dargestellt.
 `INITIAL_ADMIN_PASSWORD` an; ein erneuter Seed ändert nichts. Beim ersten Login
 Initialpasswort ändern und TOTP einrichten.
 

@@ -117,6 +117,11 @@ function AddressesHarness({ initial }: { initial: OrderFormValue }) {
       { "data-testid": "source" },
       value.details.distanceSource ?? "",
     ),
+    React.createElement(
+      "output",
+      { "data-testid": "route-snapshot" },
+      JSON.stringify(value.details.routeSnapshot ?? null),
+    ),
   );
 }
 
@@ -157,7 +162,10 @@ test("automatic route calculation runs once for a complete order without a store
       "Senderstraße 1, 80331 München",
       "Zielstraße 2, 80333 München",
     ]);
-    assert.equal(labeledInput(app.container, "Entfernung in km").value, "12");
+    assert.equal(
+      app.container.querySelector('[data-testid="distance"]')?.textContent,
+      "12",
+    );
     assert.equal(
       app.container.querySelector('[data-testid="source"]')?.textContent,
       "route",
@@ -217,7 +225,7 @@ test("an asynchronously loaded complete order is calculated once it becomes read
   }
 });
 
-test("an existing manual distance is never overwritten on open", async (context) => {
+test("a legacy manual distance without a saved itinerary is replaced by the calculated route on open", async (context) => {
   const calls = installRoutes(context, {
     distance: () => json(routePayload(12)),
   });
@@ -228,16 +236,94 @@ test("an existing manual distance is never overwritten on open", async (context)
   );
   try {
     await app.flush();
-    assert.equal(calls.length, 0);
-    assert.equal(labeledInput(app.container, "Entfernung in km").value, "42");
+    assert.equal(calls.length, 1);
+    assert.equal(
+      app.container.querySelector('[data-testid="distance"]')?.textContent,
+      "12",
+    );
     assert.equal(
       app.container.querySelector('[data-testid="source"]')?.textContent,
-      "manual",
+      "route",
     );
   } finally {
     await app.cleanup();
   }
 });
+
+test("saved route itinerary remains visible on load and is replaced and stored after an address change", async (context) => {
+  const previousSnapshot = {
+    calculatedAt: "2026-10-17T12:00:00.000Z",
+    origin: "Depot Straße 1, 80331 München",
+    addresses: ["Senderstraße 1, 80331 München", "Zielstraße 2, 80333 München"],
+    distanceKm: 12,
+    durationMinutes: 28,
+    legs: [
+      { distanceKm: 5, durationMinutes: 12 },
+      { distanceKm: 2, durationMinutes: 4 },
+      { distanceKm: 5, durationMinutes: 12 },
+    ],
+  };
+  const calls = installRoutes(context, {
+    distance: () => json(routePayload(15, 3)),
+  });
+  const app = await mount(
+    React.createElement(AddressesHarness, {
+      initial: completeOrder({
+        distanceKm: 12,
+        distanceSource: "route",
+        routeSnapshot: previousSnapshot,
+      }),
+    }),
+  );
+  try {
+    await app.flush();
+    assert.equal(
+      calls.length,
+      0,
+      "a current persisted route does not need a provider call on open",
+    );
+    assert.match(app.container.textContent ?? "", /Gesamt: 12 km · 28 Min\./u);
+    assert.match(app.container.textContent ?? "", /Start/u);
+    assert.match(app.container.textContent ?? "", /Beladestelle 1/u);
+    assert.match(app.container.textContent ?? "", /Entladestelle 1/u);
+    assert.match(app.container.textContent ?? "", /Ende/u);
+    assert.match(app.container.textContent ?? "", /12 Min\./u);
+    assert.match(app.container.textContent ?? "", /4 Min\./u);
+
+    const postalCode = labeledInput(app.container, "PLZ");
+    await app.input(postalCode, "80335");
+    await focusout(app, postalCode);
+    await app.flush();
+
+    assert.equal(calls.length, 1);
+    assert.match(app.container.textContent ?? "", /Gesamt: 15 km · 30 Min\./u);
+    const savedSnapshot = JSON.parse(
+      app.container.querySelector('[data-testid="route-snapshot"]')!
+        .textContent!,
+    ) as typeof previousSnapshot;
+    assert.equal(savedSnapshot.distanceKm, 15);
+    assert.equal(savedSnapshot.durationMinutes, 30);
+    assert.equal(savedSnapshot.addresses[0], "Senderstraße 1, 80335 München");
+    assert.equal(savedSnapshot.calculatedAt.length > 0, true);
+  } finally {
+    await app.cleanup();
+  }
+});
+
+function storedRouteSnapshot(distanceKm: number, durationMinutes = 30) {
+  return {
+    calculatedAt: "2026-10-17T12:00:00.000Z",
+    origin: "Depot Straße 1, 80331 München",
+    addresses: ["Senderstraße 1, 80331 München", "Zielstraße 2, 80333 München"],
+    distanceKm,
+    durationMinutes,
+    legs: [
+      { distanceKm: 4, durationMinutes: 10 },
+      { distanceKm: 4, durationMinutes: 10 },
+      { distanceKm: 4, durationMinutes: 10 },
+    ],
+  };
+}
 
 test("a changed route field recalculates on blur exactly once and unchanged blurs stay silent", async (context) => {
   let calculated = 12;
@@ -246,7 +332,11 @@ test("a changed route field recalculates on blur exactly once and unchanged blur
   });
   const app = await mount(
     React.createElement(AddressesHarness, {
-      initial: completeOrder({ distanceKm: 12, distanceSource: "route" }),
+      initial: completeOrder({
+        distanceKm: 12,
+        distanceSource: "route",
+        routeSnapshot: storedRouteSnapshot(12),
+      }),
     }),
   );
   try {
@@ -265,7 +355,12 @@ test("a changed route field recalculates on blur exactly once and unchanged blur
       "Senderstraße 1, 80335 München",
       "Zielstraße 2, 80333 München",
     ]);
-    assert.equal(labeledInput(app.container, "Entfernung in km").value, "15");
+    assert.match(app.container.textContent ?? "", /Beladestelle 1/u);
+    assert.match(app.container.textContent ?? "", /Entladestelle 1/u);
+    assert.equal(
+      app.container.querySelector('[data-testid="distance"]')?.textContent,
+      "15",
+    );
     await focusout(app, postalCode);
     await app.flush();
     assert.equal(calls.length, 1, "an unchanged blur must not request again");
@@ -274,7 +369,7 @@ test("a changed route field recalculates on blur exactly once and unchanged blur
   }
 });
 
-test("incomplete active addresses skip the request and keep the manual fallback", async (context) => {
+test("incomplete active addresses skip automatic route calculation", async (context) => {
   const calls = installRoutes(context, {
     distance: () => json(routePayload(12)),
   });
@@ -287,40 +382,46 @@ test("incomplete active addresses skip the request and keep the manual fallback"
   try {
     await app.flush();
     assert.equal(calls.length, 0);
-    const button = [...app.container.querySelectorAll("button")].find(
-      (entry) => entry.textContent === "Fahrstrecke berechnen",
+    assert.doesNotMatch(
+      app.container.textContent ?? "",
+      /Fahrstrecke berechnen/u,
     );
-    assert.ok(button);
-    assert.equal(button.disabled, true);
+    assert.doesNotMatch(app.container.textContent ?? "", /Entfernung in km/u);
   } finally {
     await app.cleanup();
   }
 });
 
-test("editing an address hides the stale route diagram until the blur recalculates", async (context) => {
+test("editing an address keeps the stored route visible until blur replaces it", async (context) => {
   let calculated = 9;
   const calls = installRoutes(context, {
     distance: () => json(routePayload((calculated += 3))),
   });
   const app = await mount(
-    React.createElement(AddressesHarness, { initial: completeOrder() }),
+    React.createElement(AddressesHarness, {
+      initial: completeOrder({
+        distanceKm: 12,
+        distanceSource: "route",
+        routeSnapshot: storedRouteSnapshot(12),
+      }),
+    }),
   );
   try {
     await app.flush();
-    assert.equal(calls.length, 1);
+    assert.equal(calls.length, 0);
     assert.match(app.container.textContent ?? "", /Gesamt: 12 km/u);
     const postalCode = labeledInput(app.container, "PLZ");
     await app.input(postalCode, "80335");
     await app.flush();
-    assert.doesNotMatch(
+    assert.match(
       app.container.textContent ?? "",
-      /Gesamt/u,
-      "the stale diagram is hidden while the address is edited",
+      /Gesamt: 12 km/u,
+      "the last saved route remains visible while editing before blur",
     );
     await focusout(app, postalCode);
     await app.flush();
-    assert.equal(calls.length, 2);
-    assert.match(app.container.textContent ?? "", /Gesamt: 15 km/u);
+    assert.equal(calls.length, 1);
+    assert.match(app.container.textContent ?? "", /Gesamt: 12 km/u);
   } finally {
     await app.cleanup();
   }
@@ -332,25 +433,31 @@ test("returning to a previously calculated route recalculates on blur", async (c
     distance: () => json(routePayload((calculated += 3))),
   });
   const app = await mount(
-    React.createElement(AddressesHarness, { initial: completeOrder() }),
+    React.createElement(AddressesHarness, {
+      initial: completeOrder({
+        distanceKm: 9,
+        distanceSource: "route",
+        routeSnapshot: storedRouteSnapshot(9),
+      }),
+    }),
   );
   try {
     await app.flush();
-    assert.equal(calls.length, 1);
+    assert.equal(calls.length, 0);
     const postalCode = labeledInput(app.container, "PLZ");
     await app.input(postalCode, "80335");
     await app.flush();
     await app.input(postalCode, "80331");
     await app.flush();
-    assert.doesNotMatch(app.container.textContent ?? "", /Gesamt/u);
+    assert.match(app.container.textContent ?? "", /Gesamt: 9 km/u);
     await focusout(app, postalCode);
     await app.flush();
     assert.equal(
       calls.length,
-      2,
+      1,
       "returning to a previously calculated route must recalculate on the next blur",
     );
-    assert.match(app.container.textContent ?? "", /Gesamt: 15 km/u);
+    assert.match(app.container.textContent ?? "", /Gesamt: 12 km/u);
   } finally {
     await app.cleanup();
   }
@@ -402,14 +509,14 @@ test("missing provider configuration shows the hint and requests nothing", async
     assert.equal(calls.length, 0);
     assert.match(
       app.container.textContent ?? "",
-      /manuelle Entfernungseingabe bleibt verfügbar/u,
+      /Google-Maps-Zugang in der Server-Runtime eingerichtet sein/u,
     );
   } finally {
     await app.cleanup();
   }
 });
 
-test("a provider error keeps the stored distance and the manual button retries", async (context) => {
+test("a provider error keeps the last total and a later address change retries automatically", async (context) => {
   let attempt = 0;
   const calls = installRoutes(context, {
     distance: () =>
@@ -427,7 +534,11 @@ test("a provider error keeps the stored distance and the manual button retries",
   });
   const app = await mount(
     React.createElement(AddressesHarness, {
-      initial: completeOrder({ distanceKm: 12, distanceSource: "route" }),
+      initial: completeOrder({
+        distanceKm: 12,
+        distanceSource: "route",
+        routeSnapshot: storedRouteSnapshot(12),
+      }),
     }),
   );
   try {
@@ -438,7 +549,7 @@ test("a provider error keeps the stored distance and the manual button retries",
     await app.flush();
     assert.equal(calls.length, 1);
     assert.equal(
-      labeledInput(app.container, "Entfernung in km").value,
+      app.container.querySelector('[data-testid="distance"]')?.textContent,
       "12",
       "the failed request must not clear the stored distance",
     );
@@ -446,14 +557,19 @@ test("a provider error keeps the stored distance and the manual button retries",
       app.container.textContent ?? "",
       /Google konnte die Fahrstrecke nicht berechnen/u,
     );
-    const retry = [...app.container.querySelectorAll("button")].find(
-      (entry) => entry.textContent === "Fahrstrecke berechnen",
-    );
-    assert.ok(retry);
-    await app.click(retry);
+    const retry = labeledInput(app.container, "PLZ");
+    await app.input(retry, "80336");
+    await focusout(app, retry);
     await app.flush();
     assert.equal(calls.length, 2);
-    assert.equal(labeledInput(app.container, "Entfernung in km").value, "21");
+    assert.equal(
+      app.container.querySelector('[data-testid="distance"]')?.textContent,
+      "21",
+    );
+    assert.doesNotMatch(
+      app.container.textContent ?? "",
+      /Fahrstrecke berechnen/u,
+    );
   } finally {
     await app.cleanup();
   }
@@ -505,7 +621,10 @@ test("a stale response from an aborted calculation is ignored", async (context) 
       pending[0]!.resolve(json(routePayload(99)));
     });
     await app.flush();
-    assert.equal(labeledInput(app.container, "Entfernung in km").value, "20");
+    assert.equal(
+      app.container.querySelector('[data-testid="distance"]')?.textContent,
+      "20",
+    );
   } finally {
     await app.cleanup();
   }

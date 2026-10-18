@@ -24,6 +24,8 @@ model User {
   blocked            Boolean     @default(false)
   /// Name in the greeting block of staff mails, e.g. "Max Meier".
   signatureName      String?     @db.VarChar(100)
+  /// Approved greeting signature color; black by default, optional Vega blue.
+  signatureColor     String      @default("#000000") @db.VarChar(7)
   sessions           Session[]
   accounts           Account[]
   twofactors         TwoFactor[]
@@ -342,6 +344,8 @@ model EmailOutbox {
   actorName       String?        @db.VarChar(191)
   /// Snapshot of the sender's signature name at queue time.
   signatureName   String?        @db.VarChar(100)
+  /// Snapshot of the sender's approved signature color at queue time.
+  signatureColor  String?        @db.VarChar(7)
   idempotencyKey  String         @unique @db.VarChar(191)
   status          String         @default("PENDING") @db.VarChar(16)
   attempts        Int            @default(0)

@@ -301,7 +301,9 @@ Alle Rechte werden im Backend geprüft. `Admin` hat alle Rechte; `Kundenberater`
 - Die Streckenberechnung unter `/api/admin/routes` (Depot → 2–4 Umzugsadressen → Depot,
   Kilometer gerundet in den ungespeicherten Entwurf; automatische Erst- und
   Adressänderungsberechnung über dieselbe Staff-API, Button als manueller Retry) ist
-  ausschließlich authentifizierte Admin-API für Admin/Kundenberater.
+  ausschließlich authentifizierte Admin-API für Admin/Kundenberater. Direkt
+  aufeinanderfolgende identische Adressen erzeugen einen Abschnitt mit 0 km/0 Min.;
+  andere Abschnitte bleiben Teil der Google-Routenberechnung.
 - Admin-only Finanzrouten liegen unter `/api/admin/invoices`; Kundenberater und
   öffentliche Clients erhalten keinen Finanzbeleg-Zugriff.
 - CORS Origins kommen aus Runtime-Umgebung. Origin-Prüfung begrenzt Browserzugriff, ersetzt aber keine Auth.
