@@ -1,7 +1,9 @@
 import { spawnSync } from "node:child_process";
 
 if (process.env.VEGA_MIGRATE_ON_BUILD !== "true") {
-  console.info("Skipping database migrations: VEGA_MIGRATE_ON_BUILD is not true.");
+  console.info(
+    "Skipping database migrations: VEGA_MIGRATE_ON_BUILD is not true.",
+  );
   process.exit(0);
 }
 
