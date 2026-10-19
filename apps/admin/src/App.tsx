@@ -5,6 +5,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 import { Alert, CircularProgress, Container } from "@mui/material";
 import { authClient } from "./auth-client.js";
@@ -16,7 +17,6 @@ import { ResetPasswordPage } from "./auth/ResetPasswordPage.js";
 import { TotpSetupPage } from "./auth/TotpSetupPage.js";
 import { AdminShell } from "./components/AdminShell.js";
 import { NotFoundPage } from "./components/NotFoundPage.js";
-import { RoutePlaceholderPage } from "./components/RoutePlaceholderPage.js";
 import { resolveAdminRoute } from "./routes.js";
 import type { PendingInitialPassword, StaffUser } from "./types.js";
 import { isTotpRequired, needsTotpSetup } from "@vega/domain";
@@ -241,6 +241,7 @@ export function App() {
     twoFactorEnabled: user.twoFactorEnabled === true,
   };
   if (!route) return <NotFoundPage onHome={() => replacePath("/")} />;
+  const activeRoute = route;
 
   const invoiceEditorProps = {
     navigate: navigatePath,
@@ -250,61 +251,87 @@ export function App() {
     onAccountingDirtyChange: setAccountingDirty,
     onInvoiceNumberChange: setInvoiceNumber,
   };
-  const page =
-    route.adminOnly && user.role !== "Admin" ? (
-      <Alert severity="error">
-        Diese Route ist nur für Admins freigeschaltet.
-      </Alert>
-    ) : route.profile ? (
-      <ProfilePage
-        user={staffUser}
-        onSetupTotp={() => setVoluntaryTotpSetup(true)}
-      />
-    ) : route.path === "/" ? (
-      <OrdersPage navigate={navigatePath} />
-    ) : route.path === "/orders/archived" ? (
-      <OrdersPage archived navigate={navigatePath} />
-    ) : route.path === "/invoices" ? (
-      <InvoicesPage navigate={navigatePath} />
-    ) : route.path === "/invoices/archived" ? (
-      <InvoicesPage archived navigate={navigatePath} />
-    ) : route.sourceOrderNumber !== undefined ? (
-      <InvoiceEditorPage
-        key={route.path}
-        {...invoiceEditorProps}
-        orderNumber={route.sourceOrderNumber}
-      />
-    ) : route.path === "/invoices/new" || route.path === "/blanco" ? (
-      <InvoiceEditorPage key={route.path} {...invoiceEditorProps} />
-    ) : route.path.startsWith("/invoices/") ? (
-      <InvoiceEditorPage
-        key={route.path}
-        {...invoiceEditorProps}
-        id={route.path.slice("/invoices/".length)}
-      />
-    ) : route.path.startsWith("/edit/") ? (
-      <OrderCreatePage
-        key={route.path}
-        navigate={navigatePath}
-        onDirtyChange={onOrderDirtyChange}
-        onBusyChange={setOrderBusy}
-        onCopyChange={setOrderIsCopy}
-        dirty={orderDirty}
-        {...(route.path === "/edit/-1"
-          ? {}
-          : { orderNumber: Number(route.path.slice("/edit/".length)) })}
-      />
-    ) : route.settingsArea === "options" ? (
-      <OptionsPage />
-    ) : route.path === "/maintenance" ? (
-      <MaintenancePage />
-    ) : route.settingsArea === "content" ? (
-      <ContentManagementPage route={route} />
-    ) : route.settingsArea === "users" ? (
-      <UserManagementPage currentUserId={user.id} />
-    ) : (
-      <RoutePlaceholderPage route={route} />
-    );
+  function renderPage(): ReactNode {
+    if (activeRoute.adminOnly && user.role !== "Admin") {
+      return (
+        <Alert severity="error">
+          Diese Route ist nur für Admins freigeschaltet.
+        </Alert>
+      );
+    }
+
+    if (activeRoute.profile) {
+      return (
+        <ProfilePage
+          user={staffUser}
+          onSetupTotp={() => setVoluntaryTotpSetup(true)}
+        />
+      );
+    }
+
+    if (activeRoute.path === "/") return <OrdersPage navigate={navigatePath} />;
+    if (activeRoute.path === "/orders/archived") {
+      return <OrdersPage archived navigate={navigatePath} />;
+    }
+    if (activeRoute.path === "/invoices") {
+      return <InvoicesPage navigate={navigatePath} />;
+    }
+    if (activeRoute.path === "/invoices/archived") {
+      return <InvoicesPage archived navigate={navigatePath} />;
+    }
+
+    if (activeRoute.sourceOrderNumber !== undefined) {
+      return (
+        <InvoiceEditorPage
+          key={activeRoute.path}
+          {...invoiceEditorProps}
+          orderNumber={activeRoute.sourceOrderNumber}
+        />
+      );
+    }
+    if (activeRoute.path === "/invoices/new") {
+      return (
+        <InvoiceEditorPage key={activeRoute.path} {...invoiceEditorProps} />
+      );
+    }
+    if (activeRoute.path.startsWith("/invoices/")) {
+      return (
+        <InvoiceEditorPage
+          key={activeRoute.path}
+          {...invoiceEditorProps}
+          id={activeRoute.path.slice("/invoices/".length)}
+        />
+      );
+    }
+    if (activeRoute.path.startsWith("/edit/")) {
+      return (
+        <OrderCreatePage
+          key={activeRoute.path}
+          navigate={navigatePath}
+          onDirtyChange={onOrderDirtyChange}
+          onBusyChange={setOrderBusy}
+          onCopyChange={setOrderIsCopy}
+          dirty={orderDirty}
+          {...(activeRoute.path === "/edit/-1"
+            ? {}
+            : { orderNumber: Number(activeRoute.path.slice("/edit/".length)) })}
+        />
+      );
+    }
+
+    if (activeRoute.settingsArea === "options") return <OptionsPage />;
+    if (activeRoute.path === "/maintenance") return <MaintenancePage />;
+    if (activeRoute.settingsArea === "content") {
+      return <ContentManagementPage route={activeRoute} />;
+    }
+    if (activeRoute.settingsArea === "users") {
+      return <UserManagementPage currentUserId={user.id} />;
+    }
+
+    return <NotFoundPage onHome={() => replacePath("/")} />;
+  }
+
+  const page = renderPage();
 
   return (
     <AdminShell
@@ -320,7 +347,6 @@ export function App() {
       invoiceDirty={
         invoiceDirty ||
         pathname === "/invoices/new" ||
-        pathname === "/blanco" ||
         route.sourceOrderNumber !== undefined
       }
       invoiceAccountingDirty={accountingDirty}

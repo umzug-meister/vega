@@ -43,7 +43,7 @@ Rollen sind `Admin` und `Kundenberater`. Berechtigungen werden serverseitig auf 
   nach erfolgreichem Reset Sitzungen.
 - Profil-E-Mail-Änderungen verlangen eine Passwortbestätigung und widerrufen
   andere Sessions.
-- `/settings/users` und `/api/admin/staff` bieten Suche/Paginierung, Anlage,
+- `/users` und `/api/admin/staff` bieten Suche/Paginierung, Anlage,
   Sperrung/Entsperrung, Rollenwechsel, Passwort-Reset-Mail und 2FA-Reset. Neue
   Accounts benötigen ein sicher separat übergebenes Initialpasswort,
   Passwortwechsel; Admin-Konten zusätzlich erfolgreiches TOTP-Enrollment.

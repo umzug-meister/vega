@@ -67,7 +67,7 @@ test("only admins can create an invoice from the saved order", () => {
 });
 
 test("content submenu highlights only the selected child route", () => {
-  const route = resolveAdminRoute("/settings/offers");
+  const route = resolveAdminRoute("/offers");
   assert.ok(route);
   const html = render(
     createElement(AdminShell, {
@@ -81,7 +81,7 @@ test("content submenu highlights only the selected child route", () => {
         blocked: false,
       },
       route,
-      pathname: "/settings/offers",
+      pathname: "/offers",
       navigate: () => {},
       children: null,
     }),
@@ -100,7 +100,7 @@ test("content submenu highlights only the selected child route", () => {
 });
 
 test("management submenu groups users and maintenance and highlights the active child", () => {
-  const route = resolveAdminRoute("/settings/users");
+  const route = resolveAdminRoute("/users");
   assert.ok(route);
   const html = render(
     createElement(AdminShell, {
@@ -114,7 +114,7 @@ test("management submenu groups users and maintenance and highlights the active 
         blocked: false,
       },
       route,
-      pathname: "/settings/users",
+      pathname: "/users",
       navigate: () => {},
       children: null,
     }),
@@ -371,7 +371,7 @@ test("newly saved orders navigate to their editor without a separate success vie
 
 test("admin shell uses a restrained brand in a persistent sidebar", async () => {
   const source = await readFile(
-    new URL("../src/components/AdminShell.tsx", import.meta.url),
+    new URL("../src/components/AdminSidebar.tsx", import.meta.url),
     "utf8",
   );
   assert.ok(source.includes("VEGA"));
@@ -383,7 +383,7 @@ test("admin shell uses a restrained brand in a persistent sidebar", async () => 
 
 test("sidebar navigation starts with consistent spacing after the brand", async () => {
   const source = await readFile(
-    new URL("../src/components/AdminShell.tsx", import.meta.url),
+    new URL("../src/components/AdminSidebar.tsx", import.meta.url),
     "utf8",
   );
   assert.match(

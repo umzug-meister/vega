@@ -20,16 +20,14 @@ Kundenberater/Admin
        └─ Google Cloud Storage (private EU bucket)
 ```
 
-Die Vega-Admin-Navigation behält die Legacy-Routen für Aufträge, Bearbeitung,
-Rechnungserstellung, E-Mail-Text und Einstellungen. Einstellungen sind in
-Optionen (`/settings`), Katalogbereiche (`/settings/*`) und
-Nutzer (`/settings/users`) gegliedert. Legacy-Content-Pfade bleiben
-als weitergeleitete Aliase verfügbar; archivierte Orders/Rechnungen und Profil
-haben eigene Routen.
+Die Vega-Admin-Navigation behält die Legacy-Routen für Aufträge, Bearbeitung
+und Rechnungserstellung. Optionen (`/options`), Katalogbereiche (`/offers`,
+`/prices`, `/packings`, `/services`, `/categories`, `/furniture`) und Nutzer
+(`/users`) sind direkte Pfade ohne vorgeschaltetes `/settings`-Segment;
+archivierte Orders/Rechnungen und Profil haben eigene Routen.
 
 Maintenance (`/maintenance`) ist ein eigenständiger Hauptmenüpunkt auf derselben
 Ebene wie Optionen und ausschließlich für Admins sichtbar und zugänglich.
-Der bisherige Pfad `/settings/setup` leitet auf `/maintenance` weiter.
 Die Seite stellt den serverseitig aus `APP_BASE_URL` erzeugten WordPress-Loadercode
 und eine explizit freigegebene Liste von Runtime-Variablennamen mit Setzstatus
 bereit, niemals geheime Werte. Ein manuell gestarteter, begrenzter Smoke-Test
@@ -100,11 +98,11 @@ Seitennavigation. Kontoaktionen sind je Zeile in einem Drei-Punkte-Menü gebünd
 Die Oberfläche lädt bei Bedarf alle Seiten der weiterhin
 begrenzten Admin-API automatisch nach.
 
-Die Katalognavigation öffnet standardmäßig Leistungen (`/settings/services`),
+Die Katalognavigation öffnet standardmäßig Leistungen (`/services`),
 und wird ausschließlich über das Seitenmenü bedient; in den Seiten selbst gibt
-es keine zweite Tab-Navigation. Alte `/settings/content/*`-URLs leiten per
-History-Replacement auf `/settings/*` weiter.
-Der Preise-Reiter (`/settings/prices`) enthält die globalen Preisgruppen AGB
+es keine zweite Tab-Navigation. Katalogbereiche sind direkt über ihre kurzen
+Pfade erreichbar.
+Der Preise-Reiter (`/prices`) enthält die globalen Preisgruppen AGB
 und Konfigurator; Leistungen enthält nur den Leistungskatalog.
 Optionen enthält keine globalen Preisgruppen.
 Die Angebotsverwaltung gruppiert Angebote wie im bisherigen Admin in Karten
@@ -118,7 +116,7 @@ WordPress bleibt CMS und Einbettungsfläche. Es ist nicht länger Order-Backend,
 ### Express-Server
 
 - Statische Admin- und Kundenformular-Builds ausliefern.
-- Admin-SPA am Origin-Root: Legacy-Pfade `/`, `/edit/:id`, `/blanco`, `/settings/*` und `/email-text/:id`; zusätzlich `/invoices`, `/invoices/archived`, `/orders/archived`, `/profile`. Unbekannte Admin-Pfade zeigen 404.
+- Admin-SPA am Origin-Root: `/`, `/edit/:id`, `/options`, `/offers`, `/prices`, `/packings`, `/services`, `/categories`, `/furniture`, `/users`, `/maintenance`; zusätzlich `/invoices`, `/invoices/new`, `/invoices/archived`, `/orders/archived`, `/profile`. Unbekannte Admin-Pfade zeigen 404.
 - Better Auth-Routen und Session-Cookies auf Vega hosten.
 - Öffentliche und geschützte API-Router getrennt registrieren.
 - Request-ID, strukturierte Logs, Rate-Limits, CSP und Security-Headers zentral konfigurieren.

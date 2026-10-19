@@ -181,7 +181,7 @@ Exakte Versionen sind in `package.json`/`package-lock.json` gepinnt; offen ist n
   Unklare Ergebnisse nach dem Send-POST oder verwaiste `SENDING`-Claims
   werden `UNKNOWN` und benötigen einen belegten Providerabgleich; kein
   Blind-Retry. Die Bedienung und Recovery stehen in `hostinger-mail-cron.md`.
-- In-App-Mailaktionen protokollieren Actor/Aktion/Zeit. Versand gilt nur bei erfolgreicher Hostinger-API-Antwort als gesendet. Kopieren eines Texts für externen Versand protokolliert keinen tatsächlichen Versand.
+- In-App-Mailaktionen protokollieren Actor/Aktion/Zeit. Versand gilt nur bei erfolgreicher Hostinger-API-Antwort als gesendet.
 - Bestehende Angebots-/Rechnungs-PDF-Layouts bleiben zunächst erhalten; PDF-Erzeugung wandert vom Browser ins Backend.
 - Lange Rechnungen, Gutschriften und Mahnungen erhalten explizite
   Seitenumbrüche und wiederholte Tabellenköpfe; Positionen, Summen und
