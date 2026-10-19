@@ -131,14 +131,22 @@ und `INITIAL_ADMIN_PASSWORD` wurden der Build-Umgebung serverseitig
 bereitgestellt; keine Secret-Werte gehören in Befehle oder Dokumentation.
 Die erfolgreiche Einrichtung ersetzt keinen vollständigen Go-live-/Provider-Proof.
 
-Die temporäre Erweiterung ist wieder entfernt: `npm run build` baut nur die
-Anwendung. Vor dem nächsten Deployment diese bereinigte Version bereitstellen.
+Die temporäre Erweiterung ist wieder entfernt. Standardmäßig baut
+`npm run build` nur die Anwendung. Ein Root-`postbuild` führt
+`npm run db:migrate:deploy` ausschließlich aus, wenn die serverseitige
+Build-Umgebungsvariable `VEGA_MIGRATE_ON_BUILD=true` gesetzt ist; dann muss
+`DATABASE_URL` auf die richtige Ziel-Datenbank zeigen. Für einen gezielten
+Rollout kann die Variable für den Build gesetzt und danach wieder entfernt
+werden. Vorher ein geprüftes Datenbank-Backup erstellen. Alternativ Migrationen
+wie in Abschnitt 5 separat ausführen. Niemals die Variable für lokale Builds
+oder einen Build mit unklarer `DATABASE_URL` aktivieren.
+
 `INITIAL_ADMIN_EMAIL` und `INITIAL_ADMIN_PASSWORD` anschließend im hPanel
 entfernen und die App neu starten. Initialpasswort ändern und TOTP einrichten.
 
 **Nicht als regulären Releaseprozess wiederholen:** Der Legacy-Import ersetzt
-den aktuellen Katalog. Künftige Migrationen sind separat und gezielt im
-Node-Deploymentprozess auszuführen; Seed und Import gehören nicht dazu.
+den aktuellen Katalog. Seed und Import gehören nicht zum regulären Build- oder
+Migrationsschritt.
 Vor Datenbankänderungen eine Sicherung erstellen. Ein fehlgeschlagenes
 Deployment oder ein Commit-Revert macht Datenbankänderungen nicht rückgängig.
 

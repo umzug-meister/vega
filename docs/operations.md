@@ -125,6 +125,13 @@ versioniert). `dev` und `build` generieren automatisch. Migrationen seeden nicht
 dafür `npm run db:seed`. Der `mariadb@3.5.4`-Override ist in
 `proof-01-integration-compatibility.md` begründet.
 
+Der Root-Build hat ein standardmäßig deaktiviertes `postbuild`: Nur mit
+`VEGA_MIGRATE_ON_BUILD=true` und gesetztem `DATABASE_URL` führt es nach dem
+erfolgreichen Build `npm run db:migrate:deploy` aus. Das ist ein expliziter
+Opt-in für einen kontrollierten Deployment-Build, kein Ersatz für Backup- und
+Zieldatenbankprüfung. Details zum Hostinger-Ablauf stehen in
+[`hostinger-setup.md`](./hostinger-setup.md).
+
 ### Legacy-Katalogimport
 
 `npm run db:import-legacy-catalog` liest den Katalog der Bestands-App
