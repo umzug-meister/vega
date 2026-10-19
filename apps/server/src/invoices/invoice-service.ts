@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { manualInvoiceNextValue, MAX_INVOICE_SEQUENCE_VALUE, type InvoiceInput } from "@vega/domain";
+import {
+  manualInvoiceNextValue,
+  MAX_INVOICE_SEQUENCE_VALUE,
+  type InvoiceInput,
+} from "@vega/domain";
 import { prisma } from "../prisma.js";
+import { runTransaction } from "../transaction.js";
 import { invoiceData } from "./invoice-input.js";
 
 const RETENTION_DAYS = 30;
@@ -13,10 +18,15 @@ export class InvoiceOrderError extends Error {
 
 export class InvoiceUpdateConflict extends Error {}
 
-export async function createInvoice(input: InvoiceInput, order?: { id: string; orderNumber: number }) {
-  return prisma.$transaction(async (tx) => {
+export async function createInvoice(
+  input: InvoiceInput,
+  order?: { id: string; orderNumber: number },
+) {
+  return runTransaction(async (tx) => {
     if (order) {
-      const rows = await tx.$queryRaw<Array<{ archivedAt: Date | null }>>`SELECT archivedAt FROM \`order\` WHERE id = ${order.id} AND orderNumber = ${order.orderNumber} FOR UPDATE`;
+      const rows = await tx.$queryRaw<
+        Array<{ archivedAt: Date | null }>
+      >`SELECT archivedAt FROM \`order\` WHERE id = ${order.id} AND orderNumber = ${order.orderNumber} FOR UPDATE`;
       if (!rows[0]) throw new InvoiceOrderError("ORDER_NOT_FOUND");
       if (rows[0].archivedAt) throw new InvoiceOrderError("ORDER_ARCHIVED");
     }
@@ -24,8 +34,13 @@ export async function createInvoice(input: InvoiceInput, order?: { id: string; o
     if (invoiceNumber) {
       const nextValue = manualInvoiceNextValue(invoiceNumber);
       if (nextValue !== undefined) {
-        if (!Number.isSafeInteger(nextValue) || nextValue > MAX_INVOICE_SEQUENCE_VALUE) {
-          throw new RangeError("Rechnungsnummer überschreitet den unterstützten Nummernkreis.");
+        if (
+          !Number.isSafeInteger(nextValue) ||
+          nextValue > MAX_INVOICE_SEQUENCE_VALUE
+        ) {
+          throw new RangeError(
+            "Rechnungsnummer überschreitet den unterstützten Nummernkreis.",
+          );
         }
         await tx.invoiceNumberSequence.updateMany({
           where: { id: 1, nextValue: { lt: nextValue } },
@@ -43,44 +58,79 @@ export async function createInvoice(input: InvoiceInput, order?: { id: string; o
     return tx.invoice.create({
       data: {
         id: randomUUID(),
-        ...(order ? { orderId: order.id, orderNumberSnapshot: order.orderNumber } : {}),
+        ...(order
+          ? { orderId: order.id, orderNumberSnapshot: order.orderNumber }
+          : {}),
         ...invoiceData(input, invoiceNumber),
       },
     });
   });
 }
 
-export function updateInvoice(id: string, input: InvoiceInput, invoiceNumber: string, revision: number) {
-  return prisma.$transaction(async (tx) => {
+export function updateInvoice(
+  id: string,
+  input: InvoiceInput,
+  invoiceNumber: string,
+  revision: number,
+) {
+  return runTransaction(async (tx) => {
     const result = await tx.invoice.updateMany({
       where: { id, revision, archivedAt: null },
-      data: { ...invoiceData(input, input.invoiceNumber ?? invoiceNumber), revision: { increment: 1 } },
+      data: {
+        ...invoiceData(input, input.invoiceNumber ?? invoiceNumber),
+        revision: { increment: 1 },
+      },
     });
-    if (result.count !== 1) throw new InvoiceUpdateConflict("Die Rechnung wurde zwischenzeitlich geändert.");
+    if (result.count !== 1)
+      throw new InvoiceUpdateConflict(
+        "Die Rechnung wurde zwischenzeitlich geändert.",
+      );
     return tx.invoice.findUniqueOrThrow({ where: { id } });
   });
 }
 
 export function archiveInvoice(id: string, archivedAt: Date) {
-  return prisma.$transaction(async (tx) => {
-    const existing = await tx.invoice.findUniqueOrThrow({ where: { id }, select: { updatedAt: true } });
+  return runTransaction(async (tx) => {
+    const existing = await tx.invoice.findUniqueOrThrow({
+      where: { id },
+      select: { updatedAt: true },
+    });
     const purgeAt = new Date(archivedAt.getTime() + RETENTION_DAYS * 86400000);
     // Reminders have no own archive action; they follow their invoice.
-    await tx.reminderEvent.updateMany({ where: { invoiceId: id, archivedAt: null }, data: { archivedAt, purgeAt } });
+    await tx.reminderEvent.updateMany({
+      where: { invoiceId: id, archivedAt: null },
+      data: { archivedAt, purgeAt },
+    });
     return tx.invoice.update({
       where: { id, updatedAt: existing.updatedAt },
-      data: { archivedAt, purgeAt, updatedAt: existing.updatedAt, revision: { increment: 1 } },
+      data: {
+        archivedAt,
+        purgeAt,
+        updatedAt: existing.updatedAt,
+        revision: { increment: 1 },
+      },
     });
   });
 }
 
 export function restoreInvoice(id: string) {
-  return prisma.$transaction(async (tx) => {
-    const existing = await tx.invoice.findUniqueOrThrow({ where: { id }, select: { updatedAt: true } });
-    await tx.reminderEvent.updateMany({ where: { invoiceId: id, archivedAt: { not: null } }, data: { archivedAt: null, purgeAt: null } });
+  return runTransaction(async (tx) => {
+    const existing = await tx.invoice.findUniqueOrThrow({
+      where: { id },
+      select: { updatedAt: true },
+    });
+    await tx.reminderEvent.updateMany({
+      where: { invoiceId: id, archivedAt: { not: null } },
+      data: { archivedAt: null, purgeAt: null },
+    });
     return tx.invoice.update({
       where: { id, updatedAt: existing.updatedAt },
-      data: { archivedAt: null, purgeAt: null, updatedAt: existing.updatedAt, revision: { increment: 1 } },
+      data: {
+        archivedAt: null,
+        purgeAt: null,
+        updatedAt: existing.updatedAt,
+        revision: { increment: 1 },
+      },
     });
   });
 }

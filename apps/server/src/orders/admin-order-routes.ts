@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Prisma } from "../generated/prisma/client.js";
 import { Router, type Response } from "express";
 import { prisma } from "../prisma.js";
+import { isTransactionConflict } from "../transaction.js";
 import { createAdminRateLimit } from "../http-rate-limit.js";
 import {
   hasUnchangedCustomerDateRange,
@@ -54,42 +55,36 @@ export function createAdminOrderRouter(
       const issue = orderPricingErrorIssue(error);
       if (issue) return invalidOrder(res, [issue]);
       if (error instanceof Error && error.message === "PRICE_CATALOG_CHANGED") {
-        res
-          .status(409)
-          .json({
-            error: {
-              code: "PRICE_CATALOG_CHANGED",
-              message:
-                "Der Preiskatalog wurde seit der Vorschau geändert. Bitte berechnen Sie das Angebot erneut.",
-            },
-          });
+        res.status(409).json({
+          error: {
+            code: "PRICE_CATALOG_CHANGED",
+            message:
+              "Der Preiskatalog wurde seit der Vorschau geändert. Bitte berechnen Sie das Angebot erneut.",
+          },
+        });
         return;
       }
       if (error instanceof Error && error.message === "PRICE_PREVIEW_STALE") {
-        res
-          .status(409)
-          .json({
-            error: {
-              code: "PRICE_PREVIEW_STALE",
-              message:
-                "Preisrelevante Angaben wurden seit der Vorschau geändert. Bitte berechnen Sie das Angebot erneut.",
-            },
-          });
+        res.status(409).json({
+          error: {
+            code: "PRICE_PREVIEW_STALE",
+            message:
+              "Preisrelevante Angaben wurden seit der Vorschau geändert. Bitte berechnen Sie das Angebot erneut.",
+          },
+        });
         return;
       }
       if (
         error instanceof Error &&
         error.message === "INVALID_ORDER_CATALOG_REFERENCE"
       ) {
-        res
-          .status(400)
-          .json({
-            error: {
-              code: "INVALID_ORDER_CATALOG_REFERENCE",
-              message:
-                "Eine ausgewählte Katalogposition ist nicht mehr verfügbar.",
-            },
-          });
+        res.status(400).json({
+          error: {
+            code: "INVALID_ORDER_CATALOG_REFERENCE",
+            message:
+              "Eine ausgewählte Katalogposition ist nicht mehr verfügbar.",
+          },
+        });
         return;
       }
       next(error);
@@ -424,42 +419,36 @@ export function createAdminOrderRouter(
           error instanceof Error &&
           error.message === "PRICE_CATALOG_CHANGED"
         ) {
-          res
-            .status(409)
-            .json({
-              error: {
-                code: "PRICE_CATALOG_CHANGED",
-                message:
-                  "Der Preiskatalog wurde seit der Vorschau geändert. Bitte berechnen Sie das Angebot erneut.",
-              },
-            });
+          res.status(409).json({
+            error: {
+              code: "PRICE_CATALOG_CHANGED",
+              message:
+                "Der Preiskatalog wurde seit der Vorschau geändert. Bitte berechnen Sie das Angebot erneut.",
+            },
+          });
           return;
         }
         if (error instanceof Error && error.message === "PRICE_PREVIEW_STALE") {
-          res
-            .status(409)
-            .json({
-              error: {
-                code: "PRICE_PREVIEW_STALE",
-                message:
-                  "Preisrelevante Angaben wurden seit der Vorschau geändert. Bitte berechnen Sie das Angebot erneut.",
-              },
-            });
+          res.status(409).json({
+            error: {
+              code: "PRICE_PREVIEW_STALE",
+              message:
+                "Preisrelevante Angaben wurden seit der Vorschau geändert. Bitte berechnen Sie das Angebot erneut.",
+            },
+          });
           return;
         }
         if (
           error instanceof Error &&
           error.message === "INVALID_ORDER_CATALOG_REFERENCE"
         ) {
-          res
-            .status(400)
-            .json({
-              error: {
-                code: "INVALID_ORDER_CATALOG_REFERENCE",
-                message:
-                  "Eine ausgewählte Katalogposition ist nicht mehr verfügbar.",
-              },
-            });
+          res.status(400).json({
+            error: {
+              code: "INVALID_ORDER_CATALOG_REFERENCE",
+              message:
+                "Eine ausgewählte Katalogposition ist nicht mehr verfügbar.",
+            },
+          });
           return;
         }
         if (
@@ -474,15 +463,13 @@ export function createAdminOrderRouter(
           ]);
         }
         if (error instanceof Error && error.message === "ORDER_ARCHIVED") {
-          res
-            .status(409)
-            .json({
-              error: {
-                code: "ORDER_ARCHIVED",
-                message:
-                  "Archivierte Aufträge müssen vor der Bearbeitung wiederhergestellt werden.",
-              },
-            });
+          res.status(409).json({
+            error: {
+              code: "ORDER_ARCHIVED",
+              message:
+                "Archivierte Aufträge müssen vor der Bearbeitung wiederhergestellt werden.",
+            },
+          });
           return;
         }
         throw error;
@@ -671,33 +658,27 @@ function parseOrderNumber(value: unknown): number | null {
   return parsed && parsed <= 2_147_483_647 ? parsed : null;
 }
 function notFound(res: Response) {
-  res
-    .status(404)
-    .json({
-      error: { code: "ORDER_NOT_FOUND", message: "Auftrag nicht gefunden." },
-    });
+  res.status(404).json({
+    error: { code: "ORDER_NOT_FOUND", message: "Auftrag nicht gefunden." },
+  });
 }
 function invalidOrder(res: Response, issues: unknown) {
-  res
-    .status(400)
-    .json({
-      error: {
-        code: "INVALID_ORDER",
-        message: "Bitte prüfen Sie die Auftragsdaten.",
-        issues,
-      },
-    });
+  res.status(400).json({
+    error: {
+      code: "INVALID_ORDER",
+      message: "Bitte prüfen Sie die Auftragsdaten.",
+      issues,
+    },
+  });
 }
 function orderConflict(res: Response) {
-  res
-    .status(409)
-    .json({
-      error: {
-        code: "ORDER_CONFLICT",
-        message:
-          "Der Auftrag wurde zwischenzeitlich geändert. Ihr Entwurf bleibt erhalten. Bitte laden Sie den aktuellen Stand neu und gleichen Sie Ihre Änderungen ab.",
-      },
-    });
+  res.status(409).json({
+    error: {
+      code: "ORDER_CONFLICT",
+      message:
+        "Der Auftrag wurde zwischenzeitlich geändert. Ihr Entwurf bleibt erhalten. Bitte laden Sie den aktuellen Stand neu und gleichen Sie Ihre Änderungen ab.",
+    },
+  });
 }
 function isMissingOrder(error: unknown): boolean {
   return (
@@ -705,14 +686,6 @@ function isMissingOrder(error: unknown): boolean {
     error !== null &&
     "code" in error &&
     error.code === "P2025"
-  );
-}
-function isTransactionConflict(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === "P2034"
   );
 }
 function isInvalidStoredOrder(error: unknown): boolean {

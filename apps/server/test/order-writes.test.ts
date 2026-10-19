@@ -613,7 +613,7 @@ test("staff update accepts deleted catalog snapshots from persisted relations, n
   assert.equal(writes, 2);
 });
 
-for (const code of ["P2025", "P2034"]) {
+for (const code of ["P2025", "P2034", "P2039"]) {
   for (const action of ["save", "archive", "restore"] as const) {
     test(`${action} handles concurrency error ${code} as 409 without a journal write`, async (context) => {
       let journalWrites = 0;
@@ -624,7 +624,16 @@ for (const code of ["P2025", "P2034"]) {
       ) => {
         assert.equal(args.where?.revision, 0);
         assert.deepEqual(args.data.revision, { increment: 1 });
-        throw Object.assign(new Error("Concurrent update"), { code });
+        throw Object.assign(new Error("Concurrent update"), {
+          code,
+          ...(code === "P2039"
+            ? {
+                meta: {
+                  driverAdapterError: { cause: { originalCode: "1020" } },
+                },
+              }
+            : {}),
+        });
       };
       const request = await serve(context, {
         order: {

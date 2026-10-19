@@ -47,9 +47,9 @@ keine Produktionskonfiguration.
    SELECT VERSION();
    ```
 
-   Hostinger dokumentiert MariaDB, aber keine feste Serverversion. Bei
-   Kompatibilitätsproblemen vor dem Rollout den tatsächlichen Versionsstand mit
-   der lokalen MariaDB-10.11.19-Basis vergleichen.
+   Die Zieldatenbank meldet `11.8.9-MariaDB-log`; lokal und in CI wird MariaDB
+   11.8.9 getestet. Bei abweichender Version vor dem Rollout die Kompatibilität
+   prüfen.
 
 Die URL wird als `DATABASE_URL` gesetzt:
 

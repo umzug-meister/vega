@@ -7,6 +7,7 @@ import type {
 } from "@vega/domain";
 import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
+import { runTransaction } from "../transaction.js";
 import { emailDefaults } from "../mail/email-template.js";
 import { attachUploadClaims } from "../uploads/upload-service.js";
 import { orderRelationCreates } from "./order-relations.js";
@@ -50,7 +51,7 @@ export async function createOrder(
     `${normalizedInput.customer.firstName} ${normalizedInput.customer.lastName}`.trim();
   const { imageClaims = [], ...storedInput } = normalizedInput;
 
-  return prisma.$transaction(async (transaction) => {
+  return runTransaction(async (transaction) => {
     if (source === "admin" && normalizedInput.pricingSnapshot) {
       const pricingSnapshot = await validatePricingSnapshot(
         normalizedInput,

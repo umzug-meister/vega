@@ -89,10 +89,11 @@ Credential-Übertragung und End-to-End-Upload bleiben separat nachzuweisen.
 
 ## Datenbank
 
-Lokal läuft **MariaDB 10.11.19** per Docker Compose auf `127.0.0.1:3307`.
-Hostinger nennt MariaDB, aber keine Version
+Lokal läuft **MariaDB 11.8.9** per Docker Compose auf `127.0.0.1:3307`, passend
+zur Hostinger-Zieldatenbank. Dort meldete `SELECT VERSION();` am 2026-10-19
+`11.8.9-MariaDB-log`. Hostinger nennt MariaDB ohne feste Version
 ([Hostinger-Support](https://www.hostinger.com/support/1583226-which-database-management-system-is-used-at-hostinger/));
-vor dem Deployment auf der Zieldatenbank `SELECT VERSION();` prüfen.
+vor jedem Deployment die Version erneut mit `SELECT VERSION();` prüfen.
 
 ### Hostinger-Datenbank einrichten
 
@@ -233,7 +234,7 @@ PDF-Tests sichern vollständige Inhalte und Seitenbegrenzungen statt exakter
 Zeichenkoordinaten oder Zeichenstrom-Hashes; die globale Vorgabe kompakter
 Admin-Eingabefelder bleibt separat abgesichert.
 
-CI (`.github/workflows/ci.yml`) nutzt Node 24 und MariaDB 10.11.19 inkl. frischer
+CI (`.github/workflows/ci.yml`) nutzt Node 24 und MariaDB 11.8.9 inkl. frischer
 Migrationen und Drift-Prüfung.
 
 ## WordPress-Einbettung

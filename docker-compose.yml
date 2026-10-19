@@ -1,6 +1,6 @@
 services:
   db:
-    image: mariadb:10.11.19
+    image: mariadb:11.8.9
     restart: unless-stopped
     ports:
       - "127.0.0.1:${MYSQL_PORT:-3307}:3306"
