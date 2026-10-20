@@ -86,6 +86,22 @@ test("order PDF retains the saved multiline hourly crew description", () => {
     assert.ok(pdf.includes(text), text);
 });
 
+test("fixed-price order PDF contains no minimum or additional-hour language", () => {
+  const input = orderPdfFixture();
+  input.data.details!.basis.hours = 0;
+  input.data.details!.basis.basePrice = 300;
+  input.data.details!.conditions = [
+    { description: "2 Träger / 1 x LKW 3,5t", amount: 300, kind: "base" },
+    { description: "An-/Abfahrtskosten", amount: 90, kind: "travel" },
+  ];
+  const pdf = generateOrderPdf(input, now).toString("latin1");
+  assert.ok(pdf.includes("Gesamt:"));
+  assert.ok(pdf.includes("390,00"));
+  assert.ok(!pdf.includes("Gesamtpreis f"));
+  assert.ok(!pdf.includes("weitere Stunde"));
+  assert.ok(!pdf.includes("Mindestabnahme"));
+});
+
 test("historically archived and restored orders recover their last edit date from the journal", () => {
   const createdAt = new Date("2026-08-01T10:00:00Z");
   const editedAt = new Date("2026-09-15T10:00:00Z");

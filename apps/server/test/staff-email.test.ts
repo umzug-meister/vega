@@ -140,6 +140,10 @@ test("offer preserves saved multiline crew conditions and legacy hourly mail det
     fixed.contentHtml,
     /Mindestabnahme|Jede weitere Stunde|Maximale Abnahme/u,
   );
+  assert.match(
+    fixed.contentHtml,
+    /<h3>Personalkosten<\/h3><table><tbody><tr><td><p><strong>5 Mann mit 2 x LKW \(à 3,5t \/ 20 m³\)<\/strong><\/p><\/td><td><p>1\.470,00\s€<\/p><\/td><\/tr><\/tbody><\/table>/u,
+  );
 });
 
 test("two-option offer uses the family root reference and shows both options", () => {

@@ -10,6 +10,7 @@ import { AppointmentFields } from "../src/orders/AppointmentFields.js";
 import {
   calculateConditionAmount,
   ConditionsTab,
+  mergeCalculatedConditions,
 } from "../src/orders/ConditionsTab.js";
 import { createEmptyOrder } from "../src/orders/order-form-types.js";
 import { resolveAdminRoute } from "../src/routes.js";
@@ -489,6 +490,27 @@ test("order positions keep manual editing and expose an explicit server calculat
   assert.ok(html.includes("125,00"));
 });
 
+test("zero amount is displayed as an empty field for a new position", () => {
+  const value = createEmptyOrder();
+  value.details.conditions = [
+    { description: "", quantity: 1, unitPrice: 3, amount: 0 },
+  ];
+  const html = render(
+    createElement(ConditionsTab, {
+      value,
+      onConditionsChange: () => {},
+      onCalculate: () => {},
+    }),
+  );
+  const numberInputs = [
+    ...html.matchAll(/<input\b[^>]*type="number"[^>]*>/gu),
+  ].map((match) => match[0]);
+  const amountInput = numberInputs.find((input) => input.includes('value=""'));
+  assert.ok(amountInput);
+  assert.match(amountInput, /value=""/u);
+  assert.doesNotMatch(amountInput, /value="0"/u);
+});
+
 test("manual position amount is the rounded quantity multiplied by unit price", () => {
   assert.equal(calculateConditionAmount(2, 15.255), 30.51);
   assert.equal(calculateConditionAmount(0, 15), 0);
@@ -517,6 +539,37 @@ test("manual position amount is the rounded quantity multiplied by unit price", 
   assert.match(html, /disabled=""/u);
 });
 
+test("manual order positions are separate and survive recalculation until removed", () => {
+  const calculated = [
+    { description: "Personal", amount: 500, kind: "base" as const },
+    { description: "Anfahrt", amount: 90, kind: "travel" as const },
+  ];
+  const manual = {
+    description: "Entsorgung",
+    amount: 35,
+    kind: "manual" as const,
+  };
+  const merged = mergeCalculatedConditions(calculated, [...calculated, manual]);
+  assert.deepEqual(merged, [...calculated, manual]);
+  const afterRemovingManual = mergeCalculatedConditions(calculated, calculated);
+  assert.deepEqual(afterRemovingManual, calculated);
+
+  const value = createEmptyOrder();
+  value.details.conditions = [...calculated, manual];
+  const html = render(
+    createElement(ConditionsTab, {
+      value,
+      onConditionsChange: () => {},
+      onCalculate: () => {},
+    }),
+  );
+  assert.match(html, /Positionen aus dem Auftrag/u);
+  assert.match(html, /Manuell hinzugefügt/u);
+  assert.ok(html.indexOf("Personal") < html.indexOf("Manuell hinzugefügt"));
+  assert.ok(html.indexOf("Manuell hinzugefügt") < html.indexOf("Entsorgung"));
+  assert.match(html, /Summe:[\s\S]*625,00/u);
+});
+
 test("order position descriptions retain all lines in autosizing textareas", () => {
   const value = createEmptyOrder();
   const description =
@@ -539,4 +592,68 @@ test("order position descriptions retain all lines in autosizing textareas", () 
   assert.doesNotMatch(textareas[0]![1]!, /\brows=/u);
   assert.equal(textareas[0]![2], description);
   assert.equal(textareas[1]![2], "Manuelle\nZusatzposition");
+});
+
+test("new order positions suggest both services and packaging and apply selected prices", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const path = String(url);
+    return Response.json({
+      data: path.endsWith("/packings")
+        ? [
+            {
+              id: 7,
+              name: "Kleiderbox",
+              price: 4.5,
+              description: "",
+              media: null,
+              sort: 0,
+              show: false,
+            },
+          ]
+        : [{ id: 9, name: "Entsorgung", price: 35, sort: 0, show: false }],
+    });
+  };
+  const value = createEmptyOrder();
+  value.details.conditions = [{ description: "", amount: 0, kind: "manual" }];
+  let updatedConditions = value.details.conditions;
+  const app = await mount(
+    createElement(ConditionsTab, {
+      value,
+      onConditionsChange: (conditions) => {
+        updatedConditions = conditions;
+      },
+      onCalculate: () => {},
+    }),
+  );
+  try {
+    await app.flush();
+    const description = app.container.querySelector<HTMLTextAreaElement>(
+      'textarea[role="combobox"]',
+    );
+    assert.ok(description);
+    await app.input(description, "e");
+    await app.flush();
+    const options = [
+      ...app.window.document.querySelectorAll<HTMLElement>('[role="option"]'),
+    ];
+    assert.ok(
+      options.some((option) => option.textContent?.trim() === "Entsorgung"),
+    );
+    const packing = options.find(
+      (option) => option.textContent?.trim() === "Kleiderbox",
+    );
+    assert.ok(packing);
+    await app.click(packing);
+    assert.deepEqual(updatedConditions[0], {
+      description: "Kleiderbox",
+      kind: "manual",
+      quantity: 1,
+      unitPrice: 4.5,
+      amount: 4.5,
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+    await app.cleanup();
+  }
 });

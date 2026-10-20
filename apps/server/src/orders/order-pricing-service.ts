@@ -43,7 +43,7 @@ export async function previewOrderPricing(
   }
 
   const [offerRow, services, packings, rateRows] = await Promise.all([
-    details.basis.offerId === undefined
+    details.basis.hours <= 0 || details.basis.offerId === undefined
       ? Promise.resolve(null)
       : client.catalogOffer.findUnique({
           where: { id: details.basis.offerId },
@@ -62,7 +62,11 @@ export async function previewOrderPricing(
       select: { key: true, price: true },
     }),
   ]);
-  if (details.basis.offerId !== undefined && !offerRow)
+  if (
+    details.basis.hours > 0 &&
+    details.basis.offerId !== undefined &&
+    !offerRow
+  )
     throw new Error("PRICE_NOT_CONFIGURED");
   if (
     offerRow &&

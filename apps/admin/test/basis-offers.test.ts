@@ -103,7 +103,7 @@ test("Basis tab filters as quantities are entered and offers one-click selection
       "LKW 3,5",
       "Stunden",
       "Betrag",
-      "Einzelpreis",
+      "Stundenpreis",
       "Rabatt",
     ]) {
       const label = [...view.container.querySelectorAll("label")].find(
@@ -167,6 +167,45 @@ test("Basis tab filters as quantities are entered and offers one-click selection
         ?.value,
       "4",
     );
+  } finally {
+    await view.cleanup();
+  }
+});
+
+test("staff truck count input has no four-truck maximum", async (context) => {
+  context.mock.method(
+    globalThis,
+    "fetch",
+    async () =>
+      new Response(JSON.stringify({ data: offers }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+  );
+  const view = await mount(null);
+  try {
+    function Harness() {
+      const [value, setValue] = React.useState(() => createEmptyOrder());
+      return React.createElement(BasisTab, {
+        value,
+        update: (patch) => setValue((current) => ({ ...current, ...patch })),
+        onBasisChange: (basis) =>
+          setValue((current) => ({
+            ...current,
+            details: { ...current.details, basis },
+          })),
+      });
+    }
+    await view.render(React.createElement(Harness));
+    const label = [...view.container.querySelectorAll("label")].find(
+      (entry) => entry.textContent?.trim() === "LKW 3,5",
+    );
+    assert.ok(label);
+    const input = view.container.querySelector<HTMLInputElement>(
+      `#${label.htmlFor}`,
+    );
+    assert.ok(input);
+    assert.equal(input.max, "");
   } finally {
     await view.cleanup();
   }

@@ -370,6 +370,22 @@ test("uses the central truck-count travel rate as the minimum and local rides do
   );
 });
 
+test("truck counts above the configured automatic travel rates are accepted for manual travel pricing", () => {
+  const base = pricingInput();
+  const result = calculateOrderPricing({
+    ...base,
+    addresses: [{ street: "A", postalCode: "80331", city: "München" }],
+    basis: { ...base.basis, workers: 20, trucks: 8, hours: 0 },
+    offer: null,
+  });
+  assert.equal(result.conditions[0]?.description, "20 Träger / 8 x LKW 3,5t");
+  assert.equal(result.conditions[0]?.amount, 1_000);
+  assert.equal(
+    result.conditions.some((condition) => condition.kind === "travel"),
+    false,
+  );
+});
+
 test("central travel rate is independent of worker count and legacy offer rates", () => {
   const travelCosts = [3, 6].map((workers) => {
     const base = pricingInput();
@@ -404,7 +420,7 @@ test("requires the central travel rate for the selected truck count", () => {
   );
 });
 
-test("requires distance and matching tariff for non-local priced routes", () => {
+test("requires distance for non-local priced routes and allows fixed price without an offer", () => {
   assert.throws(
     () =>
       calculateOrderPricing(
@@ -425,19 +441,66 @@ test("requires distance and matching tariff for non-local priced routes", () => 
     (error: unknown) =>
       error instanceof Error && error.message === "OFFER_MISMATCH",
   );
-  const { offerId: _offerId, ...manualBasis } = pricingInput().basis;
-  assert.throws(
-    () =>
-      calculateOrderPricing(
-        pricingInput({
-          addresses: [{ street: "A", postalCode: "80331", city: "München" }],
-          basis: manualBasis,
-          offer: null,
-        }),
-      ),
-    (error: unknown) =>
-      error instanceof OrderPricingError &&
-      error.message === "PRICE_NOT_CONFIGURED",
+  const fixedBasis = { ...pricingInput().basis, hours: 0, basePrice: 300 };
+  const fixedPrice = calculateOrderPricing(
+    pricingInput({
+      addresses: [{ street: "A", postalCode: "80331", city: "München" }],
+      basis: fixedBasis,
+      offer: null,
+    }),
+  );
+  assert.equal(fixedPrice.pricingSnapshot.offer, null);
+  assert.equal(fixedPrice.conditions[0]?.amount, 300);
+  assert.equal(
+    fixedPrice.conditions.find((condition) => condition.kind === "travel")
+      ?.amount,
+    100,
+  );
+  assert.doesNotMatch(
+    fixedPrice.conditions[0]!.description,
+    /Stunden|Mindestabnahme/u,
+  );
+});
+
+test("fixed-price preview skips a stale selected offer when hours are blank", async () => {
+  const input = orderFixture();
+  input.details!.basis = {
+    workers: 2,
+    trucks: 1,
+    hours: 0,
+    basePrice: 300,
+    extraHourPrice: 0,
+    discountPercent: 0,
+    offerId: 999,
+  };
+  input.details!.showSecondaryFrom = false;
+  input.details!.showSecondaryTo = false;
+  input.details!.extras.services = [];
+  input.from.parkingSlot = false;
+  input.to.parkingSlot = false;
+  const client = {
+    catalogOffer: {
+      findUnique: async () => {
+        assert.fail("Fixed-price preview must not require or query a tariff");
+      },
+    },
+    catalogService: { findMany: async () => [] },
+    catalogPacking: { findMany: async () => [] },
+    catalogServiceRate: {
+      findMany: async () => [{ key: "ridingCostsTruck1", price: 90 }],
+    },
+  } as unknown as Parameters<typeof previewOrderPricing>[1];
+
+  const preview = await previewOrderPricing(input, client);
+  assert.equal(preview.pricingSnapshot.offer, null);
+  assert.equal(preview.conditions[0]?.amount, 300);
+  assert.equal(
+    preview.conditions.find((condition) => condition.kind === "travel")?.amount,
+    90,
+  );
+  assert.doesNotMatch(
+    preview.conditions[0]!.description,
+    /Stunden|Mindestabnahme|weitere Stunde/u,
   );
 });
 
