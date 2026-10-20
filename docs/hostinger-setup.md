@@ -16,13 +16,13 @@ nachgewiesen werden (siehe [ADR 0008](./adr/0008-hostinger-deployment.md)).
 
 Du brauchst:
 
-- eine Vega-Subdomain, z. B. `app.example.de`, mit aktiviertem HTTPS;
+- eine Vega-Subdomain, z. B. `app.example.com`, mit aktiviertem HTTPS;
 - einen Hostinger-Tarif, der eine Node.js-Web-App mit **Node.js 24**,
   `npm ci`, eigenem Startprozess und den unten beschriebenen CLI-Aufrufen
   unterstützt;
 - Zugriff auf das hPanel, die Vega-App-Dateien per SSH und die
   Hostinger-Datenbankdetails;
-- die WordPress-Origin, z. B. `https://www.example.de` (nur Origin, kein Pfad);
+- die WordPress-Origin, z. B. `https://www.example.com` (nur Origin, kein Pfad);
 - sichere Werte für Mail, Admin-Bootstrap und – falls eingesetzt – Google/GCS.
 
 Keine Passwörter, Tokens oder privaten Schlüssel in Git, `.env` im
@@ -47,9 +47,9 @@ keine Produktionskonfiguration.
    SELECT VERSION();
    ```
 
-   Hostinger dokumentiert MariaDB, aber keine feste Serverversion. Bei
-   Kompatibilitätsproblemen vor dem Rollout den tatsächlichen Versionsstand mit
-   der lokalen MariaDB-10.11.19-Basis vergleichen.
+   Die Zieldatenbank meldet `11.8.9-MariaDB-log`; lokal und in CI wird MariaDB
+   11.8.9 getestet. Bei abweichender Version vor dem Rollout die Kompatibilität
+   prüfen.
 
 Die URL wird als `DATABASE_URL` gesetzt:
 
@@ -131,14 +131,22 @@ und `INITIAL_ADMIN_PASSWORD` wurden der Build-Umgebung serverseitig
 bereitgestellt; keine Secret-Werte gehören in Befehle oder Dokumentation.
 Die erfolgreiche Einrichtung ersetzt keinen vollständigen Go-live-/Provider-Proof.
 
-Die temporäre Erweiterung ist wieder entfernt: `npm run build` baut nur die
-Anwendung. Vor dem nächsten Deployment diese bereinigte Version bereitstellen.
+Die temporäre Erweiterung ist wieder entfernt. Standardmäßig baut
+`npm run build` nur die Anwendung. Ein Root-`postbuild` führt
+`npm run db:migrate:deploy` ausschließlich aus, wenn die serverseitige
+Build-Umgebungsvariable `VEGA_MIGRATE_ON_BUILD=true` gesetzt ist; dann muss
+`DATABASE_URL` auf die richtige Ziel-Datenbank zeigen. Für einen gezielten
+Rollout kann die Variable für den Build gesetzt und danach wieder entfernt
+werden. Vorher ein geprüftes Datenbank-Backup erstellen. Alternativ Migrationen
+wie in Abschnitt 5 separat ausführen. Niemals die Variable für lokale Builds
+oder einen Build mit unklarer `DATABASE_URL` aktivieren.
+
 `INITIAL_ADMIN_EMAIL` und `INITIAL_ADMIN_PASSWORD` anschließend im hPanel
 entfernen und die App neu starten. Initialpasswort ändern und TOTP einrichten.
 
 **Nicht als regulären Releaseprozess wiederholen:** Der Legacy-Import ersetzt
-den aktuellen Katalog. Künftige Migrationen sind separat und gezielt im
-Node-Deploymentprozess auszuführen; Seed und Import gehören nicht dazu.
+den aktuellen Katalog. Seed und Import gehören nicht zum regulären Build- oder
+Migrationsschritt.
 Vor Datenbankänderungen eine Sicherung erstellen. Ein fehlgeschlagenes
 Deployment oder ein Commit-Revert macht Datenbankänderungen nicht rückgängig.
 
@@ -163,11 +171,11 @@ erforderlich:
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `NODE_ENV`                      | `production`                                                                                                                                       |
 | `DATABASE_URL`                  | Vollständige MySQL-URL aus Schritt 2                                                                                                               |
-| `APP_BASE_URL`                  | Öffentliche Vega-Origin mit HTTPS, z. B. `https://app.example.de`                                                                                  |
+| `APP_BASE_URL`                  | Öffentliche Vega-Origin mit HTTPS, z. B. `https://app.example.com`                                                                                  |
 | `BETTER_AUTH_URL`               | Dieselbe öffentliche Vega-Origin, ohne Pfad                                                                                                        |
 | `BETTER_AUTH_SECRET`            | Zufälliger, einmaliger Secret-Wert mit mindestens 32 Zeichen; lokal z. B. mit `openssl rand -base64 32` erzeugen und nur direkt in hPanel einfügen |
-| `BETTER_AUTH_TRUSTED_ORIGINS`   | Exakte Origins, kommagetrennt; produktiv mindestens die Vega-Origin, z. B. `https://app.example.de`                                                |
-| `CORS_ALLOWED_ORIGINS`          | Exakte HTTPS-Origins, kommagetrennt: Vega-Origin und WordPress-Origin, z. B. `https://app.example.de,https://www.example.de`                       |
+| `BETTER_AUTH_TRUSTED_ORIGINS`   | Exakte Origins, kommagetrennt; produktiv mindestens die Vega-Origin, z. B. `https://app.example.com`                                                |
+| `CORS_ALLOWED_ORIGINS`          | Exakte HTTPS-Origins, kommagetrennt: Vega-Origin und WordPress-Origin, z. B. `https://app.example.com,https://www.example.com`                       |
 | `HOSTINGER_MAIL_API_TOKEN`      | Serverseitiger Hostinger-Mail-API-Token                                                                                                            |
 | `HOSTINGER_MAILBOX_RESOURCE_ID` | Resource-ID des Postfachs; ggf. aus dem Mail-API-Setup ermitteln                                                                                   |
 

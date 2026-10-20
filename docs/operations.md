@@ -89,10 +89,11 @@ Credential-Übertragung und End-to-End-Upload bleiben separat nachzuweisen.
 
 ## Datenbank
 
-Lokal läuft **MariaDB 10.11.19** per Docker Compose auf `127.0.0.1:3307`.
-Hostinger nennt MariaDB, aber keine Version
+Lokal läuft **MariaDB 11.8.9** per Docker Compose auf `127.0.0.1:3307`, passend
+zur Hostinger-Zieldatenbank. Dort meldete `SELECT VERSION();` am 2026-10-19
+`11.8.9-MariaDB-log`. Hostinger nennt MariaDB ohne feste Version
 ([Hostinger-Support](https://www.hostinger.com/support/1583226-which-database-management-system-is-used-at-hostinger/));
-vor dem Deployment auf der Zieldatenbank `SELECT VERSION();` prüfen.
+vor jedem Deployment die Version erneut mit `SELECT VERSION();` prüfen.
 
 ### Hostinger-Datenbank einrichten
 
@@ -125,6 +126,13 @@ versioniert). `dev` und `build` generieren automatisch. Migrationen seeden nicht
 dafür `npm run db:seed`. Der `mariadb@3.5.4`-Override ist in
 `proof-01-integration-compatibility.md` begründet.
 
+Der Root-Build hat ein standardmäßig deaktiviertes `postbuild`: Nur mit
+`VEGA_MIGRATE_ON_BUILD=true` und gesetztem `DATABASE_URL` führt es nach dem
+erfolgreichen Build `npm run db:migrate:deploy` aus. Das ist ein expliziter
+Opt-in für einen kontrollierten Deployment-Build, kein Ersatz für Backup- und
+Zieldatenbankprüfung. Details zum Hostinger-Ablauf stehen in
+[`hostinger-setup.md`](./hostinger-setup.md).
+
 ### Legacy-Katalogimport
 
 `npm run db:import-legacy-catalog` liest den Katalog der Bestands-App
@@ -150,15 +158,11 @@ Der Plan liegt in
 `apps/server/src/catalog/legacy-import.ts`, das Skript in
 `prisma/import-legacy-catalog.ts`.
 
-Die Migration `20261016150000_document_revisions` muss vor dem neuen
-Serverstand ausgerollt sein. Sie ergänzt `Order.revision` und
-`Invoice.revision` mit Startwert `0`; alte offene Bearbeitungsseiten müssen
-neu geladen werden. PUTs ohne Revision werden mit `400`, überholte Stände
-mit `409` abgewiesen.
-
 ## Erstadmin
 
 `npm run db:seed` legt einmalig `root_user` mit `INITIAL_ADMIN_EMAIL` und
+`INITIAL_ADMIN_PASSWORD` an; ein erneuter Seed ändert nichts. Beim ersten Login
+Initialpasswort ändern und TOTP einrichten.
 
 ## Signaturfarbe
 
@@ -174,8 +178,6 @@ Die Migration `20261018100000_user_signature_color` ergänzt den Benutzer und
 die E-Mail-Outbox. Bestehende Benutzer erhalten den schwarzen Standardwert;
 bereits eingereihte Nachrichten ohne Farbsnapshot werden beim Versand ebenfalls
 schwarz dargestellt.
-`INITIAL_ADMIN_PASSWORD` an; ein erneuter Seed ändert nichts. Beim ersten Login
-Initialpasswort ändern und TOTP einrichten.
 
 ## Recovery bei Verlust des einzigen Admin-Authenticators
 
@@ -226,7 +228,7 @@ PDF-Tests sichern vollständige Inhalte und Seitenbegrenzungen statt exakter
 Zeichenkoordinaten oder Zeichenstrom-Hashes; die globale Vorgabe kompakter
 Admin-Eingabefelder bleibt separat abgesichert.
 
-CI (`.github/workflows/ci.yml`) nutzt Node 24 und MariaDB 10.11.19 inkl. frischer
+CI (`.github/workflows/ci.yml`) nutzt Node 24 und MariaDB 11.8.9 inkl. frischer
 Migrationen und Drift-Prüfung.
 
 ## WordPress-Einbettung

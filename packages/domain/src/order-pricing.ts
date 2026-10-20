@@ -125,10 +125,19 @@ export function calculateOrderPricing(
       ),
   };
 
+  const description = [
+    `${basis.workers} Träger${basis.trucks > 0 ? ` / ${basis.trucks} x LKW 3,5t` : ""}`,
+  ];
+  if (basis.hours > 0) {
+    description.push(
+      `Mindestabnahme: ${basis.hours} Stunden, jede weitere Stunde: ${new Intl.NumberFormat("de-DE").format(basis.extraHourPrice)} €/Std`,
+    );
+    if (basis.hours <= 4)
+      description.push(`Maximale Abnahme: ${basis.hours + 1} Stunden`);
+  }
   const conditions: OrderConditionInput[] = [
     {
-      description:
-        input.offer?.name || `${basis.workers} Träger / ${basis.trucks} LKW`,
+      description: description.join("\n"),
       amount: roundAmountToCents(basis.basePrice),
       kind: "base",
     },

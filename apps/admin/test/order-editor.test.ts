@@ -303,7 +303,13 @@ test("saving an order drops service and packing rows missing a name or unit pric
       extras: {
         packingRequested: false,
         services: [
-          { kind: "service", name: "Bohrarbeiten", quantity: 1, unitPrice: 85 },
+          {
+            kind: "service",
+            catalogId: 9,
+            name: "Bohrarbeiten",
+            quantity: 1,
+            unitPrice: 85,
+          },
           { kind: "service", name: "Montage", quantity: 1, unitPrice: 50 },
           { kind: "service", name: "", quantity: 1, unitPrice: 20 },
           { kind: "service", name: "Freitext ohne Preis", quantity: 1 },
@@ -351,6 +357,7 @@ test("saving an order drops service and packing rows missing a name or unit pric
   await view.input(clearedPriceInput, "");
   await view.click(view.save);
   assert.deepEqual(savedServices, [
+    { kind: "service", catalogId: 9, name: "Bohrarbeiten", quantity: 1 },
     { kind: "service", name: "Montage", quantity: 1, unitPrice: 50 },
     { kind: "packaging", name: "Karton", quantity: 2, unitPrice: 0 },
   ]);
@@ -358,6 +365,43 @@ test("saving an order drops service and packing rows missing a name or unit pric
     view.container.querySelector("output")?.getAttribute("data-dirty"),
     "false",
   );
+});
+
+test("saving keeps catalog services whose price falls back to the catalog", async (context) => {
+  const initialData: CreateOrderInput = {
+    ...input,
+    details: {
+      ...createEmptyOrder().details,
+      extras: {
+        packingRequested: false,
+        services: [
+          { kind: "service", catalogId: 9, name: "Bohrarbeiten", quantity: 2 },
+          { kind: "packaging", catalogId: 10, name: "Karton", quantity: 1 },
+          { kind: "service", name: "Freitext ohne Preis", quantity: 1 },
+          { kind: "service", name: "  ", quantity: 1, unitPrice: 20 },
+        ],
+      },
+    },
+  };
+  let savedServices: unknown;
+  const view = await editor(context, {
+    initialData,
+    write: (body) => {
+      savedServices = (body.details as CreateOrderInput["details"])!.extras
+        .services;
+      const savedData = { ...body };
+      delete savedData.revision;
+      return json({
+        data: { orderNumber: 1000, revision: 8, data: savedData },
+      });
+    },
+  });
+
+  await view.click(view.save);
+  assert.deepEqual(savedServices, [
+    { kind: "service", catalogId: 9, name: "Bohrarbeiten", quantity: 2 },
+    { kind: "packaging", catalogId: 10, name: "Karton", quantity: 1 },
+  ]);
 });
 
 test("saving an order removes blank furniture rows and keeps named furniture", async (context) => {

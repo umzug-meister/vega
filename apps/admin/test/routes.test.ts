@@ -18,86 +18,55 @@ test("a direct two-factor URL does not mark the sign-in flow as authenticated", 
   );
 });
 
-test("legacy order and settings routes resolve to their existing sections", () => {
+test("admin routes resolve to orders, invoices, profile and root-level admin sections", () => {
   assert.equal(resolveAdminRoute("/")?.title, "Aufträge");
   assert.equal(resolveAdminRoute("/edit/-1")?.title, "Neuer Auftrag");
   assert.equal(resolveAdminRoute("/edit/-1")?.path, "/edit/-1");
   assert.equal(resolveAdminRoute("/edit/42")?.title, "Auftrag 42");
-  assert.equal(resolveAdminRoute("/blanco")?.title, "Neue Rechnung");
-  assert.equal(resolveAdminRoute("/settings")?.title, "Optionen");
-  assert.equal(resolveAdminRoute("/settings/offers")?.title, "Angebote");
-  assert.equal(resolveAdminRoute("/settings/packings")?.title, "Verpackung");
-  assert.equal(resolveAdminRoute("/settings/services")?.title, "Leistungen");
+  assert.equal(resolveAdminRoute("/blanco"), null);
+  assert.equal(resolveAdminRoute("/invoices/new")?.title, "Neue Rechnung");
+  assert.equal(resolveAdminRoute("/options")?.title, "Optionen");
+  assert.equal(resolveAdminRoute("/offers")?.title, "Angebote");
+  assert.equal(resolveAdminRoute("/packings")?.title, "Verpackung");
+  assert.equal(resolveAdminRoute("/services")?.title, "Leistungen");
   assert.equal(
-    resolveAdminRoute("/settings/categories")?.title,
+    resolveAdminRoute("/categories")?.title,
     "Möbel-Kategorien",
   );
-  assert.equal(resolveAdminRoute("/settings/furniture")?.title, "Möbel");
+  assert.equal(resolveAdminRoute("/furniture")?.title, "Möbel");
   assert.equal(
-    resolveAdminRoute("/settings/furniture")?.settingsArea,
+    resolveAdminRoute("/furniture")?.settingsArea,
     "content",
   );
-  assert.equal(resolveAdminRoute("/email-text/42")?.title, "E-Mail-Text");
+  assert.equal(resolveAdminRoute("/users")?.title, "Nutzer");
+  assert.equal(resolveAdminRoute("/email-text/42"), null);
 });
 
-test("settings routes separate options, catalog sections, and user management", () => {
-  assert.equal(resolveAdminRoute("/settings")?.settingsArea, "options");
-  assert.deepEqual(
-    resolveAdminRoute("/settings/content"),
-    resolveAdminRoute("/settings/services"),
-  );
-  assert.equal(
-    resolveAdminRoute("/settings/content")?.path,
-    "/settings/services",
-  );
-  assert.equal(
-    resolveAdminRoute("/settings/content")?.contentSection,
-    "services",
-  );
-  assert.equal(resolveAdminRoute("/settings/content")?.adminOnly, true);
-  assert.equal(
-    resolveAdminRoute("/settings/content/furniture")?.path,
-    "/settings/furniture",
-  );
-  assert.equal(
-    resolveAdminRoute("/settings/content/categories")?.path,
-    "/settings/categories",
-  );
-  assert.equal(
-    resolveAdminRoute("/settings/content/offers")?.path,
+test("catalog, options, and user sections use paths without an intermediate settings segment", () => {
+  assert.equal(resolveAdminRoute("/options")?.settingsArea, "options");
+  assert.equal(resolveAdminRoute("/options")?.adminOnly, true);
+  assert.equal(resolveAdminRoute("/prices")?.contentSection, "prices");
+  assert.equal(resolveAdminRoute("/prices")?.adminOnly, true);
+  assert.equal(resolveAdminRoute("/prices")?.title, "Preise");
+  assert.equal(resolveAdminRoute("/users")?.settingsArea, "users");
+  assert.equal(resolveAdminRoute("/users")?.adminOnly, true);
+  assert.equal(resolveAdminRoute("/users")?.title, "Nutzer");
+  for (const obsoletePath of [
+    "/settings",
+    "/settings/options",
+    "/settings/setup",
+    "/settings/users",
     "/settings/offers",
-  );
-  assert.equal(
-    resolveAdminRoute("/settings/content/packings")?.path,
-    "/settings/packings",
-  );
-  assert.equal(
-    resolveAdminRoute("/settings/content/services")?.path,
-    "/settings/services",
-  );
-  assert.equal(
-    resolveAdminRoute("/settings/content/prices")?.path,
     "/settings/prices",
-  );
-  for (const section of [
-    "offers",
-    "prices",
-    "packings",
-    "services",
-    "categories",
-    "furniture",
+    "/settings/packings",
+    "/settings/services",
+    "/settings/categories",
+    "/settings/furniture",
+    "/settings/content",
+    "/settings/content/offers",
   ]) {
-    assert.equal(
-      resolveAdminRoute(`/settings/${section}`)?.path,
-      `/settings/${section}`,
-    );
+    assert.equal(resolveAdminRoute(obsoletePath), null, obsoletePath);
   }
-  assert.equal(resolveAdminRoute("/settings/prices")?.contentSection, "prices");
-  assert.equal(resolveAdminRoute("/settings/prices")?.adminOnly, true);
-  assert.equal(resolveAdminRoute("/settings/prices")?.title, "Preise");
-  assert.equal(resolveAdminRoute("/settings/users")?.settingsArea, "users");
-  assert.equal(resolveAdminRoute("/settings/users")?.adminOnly, true);
-  assert.equal(resolveAdminRoute("/settings/users")?.title, "Nutzer");
 });
 
 test("new archive, invoice, and profile routes are available with admin-only metadata", () => {
@@ -118,11 +87,11 @@ test("nested routes display their parent and subroute in the navbar title", () =
     "Archiv | Rechnungen",
   );
   assert.equal(
-    formatAdminRouteTitle(resolveAdminRoute("/settings/offers")!),
+    formatAdminRouteTitle(resolveAdminRoute("/offers")!),
     "Katalog | Angebote",
   );
   assert.equal(
-    formatAdminRouteTitle(resolveAdminRoute("/settings/users")!),
+    formatAdminRouteTitle(resolveAdminRoute("/users")!),
     "Verwaltung | Nutzer",
   );
   assert.equal(
@@ -130,7 +99,7 @@ test("nested routes display their parent and subroute in the navbar title", () =
     "Verwaltung | Maintenance",
   );
   assert.equal(
-    formatAdminRouteTitle(resolveAdminRoute("/settings")!),
+    formatAdminRouteTitle(resolveAdminRoute("/options")!),
     "Optionen",
   );
 });

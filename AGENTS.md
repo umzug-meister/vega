@@ -31,11 +31,9 @@ zusätzlich dessen `AGENTS.md` lesen; insbesondere gelten die Legacy-Regeln in
   Spezifikation für die Hostinger-Mail-Integration. Sie beschreibt den
   Mail-Provider, nicht den gesamten Vega-Fach-API-Vertrag. Für Vega-Routen und
   Geschäftsregeln gelten `docs/` und die dort freigegebenen Verträge.
-- Hostingers öffentliche Hilfe nennt MariaDB für Web-/Cloud-Hosting, aber keine
-  konkrete Serverversion. `docker-compose.yml` pinnt lokal MariaDB 10.11.19
-  als Kompatibilitätsbasis; den tatsächlichen Hostinger-Patchstand bei Bedarf
-  auf der Ziel-Datenbank mit `SELECT VERSION()` prüfen. Details und Quelle stehen
-  in `docs/operations.md`.
+- Die Hostinger-Zieldatenbank läuft laut `SELECT VERSION()` auf MariaDB
+  `11.8.9` (`11.8.9-MariaDB-log`). `docker-compose.yml` und CI pinnen dieselbe
+  Version. Details stehen in `docs/operations.md`.
 
 ## Vorgehen bei Änderungen
 

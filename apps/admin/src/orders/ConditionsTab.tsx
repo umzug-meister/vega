@@ -5,7 +5,6 @@ import {
   ScheduleOutlined,
 } from "@mui/icons-material";
 import {
-  Alert,
   Box,
   Button,
   Grid,
@@ -32,6 +31,14 @@ interface ConditionsTabProps {
   onConditionsChange: (conditions: OrderDetailsInput["conditions"]) => void;
   onCalculate: () => void;
 }
+
+type ConditionEditPatch = Omit<
+  Partial<OrderConditionInput>,
+  "quantity" | "unitPrice"
+> & {
+  quantity?: number | undefined;
+  unitPrice?: number | undefined;
+};
 
 export function hasPricingInputsChanged(value: OrderFormValue): boolean {
   const snapshot = value.pricingSnapshot;
@@ -77,6 +84,15 @@ export function hasPricingInputsChanged(value: OrderFormValue): boolean {
   return JSON.stringify(snapshot.source) !== JSON.stringify(currentSource);
 }
 
+export function calculateConditionAmount(
+  quantity: number | undefined,
+  unitPrice: number | undefined,
+): number | undefined {
+  return quantity === undefined || unitPrice === undefined
+    ? undefined
+    : roundAmountToCents(quantity * unitPrice);
+}
+
 export function ConditionsTab({
   value,
   onConditionsChange,
@@ -88,14 +104,35 @@ export function ConditionsTab({
   );
   const netTotal = roundAmountToCents(grossTotal / 1.19);
   const vatTotal = roundAmountToCents(grossTotal - netTotal);
-  const pricingChanged = hasPricingInputsChanged(value);
 
-  function updateEntry(index: number, patch: Partial<OrderConditionInput>) {
+  function updateEntry(index: number, patch: ConditionEditPatch) {
     onConditionsChange(
-      conditions.map((entry, entryIndex) =>
-        entryIndex === index ? { ...entry, ...patch } : entry,
-      ),
+      conditions.map((entry, entryIndex) => {
+        if (entryIndex !== index) return entry;
+        const next = { ...entry, ...patch };
+        if ("quantity" in patch && patch.quantity === undefined)
+          delete next.quantity;
+        if ("unitPrice" in patch && patch.unitPrice === undefined)
+          delete next.unitPrice;
+        return next as OrderConditionInput;
+      }),
     );
+  }
+
+  function updateQuantity(index: number, raw: string) {
+    const entry = conditions[index]!;
+    const quantity = raw === "" ? undefined : Number(raw);
+    const amount =
+      calculateConditionAmount(quantity, entry.unitPrice) ?? entry.amount;
+    updateEntry(index, { quantity, amount });
+  }
+
+  function updateUnitPrice(index: number, raw: string) {
+    const entry = conditions[index]!;
+    const unitPrice = raw === "" ? undefined : Number(raw);
+    const amount =
+      calculateConditionAmount(entry.quantity, unitPrice) ?? entry.amount;
+    updateEntry(index, { unitPrice, amount });
   }
 
   return (
@@ -104,7 +141,7 @@ export function ConditionsTab({
         display: "grid",
         gridTemplateColumns: {
           xs: "minmax(0, 1fr)",
-          md: "minmax(0, 1fr) minmax(0, 2fr)",
+          md: "minmax(0, 1.3fr) minmax(0, 4.7fr)",
         },
         gap: 2,
         alignItems: "start",
@@ -190,12 +227,6 @@ export function ConditionsTab({
           <Button variant="contained" onClick={onCalculate}>
             Positionen berechnen
           </Button>
-          {pricingChanged && (
-            <Alert severity="warning">
-              Preisrelevante Angaben wurden geändert. Die gespeicherten
-              Positionen bleiben unverändert, bis Sie neu kalkulieren.
-            </Alert>
-          )}
         </Stack>
       </Paper>
       <Paper variant="outlined" sx={{ p: 2.5, minWidth: 0 }}>
@@ -208,31 +239,64 @@ export function ConditionsTab({
               container
               spacing={1}
               key={`condition-${index}`}
-              sx={{ alignItems: "center" }}
+              sx={{ alignItems: "flex-start" }}
             >
-              <Grid size={{ xs: 12, sm: 7 }}>
+              <Grid size={{ xs: 12, sm: 5 }}>
                 <TextField
+                  sx={{ width: "100%" }}
                   label="Beschreibung"
+                  multiline
+                  minRows={index === 0 ? 2 : 1}
                   value={entry.description}
                   onChange={(event) =>
                     updateEntry(index, { description: event.target.value })
                   }
                 />
               </Grid>
-              <Grid size={{ xs: 8, sm: 3 }}>
+              <Grid size={{ xs: 6, sm: 1.5 }}>
                 <TextField
+                  sx={{ width: "100%" }}
+                  type="number"
+                  label="Menge"
+                  value={entry.quantity ?? ""}
+                  onChange={(event) =>
+                    updateQuantity(index, event.target.value)
+                  }
+                  slotProps={{ htmlInput: { min: 0, step: "any" } }}
+                />
+              </Grid>
+              <Grid size={{ xs: 6, sm: 2 }}>
+                <TextField
+                  sx={{ width: "100%" }}
+                  type="number"
+                  label="Einzelpreis (€)"
+                  value={entry.unitPrice ?? ""}
+                  onChange={(event) =>
+                    updateUnitPrice(index, event.target.value)
+                  }
+                  slotProps={{ htmlInput: { min: 0, step: "0.01" } }}
+                />
+              </Grid>
+              <Grid size={{ xs: 8, sm: 2.5 }}>
+                <TextField
+                  sx={{ width: "100%" }}
                   type="number"
                   label="Betrag (€)"
                   value={entry.amount}
+                  disabled={
+                    entry.quantity !== undefined &&
+                    entry.unitPrice !== undefined
+                  }
                   onChange={(event) =>
                     updateEntry(index, { amount: Number(event.target.value) })
                   }
                 />
               </Grid>
-              <Grid size={{ xs: 4, sm: 2 }}>
+              <Grid size={{ xs: 4, sm: 1 }} sx={{}}>
                 <IconButton
-                  color="error"
+                  color="default"
                   aria-label="Position entfernen"
+                  sx={{ mt: 1, alignSelf: "flex-start" }}
                   onClick={() =>
                     onConditionsChange(
                       conditions.filter(

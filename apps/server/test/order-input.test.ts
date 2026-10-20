@@ -374,6 +374,35 @@ test("preserves the ordered validation issues for malformed order details", () =
   });
 });
 
+test("calculates condition amount from quantity and unit price on the server", () => {
+  const input = orderFixture();
+  input.details!.conditions = [
+    { description: "Möbelmontage", quantity: 2, unitPrice: 15.255, amount: 0 },
+  ];
+  const result = validateOrderCreateInput(input, { allowStaffPricing: true });
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.deepEqual(result.value.details!.conditions, [
+    {
+      description: "Möbelmontage",
+      quantity: 2,
+      unitPrice: 15.255,
+      amount: 30.51,
+    },
+  ]);
+
+  input.details!.conditions[0]!.quantity = 100_000;
+  input.details!.conditions[0]!.unitPrice = 1_000_000;
+  const tooLarge = validateOrderCreateInput(input, { allowStaffPricing: true });
+  assert.equal(tooLarge.ok, false);
+  if (!tooLarge.ok)
+    assert.ok(
+      tooLarge.issues.some(
+        (issue) => issue.field === "details.conditions.0.amount",
+      ),
+    );
+});
+
 test("preserves exact normalization and defaults for an incomplete staff draft", () => {
   const result = validateOrderCreateInput(
     {

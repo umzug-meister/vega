@@ -63,9 +63,10 @@ Session-Casts.
 
 Der erste Audit-Lauf meldete zwei kritische Findings über `concurrently@9.2.4` → `shell-quote@1.9.0` (GHSA-pqg4-j6r4-53mv). `vega/package.json` pinnt Overrides für `shell-quote`, `mysql2` und `deepmerge-ts`; damals wurde Prisma `6.19.3` ohne den verwundbaren Prisma-7-MariaDB-Treiber verwendet. Der damalige `npm audit` meldete 0 bekannte Schwachstellen. Es wurde kein `npm audit fix --force` verwendet.
 
-Für das Rechnungs-PDF wurde die verwundbare Legacy-Browserbibliothek `jspdf`
-nicht übernommen. Stattdessen wird `pdfkit` nur serverseitig verwendet;
-`npm audit --omit=dev` meldet nach der Änderung weiterhin 0 Vulnerabilities.
+Für Rechnungs-, Gutschrift- und Mahnungs-PDFs wird serverseitig `pdfkit`
+verwendet, nicht die Legacy-Browserbibliothek `jspdf`; `npm audit --omit=dev`
+meldet weiterhin 0 Vulnerabilities. Auftrags-/Angebots-PDFs nutzen seit
+2026-10-10 ebenfalls nur serverseitig `jspdf`/`jspdf-autotable`, nie im Browser.
 
 Bei `npm ci` meldet npm weiterhin, dass das optionale Install-Script von `fsevents@2.3.3` nicht in `allowScripts` freigegeben ist. Installation, Tests und Builds funktionieren trotzdem; das Script wurde nicht zusätzlich freigegeben.
 

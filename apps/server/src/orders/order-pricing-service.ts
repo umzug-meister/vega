@@ -20,6 +20,13 @@ type PricingClient = Pick<
   "catalogOffer" | "catalogService" | "catalogPacking" | "catalogServiceRate"
 >;
 
+export class PricePreviewStaleError extends Error {
+  constructor(readonly changedFields: string[]) {
+    super("PRICE_PREVIEW_STALE");
+    this.name = "PricePreviewStaleError";
+  }
+}
+
 export async function previewOrderPricing(
   input: CreateOrderInput,
   client: PricingClient,
@@ -42,12 +49,10 @@ export async function previewOrderPricing(
           where: { id: details.basis.offerId },
         }),
     client.catalogService.findMany({
-      where: { show: true },
       orderBy: [{ sort: "asc" }, { id: "asc" }],
       select: { id: true, name: true, price: true, sort: true },
     }),
     client.catalogPacking.findMany({
-      where: { show: true },
       orderBy: [{ sort: "asc" }, { id: "asc" }],
       select: { id: true, name: true, price: true, sort: true },
     }),
@@ -162,7 +167,12 @@ export async function validatePricingSnapshot(
       canonical(submittedSnapshot.source) !==
       canonical(latest.pricingSnapshot.source)
     )
-      throw new Error("PRICE_PREVIEW_STALE");
+      throw new PricePreviewStaleError(
+        changedPricingSourceFields(
+          submittedSnapshot.source,
+          latest.pricingSnapshot.source,
+        ),
+      );
     throw new Error("PRICE_CATALOG_CHANGED");
   }
   return latest.pricingSnapshot;
@@ -239,4 +249,39 @@ function canonical(value: unknown): string {
       .join(",")}}`;
   }
   return JSON.stringify(value);
+}
+
+function changedPricingSourceFields(left: unknown, right: unknown): string[] {
+  const changes: string[] = [];
+  function visit(a: unknown, b: unknown, path: string) {
+    if (canonical(a) === canonical(b)) return;
+    if (Array.isArray(a) && Array.isArray(b)) {
+      for (let index = 0; index < Math.max(a.length, b.length); index++)
+        visit(a[index], b[index], `${path}[${index}]`);
+      return;
+    }
+    if (
+      typeof a === "object" &&
+      a !== null &&
+      !Array.isArray(a) &&
+      typeof b === "object" &&
+      b !== null &&
+      !Array.isArray(b)
+    ) {
+      const keys = new Set([
+        ...Object.keys(a as Record<string, unknown>),
+        ...Object.keys(b as Record<string, unknown>),
+      ]);
+      for (const key of keys)
+        visit(
+          (a as Record<string, unknown>)[key],
+          (b as Record<string, unknown>)[key],
+          path ? `${path}.${key}` : key,
+        );
+      return;
+    }
+    changes.push(path || "source");
+  }
+  visit(left, right, "");
+  return changes;
 }
