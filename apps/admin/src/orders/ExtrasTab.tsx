@@ -39,8 +39,8 @@ export function ExtrasTab({ value, onExtrasChange }: ExtrasTabProps) {
   useEffect(() => {
     let active = true;
     Promise.all([
-      apiRequest<CatalogPackingDto[]>("/api/catalog/packings"),
-      apiRequest<CatalogServiceDto[]>("/api/catalog/services"),
+      apiRequest<CatalogPackingDto[]>("/api/admin/catalog/packings"),
+      apiRequest<CatalogServiceDto[]>("/api/admin/catalog/services"),
     ])
       .then(([packings, services]) => {
         if (active)

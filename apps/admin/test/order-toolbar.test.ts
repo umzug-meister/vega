@@ -7,7 +7,10 @@ import test from "node:test";
 import { AdminShell } from "../src/components/AdminShell.js";
 import { OrderCreatePage } from "../src/orders/OrderCreatePage.js";
 import { AppointmentFields } from "../src/orders/AppointmentFields.js";
-import { ConditionsTab } from "../src/orders/ConditionsTab.js";
+import {
+  calculateConditionAmount,
+  ConditionsTab,
+} from "../src/orders/ConditionsTab.js";
 import { createEmptyOrder } from "../src/orders/order-form-types.js";
 import { resolveAdminRoute } from "../src/routes.js";
 import type { StaffUser } from "../src/types.js";
@@ -67,7 +70,7 @@ test("only admins can create an invoice from the saved order", () => {
 });
 
 test("content submenu highlights only the selected child route", () => {
-  const route = resolveAdminRoute("/settings/offers");
+  const route = resolveAdminRoute("/offers");
   assert.ok(route);
   const html = render(
     createElement(AdminShell, {
@@ -81,7 +84,7 @@ test("content submenu highlights only the selected child route", () => {
         blocked: false,
       },
       route,
-      pathname: "/settings/offers",
+      pathname: "/offers",
       navigate: () => {},
       children: null,
     }),
@@ -100,7 +103,7 @@ test("content submenu highlights only the selected child route", () => {
 });
 
 test("management submenu groups users and maintenance and highlights the active child", () => {
-  const route = resolveAdminRoute("/settings/users");
+  const route = resolveAdminRoute("/users");
   assert.ok(route);
   const html = render(
     createElement(AdminShell, {
@@ -114,7 +117,7 @@ test("management submenu groups users and maintenance and highlights the active 
         blocked: false,
       },
       route,
-      pathname: "/settings/users",
+      pathname: "/users",
       navigate: () => {},
       children: null,
     }),
@@ -371,7 +374,7 @@ test("newly saved orders navigate to their editor without a separate success vie
 
 test("admin shell uses a restrained brand in a persistent sidebar", async () => {
   const source = await readFile(
-    new URL("../src/components/AdminShell.tsx", import.meta.url),
+    new URL("../src/components/AdminSidebar.tsx", import.meta.url),
     "utf8",
   );
   assert.ok(source.includes("VEGA"));
@@ -383,7 +386,7 @@ test("admin shell uses a restrained brand in a persistent sidebar", async () => 
 
 test("sidebar navigation starts with consistent spacing after the brand", async () => {
   const source = await readFile(
-    new URL("../src/components/AdminShell.tsx", import.meta.url),
+    new URL("../src/components/AdminSidebar.tsx", import.meta.url),
     "utf8",
   );
   assert.match(
@@ -484,4 +487,56 @@ test("order positions keep manual editing and expose an explicit server calculat
   assert.ok(html.includes("Betrag (€)"));
   assert.ok(html.includes("Manuelle Position"));
   assert.ok(html.includes("125,00"));
+});
+
+test("manual position amount is the rounded quantity multiplied by unit price", () => {
+  assert.equal(calculateConditionAmount(2, 15.255), 30.51);
+  assert.equal(calculateConditionAmount(0, 15), 0);
+  assert.equal(calculateConditionAmount(2, undefined), undefined);
+  assert.equal(calculateConditionAmount(undefined, 15), undefined);
+
+  const value = createEmptyOrder();
+  value.details.conditions = [
+    {
+      description: "Möbelmontage",
+      quantity: 2,
+      unitPrice: 15.255,
+      amount: 30.51,
+    },
+  ];
+  const html = render(
+    createElement(ConditionsTab, {
+      value,
+      onConditionsChange: () => {},
+      onCalculate: () => {},
+    }),
+  );
+  assert.match(html, /Menge/u);
+  assert.match(html, /Einzelpreis \(€\)/u);
+  assert.match(html, /30,51/u);
+  assert.match(html, /disabled=""/u);
+});
+
+test("order position descriptions retain all lines in autosizing textareas", () => {
+  const value = createEmptyOrder();
+  const description =
+    "5 Träger / 2 x LKW 3,5t\nMindestabnahme: 6 Stunden, jede weitere Stunde: 265 €/Std";
+  value.details.conditions = [
+    { description, amount: 1470, kind: "base" },
+    { description: "Manuelle\nZusatzposition", amount: 10 },
+  ];
+  const html = render(
+    createElement(ConditionsTab, {
+      value,
+      onConditionsChange: () => {},
+      onCalculate: () => {},
+    }),
+  );
+  const textareas = [
+    ...html.matchAll(/<textarea\b([^>]*)>([\s\S]*?)<\/textarea>/gu),
+  ].filter((match) => !match[1]!.includes('aria-hidden="true"'));
+  assert.equal(textareas.length, 2);
+  assert.doesNotMatch(textareas[0]![1]!, /\brows=/u);
+  assert.equal(textareas[0]![2], description);
+  assert.equal(textareas[1]![2], "Manuelle\nZusatzposition");
 });

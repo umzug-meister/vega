@@ -14,7 +14,24 @@ const streams = (pdf: Buffer) =>
   );
 
 test("order PDF renders saved customer, positions and amounts with a valid attachment filename", () => {
-  const pdf = generateOrderPdf(orderPdfFixture(), now);
+  const input = orderPdfFixture();
+  input.services.push(
+    {
+      id: 22,
+      name: "Nicht im Kundenformular",
+      price: 42,
+      sort: 3,
+      kind: "service",
+    },
+    {
+      id: 23,
+      name: "Ausgeblendete Verpackung",
+      price: 7,
+      sort: 4,
+      kind: "packaging",
+    },
+  );
+  const pdf = generateOrderPdf(input, now);
   assert.equal(pdf.subarray(0, 4).toString("ascii"), "%PDF");
   const pageCount = pdf.toString("latin1").match(/\/Type \/Page\b/g)?.length;
   assert.equal(pageCount, 4);
@@ -33,12 +50,40 @@ test("order PDF renders saved customer, positions and amounts with a valid attac
     "1.190,00",
     "119,00",
     "1.309,00",
+    "Nicht im Kundenformular",
+    "Ausgeblendete Verpackung",
   ])
     assert.ok(content.includes(value), value);
   assert.equal(
     orderPdfFilename(orderPdfFixture()),
     "24.10.2026_Beispiel_1042_3+2x3.5_4_Std_1xHVZ.pdf",
   );
+});
+
+test("order PDF retains the saved multiline hourly crew description", () => {
+  const input = orderPdfFixture();
+  input.data.details!.conditions = [
+    {
+      description:
+        "5 Träger / 2 x LKW 3,5t\nMindestabnahme: 6 Stunden, jede weitere Stunde: 265 €/Std\nMaximale Abnahme: 7 Stunden",
+      quantity: 2,
+      unitPrice: 735,
+      amount: 1470,
+      kind: "base",
+    },
+  ];
+  const pdf = generateOrderPdf(input, now).toString("latin1");
+  for (const text of [
+    "2 x LKW 3,5t",
+    "Mindestabnahme: 6 Stunden",
+    "jede weitere Stunde:",
+    "265",
+    "Maximale Abnahme: 7 Stunden",
+    "735,00",
+    "2",
+    "1.470,00",
+  ])
+    assert.ok(pdf.includes(text), text);
 });
 
 test("historically archived and restored orders recover their last edit date from the journal", () => {

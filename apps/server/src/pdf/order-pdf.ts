@@ -257,8 +257,8 @@ function addConditions(pdf: OrderPdfBuilder, data: CreateOrderInput) {
     head: [{ a: "Leistungen", b: "Einzelpreis", c: "Menge", d: PRICE }],
     body: (data.details?.conditions ?? []).map((entry) => ({
       a: entry.description,
-      b: euro(entry.amount),
-      c: "1",
+      b: euro(entry.unitPrice ?? entry.amount),
+      c: number(entry.quantity ?? 1),
       d: euro(entry.amount),
     })),
     columnStyles: {

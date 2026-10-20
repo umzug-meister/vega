@@ -1,7 +1,7 @@
 # Umzug Ruck Zuck – Umsetzungsplan
 
 **Status:** abgestimmte Zielplanung für die Umsetzung durch Agents  
-**Stand:** 2026-10-15
+**Stand:** 2026-10-19
 
 **Wichtig:** Dieser Plan beschreibt Zielverhalten und offene Arbeitspakete.
 Lokale Nachweise ersetzen keine externen Freigabe-Gates.
@@ -102,6 +102,13 @@ Exakte Versionen sind in `package.json`/`package-lock.json` gepinnt; offen ist n
 - `CatalogOffer.sum` ist der gepflegte Basispreis; `hourPrice` beschreibt
   weitere Stunden, aber erzeugt keine zusätzliche Arbeitsstunde im Angebot.
   Ein Rabatt wird ausschließlich auf den Basispreis gerechnet.
+- Die berechnete Personalposition nennt Träger und gegebenenfalls LKW 3,5t.
+  Bei gesetzten Stunden folgen mehrzeilig Mindestabnahme und Folgestundenpreis;
+  bis einschließlich vier Stunden zusätzlich die maximale Abnahme (Stunden + 1).
+  Hinweise auf ein maximales Umzugsgutvolumen entfallen vollständig in
+  Konditionen, Angebots-PDF und E-Mail; die Stundenangaben bleiben erhalten.
+  Admin-Beschreibungen wachsen mit dem Text; PDF und Mail erhalten dessen
+  Zeilenumbrüche. Bestehende Positionen werden nicht automatisch umgeschrieben.
 - Anfahrtskosten werden zentral nach LKW-Anzahl gepflegt, unabhängig von der
   Trägerzahl (`ridingCostsTruck1` bis `ridingCostsTruck4`). In München gilt
   dieser LKW-Tarif; andernorts gilt das Maximum aus diesem Tarif und
@@ -112,13 +119,21 @@ Exakte Versionen sind in `package.json`/`package-lock.json` gepinnt; offen ist n
 - Halteverbotszonen verwenden die Summe der aktivierten Adressen mal
   `hvzPrice`. Alle ausgewählten Katalog-Services und Packungen werden anhand
   der aktuellen Mengen und serverseitigen Einzelpreise einbezogen. Der
+  Schalter „Im Formular anzeigen“ filtert nur die öffentliche Kundenformular-API.
+  Admins und Kundenberater sehen und dürfen auch ausgeblendete Services und
+  Packungen im Auftrag auswählen. Der Preis-Snapshot und die Angebots-PDF-
+  Katalogtabellen enthalten immer den vollständigen Katalogstand zum Zeitpunkt
+  der Kalkulation, unabhängig von diesem Schalter.
+  Der
   Katalogpreis wird bei Auswahl als Einzelpreis vorbelegt und kann im Auftrag
   von Admins und Kundenberatern je Position angepasst werden; auch
   Freitextpositionen können einen Einzelpreis erhalten. Diese Mitarbeiterpreise
   werden serverseitig validiert, im Auftrags-JSON gespeichert und von der
   ausdrücklichen Positionskalkulation verwendet. Freitextpositionen ohne
   Einzelpreis blockieren die automatische Kalkulation, nicht das manuelle
-  Angebot. Packungen behalten den Hinweis „wird nach Verbrauch berechnet“.
+  Angebot. Manuelle Auftragspositionen unterstützen Menge und Einzelpreis;
+  sobald beide angegeben sind, berechnet der Server den gerundeten Positionsbetrag
+  als Menge mal Einzelpreis. Packungen behalten den Hinweis „wird nach Verbrauch berechnet“.
 - Jede fertige Auftragsposition wird auf Cent gerundet; erst danach wird die
   Bruttosumme exakt gebildet. Order-Bruttobeträge werden nicht mit der
   Netto-/Umsatzsteuerarithmetik von Rechnungen vermischt. Die Positionskarte
@@ -181,7 +196,7 @@ Exakte Versionen sind in `package.json`/`package-lock.json` gepinnt; offen ist n
   Unklare Ergebnisse nach dem Send-POST oder verwaiste `SENDING`-Claims
   werden `UNKNOWN` und benötigen einen belegten Providerabgleich; kein
   Blind-Retry. Die Bedienung und Recovery stehen in `hostinger-mail-cron.md`.
-- In-App-Mailaktionen protokollieren Actor/Aktion/Zeit. Versand gilt nur bei erfolgreicher Hostinger-API-Antwort als gesendet. Kopieren eines Texts für externen Versand protokolliert keinen tatsächlichen Versand.
+- In-App-Mailaktionen protokollieren Actor/Aktion/Zeit. Versand gilt nur bei erfolgreicher Hostinger-API-Antwort als gesendet.
 - Bestehende Angebots-/Rechnungs-PDF-Layouts bleiben zunächst erhalten; PDF-Erzeugung wandert vom Browser ins Backend.
 - Lange Rechnungen, Gutschriften und Mahnungen erhalten explizite
   Seitenumbrüche und wiederholte Tabellenköpfe; Positionen, Summen und
@@ -235,15 +250,13 @@ Abnahmekriterien.
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | A0 Proof                | Hostinger Node 24/Build/Start/Cron, Mail-API-Anhänge, GCS, WordPress-Loader/CORS in nichtproduktiver Umgebung (lokaler Teil: `proof-01-integration-compatibility.md`) | End-to-End-Proof in Zielumgebung; Tarifgrenzen notiert                               |
 | A1 Build                | Tatsächlicher GitHub-CI-Lauf und Hostinger-Deployment                                                                                                                 | Sauberer CI-Build; Deployment liefert API und beide Frontends                        |
-| A2 Datenmodell          | – (lokal vollständig)                                                                                                                                                 | Leere DB per Migration; keine Kaskaden auf Geschwister/Rechnungen                    |
 | A3 Auth                 | Reset-Mail-Proof mit echtem Hostinger-Versand                                                                                                                         | Kein Signup; Rollenmatrix serverseitig; Admin-2FA vor Datenzugriff                   |
 | A4 Geschäftslogik       | Hostinger-Ausführung und Purge-Proof mit fälligen Testdatensätzen über den zentralen `scripts/cron.js`-Einstieg                                                       | Kein öffentlicher Order-Read; serverseitige Positionskalkulation statt Browserpreise |
 | A5 Kundenformular       | Realer WordPress-/Hostinger-Einbettungsproof                                                                                                                          | Loader lädt in WordPress; Anfrage ohne Login; Consent funktioniert                   |
-| A6 Admin-SPA            | – (lokal vollständig)                                                                                                                                                 | Rollenrechte auf API-Ebene                                                           |
-| A7 Mail/PDF/Buchhaltung | 30-Tage-Finanz-Purge, Provider-End-to-End-Test                                                                                                                        | Mailfehler verlieren keine Anfrage; Versand protokolliert; PDFs nicht persistiert    |
+| A7 Mail/PDF/Buchhaltung | Mail-/PDF-Provider-End-to-End-Test                                                                                                                                    | Mailfehler verlieren keine Anfrage; Versand protokolliert; PDFs nicht persistiert    |
 | A8 GCS-Bilder           | Realer Provider-/CORS-/Lifecycle-Proof                                                                                                                                | Keine Credentials im Browser; Lifecycle nachweisbar                                  |
 | A9 Qualität             | E2E-Szenarien und Security Review (IDOR, XSS/Mail-Editor, CORS, Rate-Limits, Uploads)                                                                                 | Keine öffentlichen Datenlesewege; Restore-/Purge-/Mailfehler abgedeckt               |
-| A10 Betrieb             | Hostinger-Deployment, Cron, Runbook (Grundlage: `operations.md`, `hostinger-mail-cron.md`, `gcs-bucket-setup.md`)                                                     | Deployment-/Rollback-/Cron-Anleitung vorhanden                                       |
+| A10 Betrieb             | Hostinger-Deployment und Cron im Zieltarif                                                                                                                            | Deployment-/Rollback-/Cron-Anleitung vorhanden                                       |
 
 ## 8. Konfigurations- und Betriebsgrenzen
 
@@ -264,7 +277,6 @@ Mindestens erforderlich (vollständige Liste: `operations.md`):
   API-Beschränkung plus Quoten-/Kostenmonitoring.
 - GCS-Projekt-/Bucket-/Credentials über sichere Serverkonfiguration
 - Externe Archiv- und nichtproduktive Providerzugänge ausschließlich als serverseitige Runtime-Umgebungsvariablen; Variablennamen erst mit Auswahl der konkreten Integration festlegen.
-- optionaler Secret/Signatur für interne Cron-Aufrufe
 - Einmalige Bootstrapwerte nur für ersten Start; nach Anlage entfernen/deaktivieren.
 
 `BETTER_AUTH_SECRET` muss ein eindeutiges, zufälliges Secret mit mindestens 32 Zeichen/hoher Entropie sein. Better Auth erhält ausschließlich die produktive Vega-Origin und explizite lokale/Staging-Origins als Trusted Origins; keine Wildcard und keine Subdomain-Cookies, solange kein Login über mehrere Subdomains erforderlich ist. HTTPS-, `HttpOnly`-, `Secure`- und CSRF-/Origin-Schutz bleiben aktiviert. Auth-Rate-Limits werden persistent konfiguriert und für Login, Passwort-Reset und 2FA separat gesetzt. Proxy-IP-Header werden nur nach Verifikation der Hostinger-Proxykette vertraut.

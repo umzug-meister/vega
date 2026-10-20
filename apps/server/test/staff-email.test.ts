@@ -80,6 +80,68 @@ test("single offer lists crew, conditions and the PDF total without a closing gr
   );
 });
 
+test("offer preserves saved multiline crew conditions and legacy hourly mail details", () => {
+  const data = orderFixture();
+  const details = data.details!;
+  details.basis = {
+    workers: 5,
+    trucks: 2,
+    hours: 6,
+    basePrice: 1470,
+    extraHourPrice: 265,
+    discountPercent: 5,
+  };
+  details.conditions = [
+    {
+      description:
+        "5 Träger / 2 x LKW 3,5t\nMindestabnahme: 6 Stunden, jede weitere Stunde: 265 €/Std\nHinweis <unverändert>",
+      amount: 1470,
+      kind: "base",
+    },
+  ];
+  const draft = offerEmail({
+    option: { orderNumber: 1042, data },
+    referenceNumber: 1042,
+    now,
+  });
+  assert.match(draft.contentHtml, /5 Mann mit 2 x LKW/u);
+  assert.match(
+    draft.contentHtml,
+    /Mindestabnahme 6 Stunden \(Start: 80331 Muenchen, Ende: 80333 Muenchen\)/u,
+  );
+  assert.match(draft.contentHtml, /Jede weitere Stunde: 265,00\s€/u);
+  assert.match(
+    draft.contentHtml,
+    /5 Träger \/ 2 x LKW 3,5t<br>Mindestabnahme: 6 Stunden, jede weitere Stunde: 265 €\/Std<br>Hinweis &lt;unverändert&gt;/u,
+  );
+  assert.doesNotMatch(draft.contentHtml, /Maximale Abnahme/u);
+  assert.equal(
+    sanitizeEmailHtml(draft.contentHtml).replace(/<br\s*\/?\s*>/gu, "<br>"),
+    draft.contentHtml.replace(/<br\s*\/?\s*>/gu, "<br>"),
+  );
+
+  details.basis.extraHourPrice = 0;
+  assert.match(
+    offerEmail({
+      option: { orderNumber: 1042, data },
+      referenceNumber: 1042,
+      now,
+    }).contentHtml,
+    /Jede weitere Stunde: 0,00\s€/u,
+  );
+  details.basis.hours = 0;
+  details.conditions = [];
+  const fixed = offerEmail({
+    option: { orderNumber: 1042, data },
+    referenceNumber: 1042,
+    now,
+  });
+  assert.doesNotMatch(
+    fixed.contentHtml,
+    /Mindestabnahme|Jede weitere Stunde|Maximale Abnahme/u,
+  );
+});
+
 test("two-option offer uses the family root reference and shows both options", () => {
   const first = orderFixture();
   const second = orderFixture();

@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       database:
-        image: mariadb:10.11.19
+        image: mariadb:11.8.9
         env:
           MARIADB_DATABASE: vega_test
           MARIADB_USER: vega_test

@@ -8,7 +8,11 @@ import {
   OrderPricingError,
 } from "@vega/domain";
 import { validateOrderCreateInput } from "../src/orders/order-input.js";
-import { previewOrderPricing } from "../src/orders/order-pricing-service.js";
+import {
+  PricePreviewStaleError,
+  previewOrderPricing,
+  validatePricingSnapshot,
+} from "../src/orders/order-pricing-service.js";
 import { orderFixture } from "./fixtures/order.js";
 
 const offer = {
@@ -72,7 +76,12 @@ function pricingInput(
 test("calculates gross conditions from the selected tariff and current catalog", () => {
   const result = calculateOrderPricing(pricingInput());
   assert.deepEqual(result.conditions, [
-    { description: "3 Träger / 2 LKW", amount: 1_000, kind: "base" },
+    {
+      description:
+        "3 Träger / 2 x LKW 3,5t\nMindestabnahme: 4 Stunden, jede weitere Stunde: 80 €/Std\nMaximale Abnahme: 5 Stunden",
+      amount: 1_000,
+      kind: "base",
+    },
     { description: "Rabatt 10%", amount: -100, kind: "discount" },
     { description: "An-/Abfahrtskosten", amount: 255, kind: "travel" },
     {
@@ -93,6 +102,58 @@ test("calculates gross conditions from the selected tariff and current catalog",
   );
   assert.equal(result.pricingSnapshot.offer?.id, 7);
   assert.equal(result.pricingSnapshot.services.length, 2);
+});
+
+test("crew conditions match legacy hours, limits and fixed-price wording", () => {
+  for (const [workers, hours, extraHourPrice, suffix] of [
+    [5, 6, 265, "Mindestabnahme: 6 Stunden, jede weitere Stunde: 265 €/Std"],
+    [2, 2, 80, "Maximale Abnahme: 3 Stunden"],
+    [2, 3, 80, "Maximale Abnahme: 4 Stunden"],
+    [2, 4, 80, "Maximale Abnahme: 5 Stunden"],
+    [3, 4, 80, "Maximale Abnahme: 5 Stunden"],
+    [4, 4, 0, "Maximale Abnahme: 5 Stunden"],
+    [
+      3,
+      6,
+      265.5,
+      "Mindestabnahme: 6 Stunden, jede weitere Stunde: 265,5 €/Std",
+    ],
+  ] as const) {
+    const input = pricingInput();
+    input.basis = { ...input.basis, workers, hours, extraHourPrice };
+    input.offer = {
+      ...input.offer,
+      workers,
+      includedHours: hours,
+      name: "Katalogname ohne Stunden",
+    };
+    const condition = calculateOrderPricing(input).conditions[0]!;
+    assert.ok(
+      condition.description.startsWith(`${workers} Träger / 2 x LKW 3,5t\n`),
+    );
+    assert.ok(condition.description.endsWith(suffix));
+    assert.doesNotMatch(
+      condition.description,
+      /Umzugsgutvolumen|Umzugsvolumen/u,
+    );
+    assert.equal(condition.amount, 1_000);
+    if (hours > 4) assert.doesNotMatch(condition.description, /Maximale/u);
+    if (extraHourPrice === 0)
+      assert.match(condition.description, /jede weitere Stunde: 0 €\/Std/u);
+  }
+  const input = pricingInput();
+  input.basis = { ...input.basis, trucks: 0, hours: 0 };
+  input.offer = { ...input.offer, trucks: 0, includedHours: 0 };
+  assert.equal(
+    calculateOrderPricing(input).conditions[0]!.description,
+    "3 Träger",
+  );
+  input.basis = { ...input.basis, trucks: 2 };
+  input.offer = { ...input.offer, trucks: 2 };
+  assert.equal(
+    calculateOrderPricing(input).conditions[0]!.description,
+    "3 Träger / 2 x LKW 3,5t",
+  );
 });
 
 test("pricing preview respects staff unit prices and catalog defaults", async () => {
@@ -146,6 +207,70 @@ test("pricing preview respects staff unit prices and catalog defaults", async ()
     { kind: "packaging", catalogId: 10, quantity: 3, unitPrice: null },
     { kind: "service", catalogId: null, quantity: 2, unitPrice: 4 },
   ]);
+});
+
+test("pricing snapshot includes catalog entries hidden from the customer form", async () => {
+  const input = orderFixture();
+  input.details!.basis.trucks = 0;
+  input.details!.extras.services = [];
+  input.from.parkingSlot = false;
+  input.to.parkingSlot = false;
+  input.details!.showSecondaryFrom = false;
+  input.details!.showSecondaryTo = false;
+  let serviceQuery: unknown;
+  let packingQuery: unknown;
+  const client = {
+    catalogOffer: { findUnique: async () => null },
+    catalogService: {
+      findMany: async (query: unknown) => {
+        serviceQuery = query;
+        return [{ id: 21, name: "Intern", price: "12", sort: 0 }];
+      },
+    },
+    catalogPacking: {
+      findMany: async (query: unknown) => {
+        packingQuery = query;
+        return [{ id: 22, name: "Spezialkarton", price: "3", sort: 0 }];
+      },
+    },
+    catalogServiceRate: { findMany: async () => [] },
+  } as unknown as Parameters<typeof previewOrderPricing>[1];
+
+  const preview = await previewOrderPricing(input, client);
+  assert.deepEqual(
+    preview.pricingSnapshot.services.map(({ name }) => name),
+    ["Intern", "Spezialkarton"],
+  );
+  assert.equal("where" in (serviceQuery as object), false);
+  assert.equal("where" in (packingQuery as object), false);
+});
+
+test("stale pricing preview reports changed field paths without field values", async () => {
+  const input = orderFixture();
+  input.details!.basis.trucks = 0;
+  input.details!.extras.services = [];
+  input.from.parkingSlot = false;
+  input.to.parkingSlot = false;
+  input.details!.showSecondaryFrom = false;
+  input.details!.showSecondaryTo = false;
+  const client = {
+    catalogOffer: { findUnique: async () => null },
+    catalogService: { findMany: async () => [] },
+    catalogPacking: { findMany: async () => [] },
+    catalogServiceRate: { findMany: async () => [] },
+  } as unknown as Parameters<typeof previewOrderPricing>[1];
+  const preview = await previewOrderPricing(input, client);
+  input.pricingSnapshot = preview.pricingSnapshot;
+  input.details!.basis.hours += 1;
+  await assert.rejects(
+    validatePricingSnapshot(input, undefined, client),
+    (error: unknown) => {
+      assert.ok(error instanceof PricePreviewStaleError);
+      assert.deepEqual(error.changedFields, ["hours"]);
+      assert.equal(error.message, "PRICE_PREVIEW_STALE");
+      return true;
+    },
+  );
 });
 
 test("pricing preview prices a saved unit price even when the catalog row is gone", async () => {

@@ -326,6 +326,65 @@ for (const kind of ["furniture", "service", "packaging"] as const) {
   });
 }
 
+test("new hidden catalog extras are selectable by staff but remain rejected for public normalization", async () => {
+  const input = orderFixture();
+  input.details!.extras.services = [
+    { catalogId: 21, name: "Interne Leistung", kind: "service", quantity: 1 },
+    {
+      catalogId: 22,
+      name: "Interne Verpackung",
+      kind: "packaging",
+      quantity: 2,
+    },
+  ];
+  const queries: unknown[] = [];
+  const hiddenCatalog = {
+    catalogFurniture: { findMany: async () => [] },
+    catalogService: {
+      findMany: async (query: unknown) => {
+        queries.push(query);
+        const where = (
+          query as { where: { id: { in: number[] }; show?: boolean } }
+        ).where;
+        if (where.show === true) return [];
+        return where.id.in.includes(21)
+          ? [{ id: 21, name: "Interne Leistung" }]
+          : [];
+      },
+    },
+    catalogPacking: {
+      findMany: async (query: unknown) => {
+        queries.push(query);
+        const where = (
+          query as { where: { id: { in: number[] }; show?: boolean } }
+        ).where;
+        if (where.show === true) return [];
+        return where.id.in.includes(22)
+          ? [{ id: 22, name: "Interne Verpackung" }]
+          : [];
+      },
+    },
+  } as unknown as Parameters<typeof normalizeOrderCatalogInput>[2];
+
+  await assert.rejects(
+    normalizeOrderCatalogInput(input, undefined, hiddenCatalog),
+    /INVALID_ORDER_CATALOG_REFERENCE/u,
+  );
+  const normalized = await normalizeOrderCatalogInput(
+    input,
+    undefined,
+    hiddenCatalog,
+    { allowHiddenCatalogItems: true },
+  );
+  assert.deepEqual(
+    normalized.details!.extras.services,
+    input.details!.extras.services,
+  );
+  assert.equal(queries.length, 4);
+  for (const query of [queries[2], queries[3]])
+    assert.equal("show" in (query as { where: object }).where, false);
+});
+
 test("new references use current visible catalog data while historical snapshots stay unchanged", async (context) => {
   const stored = orderFixture();
   stored.details!.furniture.items = [
@@ -613,7 +672,7 @@ test("staff update accepts deleted catalog snapshots from persisted relations, n
   assert.equal(writes, 2);
 });
 
-for (const code of ["P2025", "P2034"]) {
+for (const code of ["P2025", "P2034", "P2039"]) {
   for (const action of ["save", "archive", "restore"] as const) {
     test(`${action} handles concurrency error ${code} as 409 without a journal write`, async (context) => {
       let journalWrites = 0;
@@ -624,7 +683,16 @@ for (const code of ["P2025", "P2034"]) {
       ) => {
         assert.equal(args.where?.revision, 0);
         assert.deepEqual(args.data.revision, { increment: 1 });
-        throw Object.assign(new Error("Concurrent update"), { code });
+        throw Object.assign(new Error("Concurrent update"), {
+          code,
+          ...(code === "P2039"
+            ? {
+                meta: {
+                  driverAdapterError: { cause: { originalCode: "1020" } },
+                },
+              }
+            : {}),
+        });
       };
       const request = await serve(context, {
         order: {
