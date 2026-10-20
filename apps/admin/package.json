@@ -20,8 +20,8 @@
     "@vega/domain": "0.1.0",
     "better-auth": "1.7.7",
     "qrcode.react": "4.2.0",
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@types/react": "19.3.0",
