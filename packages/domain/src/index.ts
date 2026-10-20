@@ -98,6 +98,8 @@ export interface OrderServiceInput {
 export interface OrderConditionInput {
   description: string;
   amount: number;
+  quantity?: number;
+  unitPrice?: number;
   kind?:
     | "manual"
     | "base"

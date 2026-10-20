@@ -93,8 +93,12 @@ function optionHtml({ data }: OfferOption): string {
     const lines = [`<strong>${escapeHtml(crew)}</strong>`];
     if (basis.hours > 0) {
       const route = [
-        data.from.city ? `Start: ${data.from.city}` : "",
-        data.to.city ? `Ende: ${data.to.city}` : "",
+        data.from.city
+          ? `Start: ${[data.from.postalCode, data.from.city].filter(Boolean).join(" ")}`
+          : "",
+        data.to.city
+          ? `Ende: ${[data.to.postalCode, data.to.city].filter(Boolean).join(" ")}`
+          : "",
       ]
         .filter(Boolean)
         .join(", ");
@@ -103,10 +107,9 @@ function optionHtml({ data }: OfferOption): string {
           `Mindestabnahme ${amount(basis.hours)} Stunden${route ? ` (${route})` : ""}`,
         ),
       );
-      if (basis.extraHourPrice > 0)
-        lines.push(
-          escapeHtml(`Jede weitere Stunde: ${euro(basis.extraHourPrice)}`),
-        );
+      lines.push(
+        escapeHtml(`Jede weitere Stunde: ${euro(basis.extraHourPrice)}`),
+      );
       if (basis.hours <= 4)
         lines.push(
           escapeHtml(`Maximale Abnahme: ${amount(basis.hours + 1)} Stunden`),
@@ -116,7 +119,7 @@ function optionHtml({ data }: OfferOption): string {
   }
   const rows = (data.details?.conditions ?? []).map(
     (entry) =>
-      `<tr><td><p>${escapeHtml(entry.description)}</p></td><td><p>${escapeHtml(euro(entry.amount))}</p></td></tr>`,
+      `<tr><td><p>${escapeHtml(entry.description).replace(/\r\n|\r|\n/gu, "<br>")}</p></td><td><p>${escapeHtml(euro(entry.amount))}</p></td></tr>`,
   );
   rows.push(
     `<tr><td><p><strong>Gesamtbetrag inkl. MwSt:</strong></p></td><td><p><strong>${escapeHtml(euro(addInvoiceAmounts((data.details?.conditions ?? []).map((entry) => entry.amount))))}</strong></p></td></tr>`,

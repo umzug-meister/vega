@@ -16,6 +16,7 @@ import {
 } from "./order-service.js";
 import {
   orderPricingErrorIssue,
+  PricePreviewStaleError,
   previewOrderPricing,
   validatePricingSnapshot,
 } from "./order-pricing-service.js";
@@ -47,7 +48,12 @@ export function createAdminOrderRouter(
         allowIncomplete: true,
       });
       if (!validation.ok) return invalidOrder(res, validation.issues);
-      const normalized = await normalizeOrderCatalogInput(validation.value);
+      const normalized = await normalizeOrderCatalogInput(
+        validation.value,
+        undefined,
+        prisma,
+        { allowHiddenCatalogItems: true },
+      );
       const preview = await previewOrderPricing(normalized, prisma);
       res.setHeader("Cache-Control", "no-store");
       res.json({ data: preview });
@@ -354,7 +360,14 @@ export function createAdminOrderRouter(
             throw new Error("CUSTOMER_DATE_RANGE_READ_ONLY");
           const storedInput = orderDataWithRelations(existing);
           const normalized = roundChangedOrderConditions(
-            await normalizeOrderCatalogInput(validation.value, storedInput, tx),
+            await normalizeOrderCatalogInput(
+              validation.value,
+              storedInput,
+              tx,
+              {
+                allowHiddenCatalogItems: true,
+              },
+            ),
             storedInput,
           );
           const pricingSnapshot = await validatePricingSnapshot(
@@ -428,12 +441,13 @@ export function createAdminOrderRouter(
           });
           return;
         }
-        if (error instanceof Error && error.message === "PRICE_PREVIEW_STALE") {
+        if (error instanceof PricePreviewStaleError) {
           res.status(409).json({
             error: {
               code: "PRICE_PREVIEW_STALE",
               message:
                 "Preisrelevante Angaben wurden seit der Vorschau geändert. Bitte berechnen Sie das Angebot erneut.",
+              changedFields: error.changedFields,
             },
           });
           return;

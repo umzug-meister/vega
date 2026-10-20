@@ -131,7 +131,7 @@ test("order cards use aligned responsive columns without squeezing list controls
   assert.match(conditions, /Summe:[\s\S]*425,00/u);
   assert.match(
     conditions,
-    /@media \(min-width:900px\)[^}]*grid-template-columns:minmax\(0, 1fr\) minmax\(0, 2fr\)/u,
+    /@media \(min-width:900px\)[^}]*grid-template-columns:minmax\(0, 1\.3fr\) minmax\(0, 4\.7fr\)/u,
   );
 });
 

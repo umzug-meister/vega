@@ -21,7 +21,14 @@ export async function createOrder(
   actorName = "-",
   settings?: AppSettingsDto,
 ) {
-  let normalizedInput = await normalizeOrderCatalogInput(input);
+  let normalizedInput = await normalizeOrderCatalogInput(
+    input,
+    undefined,
+    prisma,
+    {
+      allowHiddenCatalogItems: source === "admin",
+    },
+  );
   if (source === "admin")
     normalizedInput = roundChangedOrderConditions(normalizedInput);
   if (source === "public" && normalizedInput.details) {
@@ -154,7 +161,10 @@ export function roundChangedOrderConditions(
       conditions: input.details.conditions.map((condition, index) => {
         const saved = previous?.details?.conditions[index];
         const unchanged =
-          saved?.amount === condition.amount && saved.kind === condition.kind;
+          saved?.amount === condition.amount &&
+          saved.kind === condition.kind &&
+          saved.quantity === condition.quantity &&
+          saved.unitPrice === condition.unitPrice;
         return unchanged
           ? condition
           : { ...condition, amount: roundAmountToCents(condition.amount) };
@@ -170,6 +180,9 @@ export async function normalizeOrderCatalogInput(
     Prisma.TransactionClient,
     "catalogFurniture" | "catalogService" | "catalogPacking"
   > = prisma,
+  {
+    allowHiddenCatalogItems = false,
+  }: { allowHiddenCatalogItems?: boolean } = {},
 ): Promise<CreateOrderInput> {
   input = validateOrderWriteInput(input);
   let normalizedInput = input;
@@ -278,11 +291,17 @@ export async function normalizeOrderCatalogInput(
   if (selectedServiceIds.length > 0) {
     const [serviceItems, packingItems] = await Promise.all([
       catalog.catalogService.findMany({
-        where: { id: { in: selectedServiceIds }, show: true },
+        where: {
+          id: { in: selectedServiceIds },
+          ...(!allowHiddenCatalogItems ? { show: true } : {}),
+        },
         select: { id: true, name: true },
       }),
       catalog.catalogPacking.findMany({
-        where: { id: { in: selectedServiceIds }, show: true },
+        where: {
+          id: { in: selectedServiceIds },
+          ...(!allowHiddenCatalogItems ? { show: true } : {}),
+        },
         select: { id: true, name: true },
       }),
     ]);

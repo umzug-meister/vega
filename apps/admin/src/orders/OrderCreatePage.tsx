@@ -63,8 +63,9 @@ export function orderForSave(value: OrderFormValue): OrderFormValue {
         services: value.details.extras.services.filter(
           (service) =>
             service.name.trim().length > 0 &&
-            typeof service.unitPrice === "number" &&
-            Number.isFinite(service.unitPrice),
+            (service.catalogId !== undefined ||
+              (typeof service.unitPrice === "number" &&
+                Number.isFinite(service.unitPrice))),
         ),
       },
     },
@@ -82,8 +83,10 @@ interface OrderCreatePageProps {
 
 interface ApiErrorResponse {
   error?: {
+    code?: string;
     message?: string;
     issues?: Array<{ field: string; message: string }>;
+    changedFields?: string[];
   };
 }
 
@@ -266,6 +269,11 @@ export function OrderCreatePage({
       data?: CreateOrderResult | AdminOrderDetail;
     } & ApiErrorResponse;
     if (!response.ok || !body.data) {
+      if (body.error?.code === "PRICE_PREVIEW_STALE")
+        console.error("[Vega] Preisvorschau ist veraltet.", {
+          code: body.error.code,
+          changedFields: body.error.changedFields ?? [],
+        });
       const issues = body.error?.issues ?? [];
       const fieldErrors = issues.map((issue) => issue.message);
       const firstField = issues[0]?.field ?? "";
@@ -342,13 +350,6 @@ export function OrderCreatePage({
         );
         return;
       }
-      if (
-        value.details.conditions.length > 0 &&
-        !window.confirm(
-          "Die neue Kalkulation ersetzt alle bisherigen Positionen. Möchten Sie fortfahren?",
-        )
-      )
-        return;
       const next = {
         ...valueRef.current,
         pricingSnapshot: preview.pricingSnapshot,

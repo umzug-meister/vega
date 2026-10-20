@@ -11,6 +11,7 @@ import {
   addInvoiceAmounts,
   isValidEmailAddress,
   MAX_TRUCKS,
+  roundAmountToCents,
   SERVICE_RATE_KEYS,
 } from "@vega/domain";
 
@@ -733,8 +734,28 @@ function validateConditions(
       issues,
       { required: true, max: 500 },
     );
+    const quantity =
+      rawCondition.quantity === undefined
+        ? undefined
+        : numeric(
+            rawCondition,
+            "quantity",
+            `details.conditions.${index}.quantity`,
+            issues,
+            { max: 100_000 },
+          );
+    const unitPrice =
+      rawCondition.unitPrice === undefined
+        ? undefined
+        : numeric(
+            rawCondition,
+            "unitPrice",
+            `details.conditions.${index}.unitPrice`,
+            issues,
+            { max: 1_000_000 },
+          );
     const rawAmount = rawCondition.amount;
-    const amount =
+    const submittedAmount =
       typeof rawAmount === "number" &&
       Number.isFinite(rawAmount) &&
       Math.abs(rawAmount) <= 10_000_000
@@ -744,6 +765,16 @@ function validateConditions(
             message: "Bitte geben Sie einen gültigen Betrag ein.",
           }),
           undefined);
+    const amount =
+      quantity !== undefined && unitPrice !== undefined
+        ? roundAmountToCents(quantity * unitPrice)
+        : submittedAmount;
+    if (amount !== undefined && Math.abs(amount) > 10_000_000)
+      issues.push({
+        field: `details.conditions.${index}.amount`,
+        message:
+          "Der berechnete Betrag darf 10.000.000 EUR nicht überschreiten.",
+      });
     const rawKind = rawCondition.kind;
     const allowedKinds = [
       "manual",
@@ -796,6 +827,8 @@ function validateConditions(
       conditions.push({
         description,
         amount,
+        ...(quantity !== undefined ? { quantity } : {}),
+        ...(unitPrice !== undefined ? { unitPrice } : {}),
         ...(kind !== undefined ? { kind } : {}),
       });
   });

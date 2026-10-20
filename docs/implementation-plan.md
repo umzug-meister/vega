@@ -102,6 +102,13 @@ Exakte Versionen sind in `package.json`/`package-lock.json` gepinnt; offen ist n
 - `CatalogOffer.sum` ist der gepflegte Basispreis; `hourPrice` beschreibt
   weitere Stunden, aber erzeugt keine zusätzliche Arbeitsstunde im Angebot.
   Ein Rabatt wird ausschließlich auf den Basispreis gerechnet.
+- Die berechnete Personalposition nennt Träger und gegebenenfalls LKW 3,5t.
+  Bei gesetzten Stunden folgen mehrzeilig Mindestabnahme und Folgestundenpreis;
+  bis einschließlich vier Stunden zusätzlich die maximale Abnahme (Stunden + 1).
+  Hinweise auf ein maximales Umzugsgutvolumen entfallen vollständig in
+  Konditionen, Angebots-PDF und E-Mail; die Stundenangaben bleiben erhalten.
+  Admin-Beschreibungen wachsen mit dem Text; PDF und Mail erhalten dessen
+  Zeilenumbrüche. Bestehende Positionen werden nicht automatisch umgeschrieben.
 - Anfahrtskosten werden zentral nach LKW-Anzahl gepflegt, unabhängig von der
   Trägerzahl (`ridingCostsTruck1` bis `ridingCostsTruck4`). In München gilt
   dieser LKW-Tarif; andernorts gilt das Maximum aus diesem Tarif und
@@ -112,13 +119,21 @@ Exakte Versionen sind in `package.json`/`package-lock.json` gepinnt; offen ist n
 - Halteverbotszonen verwenden die Summe der aktivierten Adressen mal
   `hvzPrice`. Alle ausgewählten Katalog-Services und Packungen werden anhand
   der aktuellen Mengen und serverseitigen Einzelpreise einbezogen. Der
+  Schalter „Im Formular anzeigen“ filtert nur die öffentliche Kundenformular-API.
+  Admins und Kundenberater sehen und dürfen auch ausgeblendete Services und
+  Packungen im Auftrag auswählen. Der Preis-Snapshot und die Angebots-PDF-
+  Katalogtabellen enthalten immer den vollständigen Katalogstand zum Zeitpunkt
+  der Kalkulation, unabhängig von diesem Schalter.
+  Der
   Katalogpreis wird bei Auswahl als Einzelpreis vorbelegt und kann im Auftrag
   von Admins und Kundenberatern je Position angepasst werden; auch
   Freitextpositionen können einen Einzelpreis erhalten. Diese Mitarbeiterpreise
   werden serverseitig validiert, im Auftrags-JSON gespeichert und von der
   ausdrücklichen Positionskalkulation verwendet. Freitextpositionen ohne
   Einzelpreis blockieren die automatische Kalkulation, nicht das manuelle
-  Angebot. Packungen behalten den Hinweis „wird nach Verbrauch berechnet“.
+  Angebot. Manuelle Auftragspositionen unterstützen Menge und Einzelpreis;
+  sobald beide angegeben sind, berechnet der Server den gerundeten Positionsbetrag
+  als Menge mal Einzelpreis. Packungen behalten den Hinweis „wird nach Verbrauch berechnet“.
 - Jede fertige Auftragsposition wird auf Cent gerundet; erst danach wird die
   Bruttosumme exakt gebildet. Order-Bruttobeträge werden nicht mit der
   Netto-/Umsatzsteuerarithmetik von Rechnungen vermischt. Die Positionskarte
