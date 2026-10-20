@@ -69,9 +69,14 @@ export function calculateOrderPricing(
   input: CalculateOrderPricingInput,
 ): OrderPricingPreview {
   const { basis } = input;
-  if (basis.offerId !== undefined && input.offer?.id !== basis.offerId)
+  if (
+    basis.hours > 0 &&
+    basis.offerId !== undefined &&
+    input.offer?.id !== basis.offerId
+  )
     throw new OrderPricingError("PRICE_NOT_CONFIGURED");
   if (
+    basis.hours > 0 &&
     input.offer &&
     (input.offer.workers !== basis.workers ||
       input.offer.trucks !== basis.trucks ||
@@ -164,8 +169,9 @@ export function calculateOrderPricing(
           .toLocaleLowerCase("de-DE"),
       ),
     );
-  if (basis.trucks > 0) {
-    if (!input.offer) throw new OrderPricingError("PRICE_NOT_CONFIGURED");
+  // Dedicated riding-cost rates currently exist only for truck counts 1–4.
+  // Higher staff-entered counts remain valid; staff adds travel as a manual line.
+  if (basis.trucks > 0 && basis.trucks <= 4) {
     const truckRate = input.rates.find(
       (rate) => rate.key === `ridingCostsTruck${basis.trucks}`,
     )?.price;

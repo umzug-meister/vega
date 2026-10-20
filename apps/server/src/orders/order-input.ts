@@ -626,12 +626,22 @@ function validateBasis(
   }
   const workers = numeric(value, "workers", "details.basis.workers", issues, {
     required: true,
-    max: 1000,
+    max: allowStaffPricing ? 2_147_483_647 : 1000,
   });
   const trucks = numeric(value, "trucks", "details.basis.trucks", issues, {
     required: true,
-    max: MAX_TRUCKS,
+    max: allowStaffPricing ? 2_147_483_647 : MAX_TRUCKS,
   });
+  for (const [field, count] of [
+    ["workers", workers],
+    ["trucks", trucks],
+  ] as const) {
+    if (count !== undefined && !Number.isInteger(count))
+      issues.push({
+        field: `details.basis.${field}`,
+        message: "Bitte geben Sie eine ganze Anzahl ein.",
+      });
+  }
   const hours = numeric(value, "hours", "details.basis.hours", issues, {
     required: true,
     max: 10000,

@@ -99,9 +99,15 @@ Exakte Versionen sind in `package.json`/`package-lock.json` gepinnt; offen ist n
   `POST /api/admin/orders/pricing-preview` einen Staff-Entwurf kalkulieren.
   Der Browser ist weder Katalog- noch Berechnungsquelle. Speichern, Kopieren,
   PDF-Export und Mailversand kalkulieren nicht automatisch neu.
-- `CatalogOffer.sum` ist der gepflegte Basispreis; `hourPrice` beschreibt
-  weitere Stunden, aber erzeugt keine zusätzliche Arbeitsstunde im Angebot.
+- Bei gesetzten Stunden liefert das ausgewählte `CatalogOffer.sum` den
+  gepflegten Basispreis; `hourPrice` beschreibt weitere Stunden, erzeugt aber
+  keine zusätzliche Arbeitsstunde im Angebot.
   Ein Rabatt wird ausschließlich auf den Basispreis gerechnet.
+- Ist `hours` nicht gesetzt, gilt `basis.basePrice` als Festpreis. Für diesen
+  Modus ist kein `CatalogOffer` erforderlich; die zentral gepflegten LKW-
+  Fahrtkosten gelten unabhängig davon weiter. Konditionen, E-Mail und PDF
+  enthalten keine Stunden- oder Folgestundenhinweise; die E-Mail zeigt im
+  Abschnitt Personalkosten Team und Festpreis wie im Legacy-Festpreisangebot.
 - Die berechnete Personalposition nennt Träger und gegebenenfalls LKW 3,5t.
   Bei gesetzten Stunden folgen mehrzeilig Mindestabnahme und Folgestundenpreis;
   bis einschließlich vier Stunden zusätzlich die maximale Abnahme (Stunden + 1).
@@ -115,7 +121,11 @@ Exakte Versionen sind in `package.json`/`package-lock.json` gepinnt; offen ist n
   `distanceKm * kmPrice * trucks`. Der Kilometerbetrag wird auf das nächste
   Vielfache von 5 EUR gerundet. Lokale Adressen werden
   anhand ihres Ortsfelds erkannt; aktive Haupt- und aktivierte Nebenadressen
-  werden berücksichtigt.
+  werden berücksichtigt. Mitarbeiter dürfen Träger- und LKW-Zahlen oberhalb
+  der Katalogvorschläge eingeben; Eingaben sind positive ganzzahlige Mengen.
+  Für mehr als vier LKW ist keine automatische Anfahrt hinterlegt und diese
+  wird als manuelle Position gepflegt. Öffentliche Kundeneingaben bleiben an
+  die vorhandenen Grenzen gebunden.
 - Halteverbotszonen verwenden die Summe der aktivierten Adressen mal
   `hvzPrice`. Alle ausgewählten Katalog-Services und Packungen werden anhand
   der aktuellen Mengen und serverseitigen Einzelpreise einbezogen. Der
@@ -140,10 +150,11 @@ Exakte Versionen sind in `package.json`/`package-lock.json` gepinnt; offen ist n
   zeigt zusätzlich eine rein informative Netto-/MwSt.-Aufteilung der
   Bruttosumme mit fest 19 % (`Netto = Brutto / 1,19`, MwSt. = Brutto − Netto);
   sie ändert weder gespeicherte Positionen noch den Steuersatz einer Rechnung.
-- Berechnete Positionen können direkt angepasst werden. Eine neue Kalkulation
-  ersetzt bestehende Positionen erst nach Bestätigung. Gespeicherte
+- Berechnete Positionen können direkt angepasst werden. Manuell hinzugefügte
+  Positionen werden in einem eigenen Abschnitt geführt, bei Neuberechnungen
+  erhalten und nur durch ausdrückliches Entfernen gelöscht. Gespeicherte
   Positionen sind die verbindlichen Beträge; Katalogänderungen werden nur
-  durch eine neue, ausdrücklich bestätigte Kalkulation übernommen.
+  durch eine neue, ausdrücklich ausgelöste Kalkulation übernommen.
 - Ein serverseitiger `pricingSnapshot` im bestehenden Order-JSON hält die
   verwendeten Preisstände für Services, Packungen und AGB sowie die
   Preisgrundlage. PDF-Tabellen und Angebotsmails verwenden gespeicherte

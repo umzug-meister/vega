@@ -16,7 +16,6 @@ import {
 } from "@mui/material";
 import { AdminAlert as Alert } from "../components/AdminNotifications.js";
 import type { CatalogOfferDto, OrderDetailsInput } from "@vega/domain";
-import { MAX_TRUCKS } from "@vega/domain";
 import { AppointmentFields } from "./AppointmentFields.js";
 import { suggestDiscountPercent } from "./discount-recommendation.js";
 import { apiRequest } from "../api/api-request.js";
@@ -132,7 +131,7 @@ export function BasisTab({ value, update, onBasisChange }: BasisTabProps) {
                 onChange={(event) =>
                   setBasis({ trucks: Number(event.target.value) })
                 }
-                slotProps={{ htmlInput: { min: 0, max: MAX_TRUCKS } }}
+                slotProps={{ htmlInput: { min: 0 } }}
               />
               <TextField
                 type="number"
@@ -182,7 +181,7 @@ export function BasisTab({ value, update, onBasisChange }: BasisTabProps) {
               />
               <TextField
                 type="number"
-                label="Einzelpreis"
+                label="Stundenpreis"
                 value={basis.extraHourPrice || ""}
                 onChange={(event) =>
                   setBasis({ extraHourPrice: Number(event.target.value) })
@@ -190,9 +189,7 @@ export function BasisTab({ value, update, onBasisChange }: BasisTabProps) {
                 slotProps={{
                   htmlInput: { min: 0, step: "0.01" },
                   input: {
-                    endAdornment: (
-                      <InputAdornment position="end">€/Std</InputAdornment>
-                    ),
+                    endAdornment: <InputAdornment position="end">€</InputAdornment>,
                   },
                 }}
               />

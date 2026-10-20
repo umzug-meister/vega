@@ -168,20 +168,20 @@ test("validates and persists secondary addresses while keeping prices staff-only
   );
 });
 
-test("order basis rejects a truck count above the configured riding-cost rates", () => {
+test("staff order basis accepts arbitrary whole worker and truck counts but public counts stay bounded", () => {
   const input = orderFixture();
-  input.details!.basis.trucks = 5;
-  const rejected = validateOrderCreateInput(input, { allowStaffPricing: true });
-  assert.equal(rejected.ok, false);
-  if (!rejected.ok)
-    assert.ok(
-      rejected.issues.some((issue) => issue.field === "details.basis.trucks"),
-    );
-
-  input.details!.basis.trucks = 4;
+  input.details!.basis.workers = 12_000;
+  input.details!.basis.trucks = 8;
   assert.equal(
     validateOrderCreateInput(input, { allowStaffPricing: true }).ok,
     true,
+  );
+  assert.equal(validateOrderCreateInput(input).ok, false);
+
+  input.details!.basis.workers = 2.5;
+  assert.equal(
+    validateOrderCreateInput(input, { allowStaffPricing: true }).ok,
+    false,
   );
 });
 

@@ -114,8 +114,12 @@ function optionHtml({ data }: OfferOption): string {
         lines.push(
           escapeHtml(`Maximale Abnahme: ${amount(basis.hours + 1)} Stunden`),
         );
+      blocks.push(`<h3>Personalkosten</h3><p>${lines.join("<br>")}</p>`);
+    } else {
+      blocks.push(
+        `<h3>Personalkosten</h3><table><tbody><tr><td><p><strong>${escapeHtml(crew)}</strong></p></td><td><p>${escapeHtml(euro(basis.basePrice))}</p></td></tr></tbody></table>`,
+      );
     }
-    blocks.push(`<h3>Personalkosten</h3><p>${lines.join("<br>")}</p>`);
   }
   const rows = (data.details?.conditions ?? []).map(
     (entry) =>

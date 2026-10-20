@@ -5,6 +5,8 @@ import {
   ScheduleOutlined,
 } from "@mui/icons-material";
 import {
+  Autocomplete,
+  Alert,
   Box,
   Button,
   Grid,
@@ -21,10 +23,21 @@ import {
 import {
   addInvoiceAmounts,
   roundAmountToCents,
+  type CatalogPackingDto,
+  type CatalogServiceDto,
   type OrderConditionInput,
   type OrderDetailsInput,
 } from "@vega/domain";
+import { useEffect, useState } from "react";
+import { apiRequest } from "../api/api-request.js";
 import type { OrderFormValue } from "./order-form-types.js";
+
+interface ConditionCatalogChoice {
+  id: number;
+  name: string;
+  price: number;
+  kind: "service" | "packaging";
+}
 
 interface ConditionsTabProps {
   value: OrderFormValue;
@@ -93,17 +106,62 @@ export function calculateConditionAmount(
     : roundAmountToCents(quantity * unitPrice);
 }
 
+export function mergeCalculatedConditions(
+  calculated: OrderConditionInput[],
+  existing: OrderConditionInput[],
+): OrderConditionInput[] {
+  return [
+    ...calculated,
+    ...existing.filter((condition) => condition.kind === "manual"),
+  ];
+}
+
 export function ConditionsTab({
   value,
   onConditionsChange,
   onCalculate,
 }: ConditionsTabProps) {
+  const [catalogChoices, setCatalogChoices] = useState<
+    ConditionCatalogChoice[]
+  >([]);
+  const [catalogError, setCatalogError] = useState(false);
   const { basis, conditions } = value.details;
   const grossTotal = roundAmountToCents(
     addInvoiceAmounts(conditions.map((item) => item.amount)),
   );
   const netTotal = roundAmountToCents(grossTotal / 1.19);
   const vatTotal = roundAmountToCents(grossTotal - netTotal);
+
+  useEffect(() => {
+    let active = true;
+    void Promise.all([
+      apiRequest<CatalogPackingDto[]>("/api/admin/catalog/packings"),
+      apiRequest<CatalogServiceDto[]>("/api/admin/catalog/services"),
+    ])
+      .then(([packings, services]) => {
+        if (active)
+          setCatalogChoices([
+            ...packings.map(({ id, name, price }) => ({
+              id,
+              name,
+              price,
+              kind: "packaging" as const,
+            })),
+            ...services.map(({ id, name, price }) => ({
+              id,
+              name,
+              price,
+              kind: "service" as const,
+            })),
+          ]);
+      })
+      .catch(() => {
+        if (active) setCatalogError(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function updateEntry(index: number, patch: ConditionEditPatch) {
     onConditionsChange(
@@ -232,90 +290,67 @@ export function ConditionsTab({
       <Paper variant="outlined" sx={{ p: 2.5, minWidth: 0 }}>
         <Stack spacing={1.5}>
           <Typography component="h2" variant="h6">
-            Positionen im Auftrag
+            Positionen aus dem Auftrag
           </Typography>
-          {conditions.map((entry, index) => (
-            <Grid
-              container
-              spacing={1}
-              key={`condition-${index}`}
-              sx={{ alignItems: "flex-start" }}
-            >
-              <Grid size={{ xs: 12, sm: 5 }}>
-                <TextField
-                  sx={{ width: "100%" }}
-                  label="Beschreibung"
-                  multiline
-                  minRows={index === 0 ? 2 : 1}
-                  value={entry.description}
-                  onChange={(event) =>
-                    updateEntry(index, { description: event.target.value })
-                  }
-                />
-              </Grid>
-              <Grid size={{ xs: 6, sm: 1.5 }}>
-                <TextField
-                  sx={{ width: "100%" }}
-                  type="number"
-                  label="Menge"
-                  value={entry.quantity ?? ""}
-                  onChange={(event) =>
-                    updateQuantity(index, event.target.value)
-                  }
-                  slotProps={{ htmlInput: { min: 0, step: "any" } }}
-                />
-              </Grid>
-              <Grid size={{ xs: 6, sm: 2 }}>
-                <TextField
-                  sx={{ width: "100%" }}
-                  type="number"
-                  label="Einzelpreis (€)"
-                  value={entry.unitPrice ?? ""}
-                  onChange={(event) =>
-                    updateUnitPrice(index, event.target.value)
-                  }
-                  slotProps={{ htmlInput: { min: 0, step: "0.01" } }}
-                />
-              </Grid>
-              <Grid size={{ xs: 8, sm: 2.5 }}>
-                <TextField
-                  sx={{ width: "100%" }}
-                  type="number"
-                  label="Betrag (€)"
-                  value={entry.amount}
-                  disabled={
-                    entry.quantity !== undefined &&
-                    entry.unitPrice !== undefined
-                  }
-                  onChange={(event) =>
-                    updateEntry(index, { amount: Number(event.target.value) })
-                  }
-                />
-              </Grid>
-              <Grid size={{ xs: 4, sm: 1 }} sx={{}}>
-                <IconButton
-                  color="default"
-                  aria-label="Position entfernen"
-                  sx={{ mt: 1, alignSelf: "flex-start" }}
-                  onClick={() =>
-                    onConditionsChange(
-                      conditions.filter(
-                        (_, entryIndex) => entryIndex !== index,
-                      ),
-                    )
-                  }
-                >
-                  <DeleteOutlined />
-                </IconButton>
-              </Grid>
-            </Grid>
-          ))}
+          {catalogError && (
+            <Alert severity="warning">
+              Katalogvorschläge konnten nicht geladen werden. Positionen können
+              weiterhin manuell eingegeben werden.
+            </Alert>
+          )}
+          {basis.trucks > 4 && (
+            <Alert severity="info">
+              Für mehr als 4 LKW gibt es keinen automatischen Anfahrtstarif.
+              Bitte pflegen Sie die An-/Abfahrtskosten als manuelle Position.
+            </Alert>
+          )}
+          {conditions.map((entry, index) =>
+            entry.kind === "manual" ? null : (
+              <ConditionRow
+                key={`order-condition-${index}`}
+                entry={entry}
+                index={index}
+                catalogChoices={catalogChoices}
+                updateEntry={updateEntry}
+                updateQuantity={updateQuantity}
+                updateUnitPrice={updateUnitPrice}
+                onRemove={() =>
+                  onConditionsChange(
+                    conditions.filter((_, entryIndex) => entryIndex !== index),
+                  )
+                }
+              />
+            ),
+          )}
+          <Box sx={{ borderTop: 1, borderColor: "divider", pt: 1.5 }}>
+            <Typography component="h3" variant="h6">
+              Manuell hinzugefügt
+            </Typography>
+          </Box>
+          {conditions.map((entry, index) =>
+            entry.kind !== "manual" ? null : (
+              <ConditionRow
+                key={`manual-condition-${index}`}
+                entry={entry}
+                index={index}
+                catalogChoices={catalogChoices}
+                updateEntry={updateEntry}
+                updateQuantity={updateQuantity}
+                updateUnitPrice={updateUnitPrice}
+                onRemove={() =>
+                  onConditionsChange(
+                    conditions.filter((_, entryIndex) => entryIndex !== index),
+                  )
+                }
+              />
+            ),
+          )}
           <Button
             startIcon={<AddOutlined />}
             onClick={() =>
               onConditionsChange([
                 ...conditions,
-                { description: "", amount: 0 },
+                { description: "", amount: 0, kind: "manual" },
               ])
             }
             sx={{ alignSelf: "flex-end" }}
@@ -348,5 +383,114 @@ export function ConditionsTab({
         </Stack>
       </Paper>
     </Box>
+  );
+}
+
+function ConditionRow({
+  entry,
+  index,
+  catalogChoices,
+  updateEntry,
+  updateQuantity,
+  updateUnitPrice,
+  onRemove,
+}: {
+  entry: OrderConditionInput;
+  index: number;
+  catalogChoices: ConditionCatalogChoice[];
+  updateEntry: (index: number, patch: ConditionEditPatch) => void;
+  updateQuantity: (index: number, raw: string) => void;
+  updateUnitPrice: (index: number, raw: string) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <Grid container spacing={1} sx={{ alignItems: "flex-start" }}>
+      <Grid size={{ xs: 12, sm: 5 }}>
+        <Autocomplete<ConditionCatalogChoice, false, false, true>
+          freeSolo
+          fullWidth
+          options={catalogChoices}
+          value={entry.description}
+          inputValue={entry.description}
+          getOptionLabel={(option) =>
+            typeof option === "string" ? option : option.name
+          }
+          getOptionKey={(option) =>
+            typeof option === "string" ? option : `${option.kind}-${option.id}`
+          }
+          isOptionEqualToValue={(option, selected) =>
+            typeof selected !== "string" && option.id === selected.id
+          }
+          onInputChange={(_, input, reason) => {
+            if (reason === "input" || reason === "clear")
+              updateEntry(index, { description: input });
+          }}
+          onChange={(_, selected) => {
+            if (typeof selected === "string")
+              updateEntry(index, { description: selected });
+            else if (selected)
+              updateEntry(index, {
+                description: selected.name,
+                quantity: 1,
+                unitPrice: selected.price,
+                amount: roundAmountToCents(selected.price),
+              });
+          }}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              sx={{ width: "100%" }}
+              label="Beschreibung"
+              multiline
+              minRows={index === 0 ? 2 : 1}
+            />
+          )}
+        />
+      </Grid>
+      <Grid size={{ xs: 6, sm: 1.5 }}>
+        <TextField
+          sx={{ width: "100%" }}
+          type="number"
+          label="Menge"
+          value={entry.quantity ?? ""}
+          onChange={(event) => updateQuantity(index, event.target.value)}
+          slotProps={{ htmlInput: { min: 0, step: "any" } }}
+        />
+      </Grid>
+      <Grid size={{ xs: 6, sm: 2 }}>
+        <TextField
+          sx={{ width: "100%" }}
+          type="number"
+          label="Einzelpreis (€)"
+          value={entry.unitPrice ?? ""}
+          onChange={(event) => updateUnitPrice(index, event.target.value)}
+          slotProps={{ htmlInput: { min: 0, step: "0.01" } }}
+        />
+      </Grid>
+      <Grid size={{ xs: 8, sm: 2.5 }}>
+        <TextField
+          sx={{ width: "100%" }}
+          type="number"
+          label="Betrag (€)"
+          value={entry.amount === 0 ? "" : entry.amount}
+          disabled={
+            entry.quantity !== undefined && entry.unitPrice !== undefined
+          }
+          onChange={(event) =>
+            updateEntry(index, { amount: Number(event.target.value) })
+          }
+        />
+      </Grid>
+      <Grid size={{ xs: 4, sm: 1 }}>
+        <IconButton
+          color="default"
+          aria-label="Position entfernen"
+          sx={{ mt: 1, alignSelf: "flex-start" }}
+          onClick={onRemove}
+        >
+          <DeleteOutlined />
+        </IconButton>
+      </Grid>
+    </Grid>
   );
 }

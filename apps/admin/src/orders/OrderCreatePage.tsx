@@ -13,7 +13,11 @@ import { useAdminNotification } from "../components/AdminNotifications.js";
 import { SectionTabs } from "../components/SectionTabs.js";
 import { AddressesTab } from "./AddressesTab.js";
 import { BasisTab } from "./BasisTab.js";
-import { ConditionsTab, hasPricingInputsChanged } from "./ConditionsTab.js";
+import {
+  ConditionsTab,
+  hasPricingInputsChanged,
+  mergeCalculatedConditions,
+} from "./ConditionsTab.js";
 import { CustomerTab } from "./CustomerTab.js";
 import { ExtrasTab } from "./ExtrasTab.js";
 import { FurnitureTab } from "./FurnitureTab.js";
@@ -355,7 +359,10 @@ export function OrderCreatePage({
         pricingSnapshot: preview.pricingSnapshot,
         details: {
           ...valueRef.current.details,
-          conditions: preview.conditions,
+          conditions: mergeCalculatedConditions(
+            preview.conditions,
+            valueRef.current.details.conditions,
+          ),
         },
       };
       valueRef.current = next;
