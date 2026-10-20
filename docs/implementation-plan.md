@@ -1,7 +1,7 @@
 # Umzug Ruck Zuck – Umsetzungsplan
 
 **Status:** abgestimmte Zielplanung für die Umsetzung durch Agents  
-**Stand:** 2026-10-15
+**Stand:** 2026-10-19
 
 **Wichtig:** Dieser Plan beschreibt Zielverhalten und offene Arbeitspakete.
 Lokale Nachweise ersetzen keine externen Freigabe-Gates.
@@ -235,15 +235,13 @@ Abnahmekriterien.
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | A0 Proof                | Hostinger Node 24/Build/Start/Cron, Mail-API-Anhänge, GCS, WordPress-Loader/CORS in nichtproduktiver Umgebung (lokaler Teil: `proof-01-integration-compatibility.md`) | End-to-End-Proof in Zielumgebung; Tarifgrenzen notiert                               |
 | A1 Build                | Tatsächlicher GitHub-CI-Lauf und Hostinger-Deployment                                                                                                                 | Sauberer CI-Build; Deployment liefert API und beide Frontends                        |
-| A2 Datenmodell          | – (lokal vollständig)                                                                                                                                                 | Leere DB per Migration; keine Kaskaden auf Geschwister/Rechnungen                    |
 | A3 Auth                 | Reset-Mail-Proof mit echtem Hostinger-Versand                                                                                                                         | Kein Signup; Rollenmatrix serverseitig; Admin-2FA vor Datenzugriff                   |
 | A4 Geschäftslogik       | Hostinger-Ausführung und Purge-Proof mit fälligen Testdatensätzen über den zentralen `scripts/cron.js`-Einstieg                                                       | Kein öffentlicher Order-Read; serverseitige Positionskalkulation statt Browserpreise |
 | A5 Kundenformular       | Realer WordPress-/Hostinger-Einbettungsproof                                                                                                                          | Loader lädt in WordPress; Anfrage ohne Login; Consent funktioniert                   |
-| A6 Admin-SPA            | – (lokal vollständig)                                                                                                                                                 | Rollenrechte auf API-Ebene                                                           |
-| A7 Mail/PDF/Buchhaltung | 30-Tage-Finanz-Purge, Provider-End-to-End-Test                                                                                                                        | Mailfehler verlieren keine Anfrage; Versand protokolliert; PDFs nicht persistiert    |
+| A7 Mail/PDF/Buchhaltung | Mail-/PDF-Provider-End-to-End-Test                                                                                                                                    | Mailfehler verlieren keine Anfrage; Versand protokolliert; PDFs nicht persistiert    |
 | A8 GCS-Bilder           | Realer Provider-/CORS-/Lifecycle-Proof                                                                                                                                | Keine Credentials im Browser; Lifecycle nachweisbar                                  |
 | A9 Qualität             | E2E-Szenarien und Security Review (IDOR, XSS/Mail-Editor, CORS, Rate-Limits, Uploads)                                                                                 | Keine öffentlichen Datenlesewege; Restore-/Purge-/Mailfehler abgedeckt               |
-| A10 Betrieb             | Hostinger-Deployment, Cron, Runbook (Grundlage: `operations.md`, `hostinger-mail-cron.md`, `gcs-bucket-setup.md`)                                                     | Deployment-/Rollback-/Cron-Anleitung vorhanden                                       |
+| A10 Betrieb             | Hostinger-Deployment und Cron im Zieltarif                                                                                                                            | Deployment-/Rollback-/Cron-Anleitung vorhanden                                       |
 
 ## 8. Konfigurations- und Betriebsgrenzen
 
@@ -264,7 +262,6 @@ Mindestens erforderlich (vollständige Liste: `operations.md`):
   API-Beschränkung plus Quoten-/Kostenmonitoring.
 - GCS-Projekt-/Bucket-/Credentials über sichere Serverkonfiguration
 - Externe Archiv- und nichtproduktive Providerzugänge ausschließlich als serverseitige Runtime-Umgebungsvariablen; Variablennamen erst mit Auswahl der konkreten Integration festlegen.
-- optionaler Secret/Signatur für interne Cron-Aufrufe
 - Einmalige Bootstrapwerte nur für ersten Start; nach Anlage entfernen/deaktivieren.
 
 `BETTER_AUTH_SECRET` muss ein eindeutiges, zufälliges Secret mit mindestens 32 Zeichen/hoher Entropie sein. Better Auth erhält ausschließlich die produktive Vega-Origin und explizite lokale/Staging-Origins als Trusted Origins; keine Wildcard und keine Subdomain-Cookies, solange kein Login über mehrere Subdomains erforderlich ist. HTTPS-, `HttpOnly`-, `Secure`- und CSRF-/Origin-Schutz bleiben aktiviert. Auth-Rate-Limits werden persistent konfiguriert und für Login, Passwort-Reset und 2FA separat gesetzt. Proxy-IP-Header werden nur nach Verifikation der Hostinger-Proxykette vertraut.

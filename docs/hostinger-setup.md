@@ -16,13 +16,13 @@ nachgewiesen werden (siehe [ADR 0008](./adr/0008-hostinger-deployment.md)).
 
 Du brauchst:
 
-- eine Vega-Subdomain, z. B. `app.example.de`, mit aktiviertem HTTPS;
+- eine Vega-Subdomain, z. B. `app.example.com`, mit aktiviertem HTTPS;
 - einen Hostinger-Tarif, der eine Node.js-Web-App mit **Node.js 24**,
   `npm ci`, eigenem Startprozess und den unten beschriebenen CLI-Aufrufen
   unterstützt;
 - Zugriff auf das hPanel, die Vega-App-Dateien per SSH und die
   Hostinger-Datenbankdetails;
-- die WordPress-Origin, z. B. `https://www.example.de` (nur Origin, kein Pfad);
+- die WordPress-Origin, z. B. `https://www.example.com` (nur Origin, kein Pfad);
 - sichere Werte für Mail, Admin-Bootstrap und – falls eingesetzt – Google/GCS.
 
 Keine Passwörter, Tokens oder privaten Schlüssel in Git, `.env` im
@@ -171,11 +171,11 @@ erforderlich:
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `NODE_ENV`                      | `production`                                                                                                                                       |
 | `DATABASE_URL`                  | Vollständige MySQL-URL aus Schritt 2                                                                                                               |
-| `APP_BASE_URL`                  | Öffentliche Vega-Origin mit HTTPS, z. B. `https://app.example.de`                                                                                  |
+| `APP_BASE_URL`                  | Öffentliche Vega-Origin mit HTTPS, z. B. `https://app.example.com`                                                                                  |
 | `BETTER_AUTH_URL`               | Dieselbe öffentliche Vega-Origin, ohne Pfad                                                                                                        |
 | `BETTER_AUTH_SECRET`            | Zufälliger, einmaliger Secret-Wert mit mindestens 32 Zeichen; lokal z. B. mit `openssl rand -base64 32` erzeugen und nur direkt in hPanel einfügen |
-| `BETTER_AUTH_TRUSTED_ORIGINS`   | Exakte Origins, kommagetrennt; produktiv mindestens die Vega-Origin, z. B. `https://app.example.de`                                                |
-| `CORS_ALLOWED_ORIGINS`          | Exakte HTTPS-Origins, kommagetrennt: Vega-Origin und WordPress-Origin, z. B. `https://app.example.de,https://www.example.de`                       |
+| `BETTER_AUTH_TRUSTED_ORIGINS`   | Exakte Origins, kommagetrennt; produktiv mindestens die Vega-Origin, z. B. `https://app.example.com`                                                |
+| `CORS_ALLOWED_ORIGINS`          | Exakte HTTPS-Origins, kommagetrennt: Vega-Origin und WordPress-Origin, z. B. `https://app.example.com,https://www.example.com`                       |
 | `HOSTINGER_MAIL_API_TOKEN`      | Serverseitiger Hostinger-Mail-API-Token                                                                                                            |
 | `HOSTINGER_MAILBOX_RESOURCE_ID` | Resource-ID des Postfachs; ggf. aus dem Mail-API-Setup ermitteln                                                                                   |
 

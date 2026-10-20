@@ -95,8 +95,8 @@ cat > /tmp/vega-prod-gcs-cors-20261018.json <<'EOF'
 [
   {
     "origin": [
-      "https://vega.umzugruckzuck24.de",
-      "https://umzugruckzuck24.de"
+      "https://vega.example.com",
+      "https://example.com"
     ],
     "method": ["GET", "POST", "HEAD"],
     "responseHeader": ["Content-Type", "x-goog-*"],

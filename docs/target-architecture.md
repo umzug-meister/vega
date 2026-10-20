@@ -4,14 +4,14 @@
 
 ```text
 Kunde
-  └─ umzugruckzuck24.de (WordPress / Content)
+  └─ example.com (WordPress / Content)
        └─ Loader von Vega-Node-App
             ├─ langes Formular (React/Vite-Bundle)
             ├─ öffentliche API: Safe Catalog GET + Order POST plus eng begrenzter Places-Proxy
             └─ kurzlebige GCS Upload-Links
 
 Kundenberater/Admin
-  └─ vega.umzugruckzuck24.de
+  └─ vega.example.com
        ├─ React/Vite Admin-SPA am Origin-Root (`/`); Redirect zu `/login` bzw. nach erfolgreicher Passwortprüfung zu `/two-factor`; direkter Aufruf von `/two-factor` ohne laufende Anmelde-Challenge führt zu `/login`, unbekannte Pfade zeigen 404
        ├─ Better Auth + TOTP
        ├─ Express 5 API / Domain Services
@@ -270,7 +270,8 @@ Alle Rechte werden im Backend geprüft. `Admin` hat alle Rechte; `Kundenberater`
   einen erst bei erfolgreichem Versand zu setzenden `sentAt` fest. Beide
   Tabellen enthalten Rechnungsnummer-/Kunden-/Auftragsnummer-Snapshots;
   Rechnungs-Purge setzt ihre FK-Bezüge auf NULL, ohne sie vor ihrer eigenen
-  Aufbewahrungsfrist zu löschen. Use-Cases und UI folgen unter A7.
+  Aufbewahrungsfrist zu löschen. Die Admin-Use-Cases und die UI (Rechnungseditor
+  mit Tabs für Rechnung, Mahnstufen 1–3 und Gutschrift) sind umgesetzt.
 - `Invoice`, `CreditNote` und `ReminderEvent` haben jeweils eigene Archiv-/Purge-Felder. Admins archivieren die Finanzdatensätze; Purge erfolgt einheitlich nach 30 Tagen, Restore ist bis dahin möglich.
 - `OrderActivityEvent` enthält nur Objekt, Aktion, Zeitstempel und Benutzername;
   keine Feld-Diffs. Öffentliche Anfragen verwenden als Akteur `-`. Derzeitige

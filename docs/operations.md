@@ -158,15 +158,11 @@ Der Plan liegt in
 `apps/server/src/catalog/legacy-import.ts`, das Skript in
 `prisma/import-legacy-catalog.ts`.
 
-Die Migration `20261016150000_document_revisions` muss vor dem neuen
-Serverstand ausgerollt sein. Sie ergänzt `Order.revision` und
-`Invoice.revision` mit Startwert `0`; alte offene Bearbeitungsseiten müssen
-neu geladen werden. PUTs ohne Revision werden mit `400`, überholte Stände
-mit `409` abgewiesen.
-
 ## Erstadmin
 
 `npm run db:seed` legt einmalig `root_user` mit `INITIAL_ADMIN_EMAIL` und
+`INITIAL_ADMIN_PASSWORD` an; ein erneuter Seed ändert nichts. Beim ersten Login
+Initialpasswort ändern und TOTP einrichten.
 
 ## Signaturfarbe
 
@@ -182,8 +178,6 @@ Die Migration `20261018100000_user_signature_color` ergänzt den Benutzer und
 die E-Mail-Outbox. Bestehende Benutzer erhalten den schwarzen Standardwert;
 bereits eingereihte Nachrichten ohne Farbsnapshot werden beim Versand ebenfalls
 schwarz dargestellt.
-`INITIAL_ADMIN_PASSWORD` an; ein erneuter Seed ändert nichts. Beim ersten Login
-Initialpasswort ändern und TOTP einrichten.
 
 ## Recovery bei Verlust des einzigen Admin-Authenticators
 
