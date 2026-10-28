@@ -78,13 +78,47 @@ const EMAIL_ALLOWED_TAGS = [
   "ul",
 ];
 
+/**
+ * The editor's text-color tool emits `<span style="color: rgb(r, g, b)">`
+ * because Tiptap serializes through the DOM, which normalizes hex colors to
+ * `rgb()`. Convert those three plain channels to hex before filtering so email
+ * clients get the compact form and only `color` survives.
+ */
+const RGB_COLOR = /rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)/gi;
+
+function normalizeRgbColors(style: string): string {
+  return style.replace(RGB_COLOR, (match, red, green, blue) => {
+    const channels = [red, green, blue].map(Number);
+    return channels.some((channel) => channel > 255)
+      ? match
+      : `#${channels.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+  });
+}
+
+const EMAIL_ALLOWED_STYLES = {
+  span: {
+    color: [/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i],
+  },
+};
+
 export function sanitizeEmailHtml(html: string): string {
   return sanitizeHtml(html, {
     allowedTags: EMAIL_ALLOWED_TAGS,
     allowedAttributes: {
       a: ["href"],
+      span: ["style"],
       td: ["colspan", "rowspan"],
       th: ["colspan", "rowspan"],
+    },
+    allowedStyles: EMAIL_ALLOWED_STYLES,
+    transformTags: {
+      span: (tagName, attribs) =>
+        typeof attribs.style === "string"
+          ? {
+              tagName,
+              attribs: { ...attribs, style: normalizeRgbColors(attribs.style) },
+            }
+          : { tagName, attribs },
     },
     allowedSchemes: ["http", "https", "mailto"],
     allowProtocolRelative: false,
@@ -94,7 +128,18 @@ export function sanitizeEmailHtml(html: string): string {
 export function htmlToPlainText(html: string): string {
   // Parser-based conversion: script/style content and comments are dropped,
   // entities are decoded once for text (not HTML) output.
-  const text = convert(html, { wordwrap: false });
+  const text = convert(html, {
+    wordwrap: false,
+    // `mailto:` links would repeat the address as `[address?subject=...]`. The
+    // label already is the address, so plain-text readers see it only once.
+    selectors: [
+      {
+        selector: 'a[href^="mailto:"]',
+        format: "inline",
+        options: { ignoreHref: true },
+      },
+    ],
+  });
   return text.replace(/\n{3,}/g, "\n\n").trim();
 }
 
@@ -112,10 +157,25 @@ export function passwordResetEmail(url: string): {
 }
 
 export const emailDefaults = {
-  inquiryNotification(customerName: string, orderNumber: number) {
+  /**
+   * Company notification for a new public inquiry. The Hostinger send API has
+   * no Reply-To field, so the customer's address is exposed as a ready-made
+   * `mailto:` link instead of a mail header.
+   */
+  inquiryNotification(
+    customerName: string,
+    orderNumber: number,
+    customerEmail?: string | null,
+  ) {
+    const email = customerEmail?.trim();
+    const replyLink = email
+      ? `<p>Antworten an den Kunden: <a href="${escapeHtml(
+          `mailto:${email}?subject=${encodeURIComponent(`Ihre Umzugsanfrage ${orderNumber}`)}`,
+        )}">${escapeHtml(email)}</a></p>`
+      : "";
     return {
       subject: `Neue Umzugsanfrage ${orderNumber}`,
-      contentHtml: `<p>Eine neue Umzugsanfrage von ${escapeHtml(customerName)} wurde gespeichert.</p><p>Auftragsnummer: ${orderNumber}. Bitte prüfen Sie die vollständigen Angaben in der Vega-Admin-Oberfläche.</p>`,
+      contentHtml: `<p>Eine neue Umzugsanfrage von ${escapeHtml(customerName)} wurde gespeichert.</p><p>Auftragsnummer: ${orderNumber}. Bitte prüfen Sie die vollständigen Angaben in der Vega-Admin-Oberfläche.</p>${replyLink}`,
     };
   },
   inquiryReceived(customerName: string, orderNumber: number) {

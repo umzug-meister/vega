@@ -17,7 +17,9 @@ import {
 import { AdminToolbar } from "./AdminToolbar.js";
 import { formatAdminRouteTitle, type AdminRoute } from "../routes.js";
 import type { StaffUser } from "../types.js";
+import type { OrderEmailKind } from "@vega/domain";
 import type { EmailTarget } from "../email/EmailDialog.js";
+import { OrderEmailActionsContext } from "../email/order-email-actions.js";
 import { apiRequest } from "../api/api-request.js";
 
 // Loaded on demand so the rich-text editor stays out of the initial bundle.
@@ -159,7 +161,7 @@ export function AdminShell({
     }, "Auftrag konnte nicht archiviert werden.");
   }
 
-  function openOrderEmail(kind: "offer" | "offer-pair" | "decline") {
+  function openOrderEmail(kind: OrderEmailKind) {
     if (editedOrderNumber && !orderActionsDisabled)
       setEmailTarget({
         type: "order",
@@ -253,24 +255,28 @@ export function AdminShell({
           minHeight: "100vh",
         }}
       >
-        <Container
-          maxWidth="xl"
-          sx={{
-            maxWidth: "1800px !important",
-            py: { xs: 2.5, md: 3.5 },
-            px: { xs: 2, sm: 3, lg: 4 },
-          }}
+        <OrderEmailActionsContext.Provider
+          value={{ open: openOrderEmail, disabled: orderActionsDisabled }}
         >
-          {route.adminOnly && !isAdmin ? (
-            <Paper variant="outlined" sx={{ p: 3 }}>
-              <Typography color="error">
-                Diese Route ist nur für Admins freigeschaltet.
-              </Typography>
-            </Paper>
-          ) : (
-            children
-          )}
-        </Container>
+          <Container
+            maxWidth="xl"
+            sx={{
+              maxWidth: "1800px !important",
+              py: { xs: 2.5, md: 3.5 },
+              px: { xs: 2, sm: 3, lg: 4 },
+            }}
+          >
+            {route.adminOnly && !isAdmin ? (
+              <Paper variant="outlined" sx={{ p: 3 }}>
+                <Typography color="error">
+                  Diese Route ist nur für Admins freigeschaltet.
+                </Typography>
+              </Paper>
+            ) : (
+              children
+            )}
+          </Container>
+        </OrderEmailActionsContext.Provider>
       </Box>
     </Box>
   );

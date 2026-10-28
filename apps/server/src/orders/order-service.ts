@@ -129,6 +129,7 @@ export async function createOrder(
       const draft = emailDefaults.inquiryNotification(
         customerName,
         orderNumber,
+        normalizedInput.customer.email,
       );
       const outbox = await transaction.emailOutbox.create({
         data: {

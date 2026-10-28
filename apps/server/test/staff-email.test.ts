@@ -198,6 +198,23 @@ test("sanitizer keeps editor tables but strips styles, scripts and unsafe links"
   assert.match(renderEmailLayout(html), /Freundliche Grüße/u);
 });
 
+test("sanitizer keeps only hex text colors and drops every other inline style", () => {
+  const html = sanitizeEmailHtml(
+    '<p><span style="color: #c62828">rot</span> ' +
+      '<span style="color:#2e7d32; background:url(https://evil.test/x); font-size:40px">grün</span> ' +
+      '<span style="color: rgb(198, 40, 40);">tiptap</span> ' +
+      '<span style="color:expression(alert(1))">bad</span> ' +
+      '<span style="color:#12345">bad2</span> ' +
+      '<span style="font-weight:bold">bold</span></p>' +
+      '<p style="color:#c62828">Absatz</p>',
+  );
+  assert.equal(
+    html,
+    '<p><span style="color:#c62828">rot</span> <span style="color:#2e7d32">grün</span> <span style="color:#c62828">tiptap</span> <span>bad</span> <span>bad2</span> <span>bold</span></p><p>Absatz</p>',
+  );
+  assert.doesNotMatch(html, /evil\.test|expression|font-size|font-weight/u);
+});
+
 test("staff mail input is normalized and rejects header injection, empty text and weak keys", () => {
   const valid = validateStaffEmailInput({
     to: " Kunde@Example.test ",
