@@ -313,8 +313,9 @@ Alle Rechte werden im Backend geprüft. `Admin` hat alle Rechte; `Kundenberater`
   und Beträge innerhalb der Datenbankgrenzen; auch Zeilen- und Gesamtsummen
   werden geprüft. Fehlerhafte JSON-Bodies liefern `400`, zu große `413`
   und nicht unterstützte Body-Encoding-/Charset-Angaben `415`, keine `500`.
-- HTTP-Logs enthalten nur Methoden, bereinigte Pfade, Request-ID und
-  Fehlercodes/Status, keine Query-Werte, Reset-Pfadtoken oder
+- HTTP-Logs enthalten nur Methoden, bereinigte Pfade, Request-ID,
+  Fehlerklasse/-kategorie, Fehlercodes/Status und explizit freigegebene,
+  wertfreie Diagnosefelder, keine Query-Werte, Reset-Pfadtoken oder
   ungefilterten Error-Payloads.
 - Keine Provider-API-Schlüssel, Mail-Tokens, GCS-Credentials oder Preise als allein browserseitige Wahrheit.
 

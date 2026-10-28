@@ -117,7 +117,7 @@ test("malformed JSON, oversized bodies and unsupported encodings return safe 4xx
       .find(
         (entry) =>
           entry.requestId === result.error.requestId &&
-          entry.msg === "request rejected",
+          entry.msg === `request rejected: ${example.code}`,
       );
     assert.equal(record?.code, example.code);
     assert.equal(record?.statusCode, example.status);
@@ -167,8 +167,12 @@ test("unexpected server failures remain visible without serializing error messag
   assert.equal(result.error.code, "INTERNAL_SERVER_ERROR");
   assert.equal(result.error.requestId, response.headers.get("x-request-id"));
   const records = logs.map((line) => JSON.parse(line));
-  const failure = records.find((record) => record.msg === "request failed");
+  const failure = records.find((record) =>
+    String(record.msg).startsWith("request failed"),
+  );
   assert.equal(failure?.code, "INTERNAL_SERVER_ERROR");
+  assert.equal(failure?.msg, "request failed: INTERNAL_SERVER_ERROR (P2002)");
+  assert.equal(failure?.errorReason, undefined);
   assert.equal(failure?.level, 50);
   assert.equal(failure?.errorName, "Error");
   assert.equal(failure?.errorCode, "P2002");
@@ -185,4 +189,34 @@ test("unexpected server failures remain visible without serializing error messag
   assert.ok(records.every((record) => record.msg !== "request completed"));
   assert.ok(!logs.join("").includes(confidential));
   assert.ok(!JSON.stringify(result).includes(confidential));
+});
+
+test("server failure messages name a safe error category without the error text", async (context) => {
+  const { base, logs } = await httpFixture(context);
+  const confidential = "synthetic-sensitive-validation-argument";
+  const original = prisma.appSettings.findUniqueOrThrow;
+  const originalLimit = prisma.publicApiRateLimit.upsert;
+  Reflect.set(prisma.publicApiRateLimit, "upsert", async () => ({ count: 1 }));
+  Reflect.set(prisma.appSettings, "findUniqueOrThrow", async () => {
+    throw Object.assign(new Error(confidential), {
+      name: "PrismaClientValidationError",
+    });
+  });
+  context.after(() => {
+    Reflect.set(prisma.appSettings, "findUniqueOrThrow", original);
+    Reflect.set(prisma.publicApiRateLimit, "upsert", originalLimit);
+  });
+  const response = await fetch(`${base}/api/customer-form/config`);
+  assert.equal(response.status, 500);
+  const records = logs.map((line) => JSON.parse(line));
+  const failure = records.find((record) =>
+    String(record.msg).startsWith("request failed"),
+  );
+  assert.equal(failure?.errorName, "PrismaClientValidationError");
+  assert.equal(failure?.errorReason, "database-input-validation");
+  assert.equal(
+    failure?.msg,
+    "request failed: INTERNAL_SERVER_ERROR (PrismaClientValidationError, database-input-validation)",
+  );
+  assert.ok(!logs.join("").includes(confidential));
 });
