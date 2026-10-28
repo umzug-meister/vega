@@ -46,6 +46,7 @@ const ORDER_EMAIL_KINDS: readonly OrderEmailKind[] = [
   "offer",
   "offer-pair",
   "decline",
+  "message",
 ];
 
 /**
@@ -102,7 +103,7 @@ export function registerOrderEmailRoutes(
       if (!context.ok) return fail(res, context);
       const { order, partner, draft } = context.value;
       const attachmentNames =
-        context.value.kind === "decline"
+        context.value.kind === "decline" || context.value.kind === "message"
           ? []
           : [order, ...(partner ? [partner] : [])].map((entry) =>
               orderPdfFilename({
@@ -169,7 +170,7 @@ export function registerOrderEmailRoutes(
         input.value.idempotencyKey,
         async () => {
           const pdfs =
-            kind === "decline"
+            kind === "decline" || kind === "message"
               ? []
               : await Promise.all(
                   [order, ...(partner ? [partner] : [])].map(renderOrderPdf),
@@ -177,7 +178,12 @@ export function registerOrderEmailRoutes(
           return {
             orderId: order.id,
             ...(partner ? { optionOrderId: partner.id } : {}),
-            kind: kind === "decline" ? "INQUIRY_DECLINED" : "OFFER",
+            kind:
+              kind === "decline"
+                ? "INQUIRY_DECLINED"
+                : kind === "message"
+                  ? "ORDER_MESSAGE"
+                  : "OFFER",
             to: [input.value.to],
             subject: input.value.subject,
             contentHtml: input.value.contentHtml,
@@ -235,6 +241,15 @@ async function resolveContext(
         "Archivierte Aufträge müssen vor dem Versand wiederhergestellt werden.",
     };
   const data = orderDataWithRelations(order) as CreateOrderInput;
+  if (kind === "message")
+    return {
+      ok: true,
+      value: {
+        kind,
+        order,
+        draft: { subject: "", contentHtml: "" },
+      },
+    };
   if (kind === "decline")
     return {
       ok: true,

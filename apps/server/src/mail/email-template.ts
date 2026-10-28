@@ -128,7 +128,18 @@ export function sanitizeEmailHtml(html: string): string {
 export function htmlToPlainText(html: string): string {
   // Parser-based conversion: script/style content and comments are dropped,
   // entities are decoded once for text (not HTML) output.
-  const text = convert(html, { wordwrap: false });
+  const text = convert(html, {
+    wordwrap: false,
+    // `mailto:` links would repeat the address as `[address?subject=...]`. The
+    // label already is the address, so plain-text readers see it only once.
+    selectors: [
+      {
+        selector: 'a[href^="mailto:"]',
+        format: "inline",
+        options: { ignoreHref: true },
+      },
+    ],
+  });
   return text.replace(/\n{3,}/g, "\n\n").trim();
 }
 
@@ -146,10 +157,25 @@ export function passwordResetEmail(url: string): {
 }
 
 export const emailDefaults = {
-  inquiryNotification(customerName: string, orderNumber: number) {
+  /**
+   * Company notification for a new public inquiry. The Hostinger send API has
+   * no Reply-To field, so the customer's address is exposed as a ready-made
+   * `mailto:` link instead of a mail header.
+   */
+  inquiryNotification(
+    customerName: string,
+    orderNumber: number,
+    customerEmail?: string | null,
+  ) {
+    const email = customerEmail?.trim();
+    const replyLink = email
+      ? `<p>Antworten an den Kunden: <a href="${escapeHtml(
+          `mailto:${email}?subject=${encodeURIComponent(`Ihre Umzugsanfrage ${orderNumber}`)}`,
+        )}">${escapeHtml(email)}</a></p>`
+      : "";
     return {
       subject: `Neue Umzugsanfrage ${orderNumber}`,
-      contentHtml: `<p>Eine neue Umzugsanfrage von ${escapeHtml(customerName)} wurde gespeichert.</p><p>Auftragsnummer: ${orderNumber}. Bitte prüfen Sie die vollständigen Angaben in der Vega-Admin-Oberfläche.</p>`,
+      contentHtml: `<p>Eine neue Umzugsanfrage von ${escapeHtml(customerName)} wurde gespeichert.</p><p>Auftragsnummer: ${orderNumber}. Bitte prüfen Sie die vollständigen Angaben in der Vega-Admin-Oberfläche.</p>${replyLink}`,
     };
   },
   inquiryReceived(customerName: string, orderNumber: number) {

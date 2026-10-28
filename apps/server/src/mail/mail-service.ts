@@ -14,6 +14,7 @@ import { isValidEmailAddress } from "@vega/domain";
 export type EmailKind =
   | "INQUIRY_RECEIVED"
   | "OFFER"
+  | "ORDER_MESSAGE"
   | "INVOICE"
   | "CREDIT_NOTE"
   | "PAYMENT_REMINDER"

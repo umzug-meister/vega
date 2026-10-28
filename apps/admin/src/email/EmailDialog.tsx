@@ -66,6 +66,7 @@ const TITLES: Record<OrderEmailKind | "invoice" | "credit", string> = {
   offer: "Angebot versenden",
   "offer-pair": "2 Angebote versenden",
   decline: "Absage versenden",
+  message: "E-Mail versenden",
   invoice: "Rechnung versenden",
   credit: "Gutschrift versenden",
 };

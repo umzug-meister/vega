@@ -14,6 +14,7 @@ const ACTION_LABELS: Record<string, string> = {
   OFFER_SENT_AS_OPTION: "Als zweites Angebot per E-Mail versendet",
   EMAIL_SENT_INQUIRY_RECEIVED: "Eingangsbestätigung per E-Mail versendet",
   EMAIL_SENT_OFFER: "Angebot per E-Mail versendet",
+  EMAIL_SENT_ORDER_MESSAGE: "E-Mail versendet",
   EMAIL_SENT_INQUIRY_DECLINED: "Absage per E-Mail versendet",
   EMAIL_SENT_INVOICE: "Rechnung per E-Mail versendet",
 };

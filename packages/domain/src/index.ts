@@ -295,7 +295,7 @@ export interface AdminOrderFamilyMember {
   trucks: number | null;
 }
 
-export type OrderEmailKind = "offer" | "offer-pair" | "decline";
+export type OrderEmailKind = "offer" | "offer-pair" | "decline" | "message";
 
 /** Editable, server-generated mail draft; attachments are rendered at send time. */
 export interface EmailDraft {

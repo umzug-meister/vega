@@ -287,6 +287,30 @@ test("stored sender settings are used by all server mail flows", async () => {
   assert.equal(sent[0]?.expectedFromAddress, "sender@example.test");
 });
 
+test("company inquiry notification links the customer's form email for a direct reply", () => {
+  const draft = emailDefaults.inquiryNotification(
+    "Firma & Co",
+    1014,
+    " kunde@example.test ",
+  );
+  assert.equal(draft.subject, "Neue Umzugsanfrage 1014");
+  assert.match(draft.contentHtml, /Antworten an den Kunden/u);
+  const sanitized = sanitizeEmailHtml(draft.contentHtml);
+  assert.match(
+    sanitized,
+    /<a href="mailto:kunde@example\.test\?subject=Ihre%20Umzugsanfrage%201014">kunde@example\.test<\/a>/u,
+  );
+  // No form address (e.g. admin-created order): no reply link is invented.
+  const withoutEmail = sanitizeEmailHtml(
+    emailDefaults.inquiryNotification("Ada", 1014).contentHtml,
+  );
+  assert.doesNotMatch(withoutEmail, /Antworten an den Kunden|mailto:/u);
+  // The plain-text alternative shows the address once, without the mailto target.
+  const text = htmlToPlainText(draft.contentHtml);
+  assert.match(text, /Antworten an den Kunden: kunde@example\.test/u);
+  assert.doesNotMatch(text, /\[|subject=/u);
+});
+
 test("configured sender address must match the actual Hostinger mailbox and is not sent as an unsupported from field", async () => {
   const calls: Request[] = [];
   const client = new HostingerMailClient(

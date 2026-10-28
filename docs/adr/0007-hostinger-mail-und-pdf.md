@@ -28,6 +28,15 @@
   in `EmailOutbox.attachments` gehalten und nach erfolgreichem Versand auf
   `NULL` gesetzt; dauerhaft gespeicherte PDFs entstehen nicht. Gutschrift- und
   Mahnungsmails verknüpfen die Outbox mit Auftrag bzw. `ReminderEvent`.
+- Bei einer neuen öffentlichen Anfrage gehen zwei Mails raus: die Bestätigung
+  an den Kunden und die Benachrichtigung an `companyEmail`. Die
+  `V1.Send.Request`-Spezifikation der Hostinger-API kennt kein `Reply-To`
+  (weder Header noch Feld); ein solcher Header kann über den genutzten
+  API-Versand daher nicht gesetzt werden. Die Firmenmail enthält stattdessen
+  Name, Auftragsnummer und einen `mailto:`-Link auf die im Formular
+  angegebene Kundenadresse mit vorbelegtem Betreff. Ein echtes `Reply-To`
+  bräuchte einen SMTP-Versandweg mit eigenen Zugangsdaten und ist als offene
+  Architekturentscheidung nicht umgesetzt.
 - Mitarbeitende pflegen im Profil einen optionalen Signaturnamen
   (`User.signatureName`). Er wird beim Einreihen in `EmailOutbox.signatureName`
   übernommen und im Grußblock der Mailhülle über „Ihr Umzug Ruck Zuck Team“

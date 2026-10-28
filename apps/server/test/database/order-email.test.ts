@@ -360,4 +360,28 @@ test("staff order mails: family, pair rules, idempotent send with PDFs and succe
     Array.isArray(invoiceAttachments) && invoiceAttachments.length === 1,
   );
   assert.equal(record(invoiceAttachments[0]).contentType, "application/pdf");
+
+  // Blank customer mail: no template, no attachment, own outbox kind.
+  const blankDraft = record(
+    (await json(await draft(origin.orderNumber, "kind=message"))).data,
+  );
+  assert.equal(blankDraft.to, "customer@example.test");
+  assert.equal(blankDraft.subject, "");
+  assert.equal(blankDraft.contentHtml, "");
+  assert.deepEqual(blankDraft.attachmentNames, []);
+
+  const messageSent = await send(origin.orderNumber, {
+    kind: "message",
+    to: "customer@example.test",
+    subject: "Kurze Rückfrage",
+    contentHtml: "<p>Bitte nennen Sie uns noch die Etage.</p>",
+    idempotencyKey: key(5),
+  });
+  assert.equal(messageSent.status, 200);
+  assert.equal(payloads.length, 4);
+  assert.equal(payloads[3]!.attachments, undefined);
+  const messageRow = await prisma.emailOutbox.findFirstOrThrow({
+    where: { idempotencyKey: { contains: key(5) } },
+  });
+  assert.equal(messageRow.kind, "ORDER_MESSAGE");
 });
