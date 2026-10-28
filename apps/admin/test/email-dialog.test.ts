@@ -293,6 +293,54 @@ test("remount after a request never reached the server cannot submit the replace
   assert.equal(accepted, 1);
 });
 
+test("rich-text toolbar offers a text color palette and keeps colored text in the sent draft", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const requests: Array<Record<string, unknown>> = [];
+  const colored = {
+    ...draft,
+    contentHtml:
+      '<p><span style="color: rgb(198, 40, 40)">Original</span></p>',
+  };
+  globalThis.fetch = async (_url, init) => {
+    if (init?.method !== "POST") return Response.json({ data: colored });
+    requests.push(JSON.parse(String(init.body)));
+    return Response.json({ data: { status: "SENT", outboxId: "mail-color" } });
+  };
+  const dom = await mount(
+    createElement(EmailDialog, {
+      target: { type: "order", orderNumber: 8005, kind: "offer" },
+      onClose: () => {},
+    }),
+  );
+  context.after(async () => {
+    await dom.cleanup();
+    globalThis.fetch = originalFetch;
+  });
+  await dom.flush();
+  const document = dom.window.document;
+  const colorButton = document.querySelector<HTMLButtonElement>(
+    'button[aria-label="Textfarbe"]',
+  );
+  assert.ok(colorButton);
+  assert.equal(document.querySelector('[aria-label="Rot"]'), null);
+  await dom.click(colorButton);
+  await dom.flush();
+  assert.ok(
+    document.querySelector('[role="group"][aria-label="Textfarbe wählen"]'),
+  );
+  for (const name of ["Schwarz", "Grau", "Rot", "Orange", "Grün", "Blau"])
+    assert.ok(document.querySelector(`[aria-label="${name}"]`), `${name} missing`);
+  assert.ok(
+    document.querySelector<HTMLButtonElement>('[aria-label="Standardfarbe"]'),
+  );
+  await dom.click(button(document, "Senden"));
+  assert.equal(requests.length, 1);
+  assert.match(
+    String(requests[0]!.contentHtml),
+    /<span style="color: rgb\(198, 40, 40\);?">Original<\/span>/u,
+  );
+});
+
 test("first-request validation errors permit correction without unlocking a previously uncertain send", async (context) => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (_url, init) =>

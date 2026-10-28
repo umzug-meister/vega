@@ -38,6 +38,14 @@
   `EmailOutbox.signatureColor` eingefroren, damit Retry-Mails dieselbe Farbe
   behalten. Die Farbe wird auf den vollständigen Grußblock einschließlich
   Signaturname und Teamname angewendet.
+- Im editierbaren Mailtext kann zusätzlich die Textfarbe aus einer festen
+  Palette (Schwarz, Grau, Rot, Orange, Grün, Blau) gesetzt oder auf die
+  Standardfarbe zurückgesetzt werden. Der Editor schreibt sie als
+  `<span style="color:…">`; Tiptap serialisiert Hexwerte dabei als
+  `rgb(r, g, b)`. Der Server-Sanitizer normalisiert diese Schreibweise zu
+  `#rrggbb` und behält ausschließlich die Eigenschaft `color` mit einem
+  Hexwert (3, 4, 6 oder 8 Stellen). Alle anderen Inline-Styles bleiben
+  gesperrt.
 
 ## Folgen
 

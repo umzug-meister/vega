@@ -78,13 +78,47 @@ const EMAIL_ALLOWED_TAGS = [
   "ul",
 ];
 
+/**
+ * The editor's text-color tool emits `<span style="color: rgb(r, g, b)">`
+ * because Tiptap serializes through the DOM, which normalizes hex colors to
+ * `rgb()`. Convert those three plain channels to hex before filtering so email
+ * clients get the compact form and only `color` survives.
+ */
+const RGB_COLOR = /rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)/gi;
+
+function normalizeRgbColors(style: string): string {
+  return style.replace(RGB_COLOR, (match, red, green, blue) => {
+    const channels = [red, green, blue].map(Number);
+    return channels.some((channel) => channel > 255)
+      ? match
+      : `#${channels.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+  });
+}
+
+const EMAIL_ALLOWED_STYLES = {
+  span: {
+    color: [/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i],
+  },
+};
+
 export function sanitizeEmailHtml(html: string): string {
   return sanitizeHtml(html, {
     allowedTags: EMAIL_ALLOWED_TAGS,
     allowedAttributes: {
       a: ["href"],
+      span: ["style"],
       td: ["colspan", "rowspan"],
       th: ["colspan", "rowspan"],
+    },
+    allowedStyles: EMAIL_ALLOWED_STYLES,
+    transformTags: {
+      span: (tagName, attribs) =>
+        typeof attribs.style === "string"
+          ? {
+              tagName,
+              attribs: { ...attribs, style: normalizeRgbColors(attribs.style) },
+            }
+          : { tagName, attribs },
     },
     allowedSchemes: ["http", "https", "mailto"],
     allowProtocolRelative: false,
