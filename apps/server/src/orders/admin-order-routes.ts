@@ -100,7 +100,9 @@ export function createAdminOrderRouter(
 
   router.get("/", async (req, res, next) => {
     const archived = req.query.archived === "true";
-    const { search, kind, orderNumber } = normalizeOrderSearch(req.query.search);
+    const { search, kind, orderNumber } = normalizeOrderSearch(
+      req.query.search,
+    );
     const page = parsePositiveInteger(req.query.page) ?? 1;
     const pageSize = Math.min(
       parsePositiveInteger(req.query.pageSize) ?? 25,
