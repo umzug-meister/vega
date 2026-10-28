@@ -28,6 +28,7 @@ import {
 import { renderOrderPdf } from "./order-pdf-service.js";
 import { registerOrderEmailRoutes } from "./order-email-routes.js";
 import type { AppConfig } from "../config.js";
+import { normalizeOrderSearch, orderListWhere } from "./order-search.js";
 
 const PAGE_SIZE_MAX = 100;
 const ARCHIVE_RETENTION_DAYS = 60;
@@ -98,31 +99,15 @@ export function createAdminOrderRouter(
   });
 
   router.get("/", async (req, res, next) => {
+    const archived = req.query.archived === "true";
+    const { search, kind, orderNumber } = normalizeOrderSearch(req.query.search);
+    const page = parsePositiveInteger(req.query.page) ?? 1;
+    const pageSize = Math.min(
+      parsePositiveInteger(req.query.pageSize) ?? 25,
+      PAGE_SIZE_MAX,
+    );
     try {
-      const archived = req.query.archived === "true";
-      const search =
-        typeof req.query.search === "string"
-          ? req.query.search.trim().slice(0, 100)
-          : "";
-      const page = parsePositiveInteger(req.query.page) ?? 1;
-      const pageSize = Math.min(
-        parsePositiveInteger(req.query.pageSize) ?? 25,
-        PAGE_SIZE_MAX,
-      );
-      const where: Prisma.OrderWhereInput = {
-        archivedAt: archived ? { not: null } : null,
-        ...(search
-          ? {
-              OR: [
-                { customerName: { contains: search } },
-                { customerEmail: { contains: search } },
-                ...(/^\d+$/u.test(search)
-                  ? [{ orderNumber: Number(search) }]
-                  : []),
-              ],
-            }
-          : {}),
-      };
+      const where = orderListWhere({ archived, search, orderNumber });
       const [total, orders] = await prisma.$transaction([
         prisma.order.count({ where }),
         prisma.order.findMany({
@@ -138,6 +123,14 @@ export function createAdminOrderRouter(
         data: { items: orders.map(toOrderListItem), page, pageSize, total },
       });
     } catch (error) {
+      res.locals.failureContext = {
+        operation: "orders.list",
+        searchKind: kind,
+        searchLength: search.length,
+        archived,
+        page,
+        pageSize,
+      };
       next(error);
     }
   });

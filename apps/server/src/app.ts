@@ -620,14 +620,18 @@ import(${JSON.stringify(asset)}).catch(() => { root.textContent = "Das Umzugsfor
   const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
     const requestId = String(res.locals.requestId ?? "unbekannt");
     const failure = requestFailure(error);
+    const diagnostics =
+      failure.status >= 500 ? errorDiagnostics(error) : undefined;
     const metadata = {
       code: failure.code,
       statusCode: failure.status,
       requestId,
-      ...(failure.status >= 500 ? errorDiagnostics(error) : {}),
+      ...diagnostics,
+      ...safeFailureContext(res.locals.failureContext),
     };
-    if (failure.status < 500) req.log.warn(metadata, "request rejected");
-    else req.log.error(metadata, "request failed");
+    const message = failureLogMessage(failure, diagnostics);
+    if (failure.status < 500) req.log.warn(metadata, message);
+    else req.log.error(metadata, message);
     res.status(failure.status).json({
       error: { code: failure.code, message: failure.message, requestId },
     });
@@ -639,6 +643,7 @@ import(${JSON.stringify(asset)}).catch(() => { root.textContent = "Das Umzugsfor
 
 function errorDiagnostics(error: unknown): {
   errorName?: string;
+  errorReason?: string;
   errorCode?: string;
   prismaMeta?: { modelName?: string; target?: string[] };
   errorFrames?: string[];
@@ -662,6 +667,9 @@ function errorDiagnostics(error: unknown): {
   if (typeof value.code === "string" && isSafeDiagnosticCode(value.code)) {
     diagnostics.errorCode = value.code;
   }
+
+  const reason = classifyError(value.name);
+  if (reason) diagnostics.errorReason = reason;
 
   if (
     diagnostics.errorCode?.startsWith("P") &&
@@ -711,6 +719,89 @@ function errorDiagnostics(error: unknown): {
   }
 
   return diagnostics;
+}
+
+/** Stable, non-sensitive category for common server-side failures. */
+function classifyError(name: unknown): string | undefined {
+  if (typeof name !== "string") return undefined;
+  switch (name) {
+    case "PrismaClientValidationError":
+      return "database-input-validation";
+    case "PrismaClientKnownRequestError":
+      return "database-request-rejected";
+    case "PrismaClientUnknownRequestError":
+      return "database-request-failed";
+    case "PrismaClientInitializationError":
+      return "database-unavailable";
+    case "PrismaClientRustPanicError":
+      return "database-engine-failure";
+    case "MailDeliveryError":
+      return "mail-delivery-failure";
+    case "UploadError":
+      return "upload-failure";
+    case "ProviderUnreachableError":
+      return "provider-unreachable";
+    case "PlacesProviderError":
+      return "provider-rejected";
+    case "AbortError":
+    case "TimeoutError":
+      return "timeout";
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Only server-side, whitelisted primitive diagnostics. Free-form strings are
+ * limited to token-like values so customer data cannot leak through a route's
+ * failure context.
+ */
+function safeFailureContext(
+  value: unknown,
+): Record<string, string | number | boolean> {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    return {};
+  const result: Record<string, string | number | boolean> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (Object.keys(result).length >= 12) break;
+    if (!/^[a-zA-Z][a-zA-Z0-9]{0,31}$/u.test(key)) continue;
+    if (
+      typeof entry === "boolean" ||
+      (typeof entry === "number" && Number.isFinite(entry))
+    ) {
+      result[key] = entry;
+    } else if (
+      typeof entry === "string" &&
+      /^[a-zA-Z0-9._:-]{1,64}$/u.test(entry)
+    ) {
+      result[key] = entry;
+    }
+  }
+  return result;
+}
+
+/**
+ * Keeps the log message itself useful in simple log viewers. The dynamic parts
+ * come only from whitelisted error metadata, never from error messages.
+ */
+function failureLogMessage(
+  failure: { status: number; code: string },
+  diagnostics?: ReturnType<typeof errorDiagnostics>,
+): string {
+  if (failure.status < 500) return `request rejected: ${failure.code}`;
+  const details = [
+    diagnostics?.errorName,
+    diagnostics?.errorReason,
+    diagnostics?.errorCode,
+  ]
+    .filter(
+      (value): value is string =>
+        typeof value === "string" && value !== "" && value !== "Error",
+    )
+    .filter((value, index, all) => all.indexOf(value) === index);
+  return details.length > 0
+    ? `request failed: ${failure.code} (${details.join(", ")})`
+    : `request failed: ${failure.code}`;
 }
 
 function isSafeDiagnosticCode(code: string): boolean {

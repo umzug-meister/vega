@@ -26,13 +26,19 @@ gehört nur in `CORS_ALLOWED_ORIGINS`. Nach Änderungen an `.env` den Server neu
 
 ### Fehlerlogs und Diagnose
 
-Unerwartete Serverfehler werden mit `requestId`, Route/Methode, HTTP-Status,
-Fehlerklasse und – sofern vorhanden – einem streng geprüften Infrastrukturcode
-protokolliert. Prisma-Fehler ergänzen nur Tabellen-/Feldnamen und Quellpositionen
-innerhalb des Servercodes. Fehlernachrichten, Stack-Text, `cause`, SQL-Argumente,
-Request-Bodies, Tokens, E-Mail-Inhalte und beliebige Fehler-Properties werden
-nicht geloggt. Für die Diagnose Antwort-`requestId` und Logeintrag korrelieren;
-keine sensiblen Werte nachträglich in Logs aufnehmen.
+Unerwartete Serverfehler werden mit `requestId`, Methode/Pfad, HTTP-Status,
+Fehlerklasse, einer stabilen Kategorie (`errorReason`, z. B.
+`database-input-validation`) und – sofern vorhanden – einem streng geprüften
+Infrastrukturcode protokolliert. Die Logmeldung selbst nennt Statuscode und
+Fehlerklasse, etwa
+`request failed: INTERNAL_SERVER_ERROR (PrismaClientValidationError, database-input-validation)`.
+Routen dürfen zusätzlich einen whitelist-basierten `failureContext` ergänzen,
+etwa `operation`, Suchart und Suchlänge der Auftragssuche; Suchbegriffe und
+Kundendaten gehören nicht hinein. Prisma-Fehler ergänzen nur Tabellen-/Feldnamen
+und Quellpositionen innerhalb des Servercodes. Fehlernachrichten, Stack-Text,
+`cause`, SQL-Argumente, Request-Bodies, Tokens, E-Mail-Inhalte und beliebige
+Fehler-Properties werden nicht geloggt. Für die Diagnose Antwort-`requestId` und
+Logeintrag korrelieren; keine sensiblen Werte nachträglich in Logs aufnehmen.
 
 ### Hostinger-Reverse-Proxy
 

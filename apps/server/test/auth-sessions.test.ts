@@ -193,6 +193,10 @@ test("unexpected password-change failures remain server errors and do not unlock
   assert.equal(response.status, 500);
   assert.equal(response.body.error.code, "INTERNAL_SERVER_ERROR");
   assert.equal((await client.gate()).body.error.code, "PASSWORD_CHANGE_REQUIRED");
-  assert.ok(logs.some((line) => JSON.parse(line).msg === "request failed"));
+  assert.ok(
+    logs.some((line) =>
+      String(JSON.parse(line).msg).startsWith("request failed"),
+    ),
+  );
   assert.ok(!logs.join("").includes(confidential));
 });
