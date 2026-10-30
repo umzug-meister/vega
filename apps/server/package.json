@@ -24,7 +24,7 @@
     "helmet": "8.3.0",
     "html-to-text": "10.0.1",
     "jspdf": "4.2.1",
-    "jspdf-autotable": "5.0.8",
+    "jspdf-autotable": "5.0.9",
     "pdfkit": "^0.17.2",
     "pino-http": "11.0.0",
     "sanitize-html": "2.18.1",
