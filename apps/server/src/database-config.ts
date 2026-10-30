@@ -84,6 +84,13 @@ export function loadDatabaseConfig(env: NodeJS.ProcessEnv = process.env) {
     minimumIdle: 0,
     timezone: "+00:00",
     logParam: false,
+    // Pin the session collation to the one used by every migration. MariaDB
+    // 11.5+ defaults utf8mb4 to uca1400, and some hosts ignore the client
+    // handshake charset; `contains`/LIKE then fails with ER 1267 when the
+    // connection collation differs from the table collation.
+    charset: "utf8mb4",
+    collation: "UTF8MB4_UNICODE_CI",
+    initSql: "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci",
     ssl,
   };
 }
