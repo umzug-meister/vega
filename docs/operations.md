@@ -29,8 +29,11 @@ gehört nur in `CORS_ALLOWED_ORIGINS`. Nach Änderungen an `.env` den Server neu
 Unerwartete Serverfehler werden mit `requestId`, Methode/Pfad, HTTP-Status,
 Fehlerklasse, einer stabilen Kategorie (`errorReason`, z. B.
 `database-input-validation`) und – sofern vorhanden – einem streng geprüften
-Infrastrukturcode protokolliert. Die Logmeldung selbst nennt Statuscode und
-Fehlerklasse, etwa
+Infrastrukturcode protokolliert. Bei Prisma `P2039` (nicht zugeordneter
+Treiberfehler) kommen die ursprüngliche numerische Datenbank-Fehlernummer
+(`databaseErrorCode`, z. B. `1267`) und der SQLSTATE (`databaseErrorState`)
+hinzu; die Logmeldung nennt sie als `MariaDB <Nummer>`. Die Logmeldung selbst
+nennt Statuscode und Fehlerklasse, etwa
 `request failed: INTERNAL_SERVER_ERROR (PrismaClientValidationError, database-input-validation)`.
 Routen dürfen zusätzlich einen whitelist-basierten `failureContext` ergänzen,
 etwa `operation`, Suchart und Suchlänge der Auftragssuche; Suchbegriffe und
@@ -68,6 +71,11 @@ Ein-Hop-Einstellung entfernen und den Better-Auth-Forwarding-Header deaktivieren
 
 Unbekannte/doppelte Optionen, Timeouts `0` und `sslaccept=accept_invalid_certs`
 werden abgewiesen. Credentials in der URL prozentkodieren.
+
+Der Server pinnt die Verbindung unabhängig von Hosting-/Server-Defaults auf
+`utf8mb4` mit Collation `utf8mb4_unicode_ci` (Schema-Collation). MariaDB setzt
+ab 11.5/11.8 für `utf8mb4` standardmäßig `uca1400`; ohne Pinning können
+`contains`-/`LIKE`-Suchen mit `ER 1267 (Illegal mix of collations)` fehlschlagen.
 
 ## GCS-Produktion: CLI-Setup und Credential-Ablage
 

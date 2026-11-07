@@ -645,6 +645,8 @@ function errorDiagnostics(error: unknown): {
   errorName?: string;
   errorReason?: string;
   errorCode?: string;
+  databaseErrorCode?: string;
+  databaseErrorState?: string;
   prismaMeta?: { modelName?: string; target?: string[] };
   errorFrames?: string[];
 } {
@@ -676,7 +678,42 @@ function errorDiagnostics(error: unknown): {
     typeof value.meta === "object" &&
     value.meta !== null
   ) {
-    const meta = value.meta as { modelName?: unknown; target?: unknown };
+    const meta = value.meta as {
+      modelName?: unknown;
+      target?: unknown;
+      driverAdapterError?: unknown;
+    };
+    // P2039 is Prisma's fallback for unmapped driver errors. The original
+    // numeric database code and SQLSTATE are safe infrastructure diagnostics
+    // and are required to tell e.g. lock timeouts from collation conflicts.
+    if (
+      typeof meta.driverAdapterError === "object" &&
+      meta.driverAdapterError !== null
+    ) {
+      const adapter = meta.driverAdapterError as { cause?: unknown };
+      if (typeof adapter.cause === "object" && adapter.cause !== null) {
+        const cause = adapter.cause as {
+          originalCode?: unknown;
+          state?: unknown;
+        };
+        const originalCode =
+          typeof cause.originalCode === "number"
+            ? String(cause.originalCode)
+            : cause.originalCode;
+        if (
+          typeof originalCode === "string" &&
+          /^\d{1,6}$/u.test(originalCode)
+        ) {
+          diagnostics.databaseErrorCode = originalCode;
+        }
+        if (
+          typeof cause.state === "string" &&
+          /^[A-Z0-9]{5}$/u.test(cause.state)
+        ) {
+          diagnostics.databaseErrorState = cause.state;
+        }
+      }
+    }
     const prismaMeta: NonNullable<typeof diagnostics.prismaMeta> = {};
     if (
       typeof meta.modelName === "string" &&
@@ -793,6 +830,9 @@ function failureLogMessage(
     diagnostics?.errorName,
     diagnostics?.errorReason,
     diagnostics?.errorCode,
+    diagnostics?.databaseErrorCode
+      ? `MariaDB ${diagnostics.databaseErrorCode}`
+      : undefined,
   ]
     .filter(
       (value): value is string =>

@@ -381,10 +381,10 @@ export function Success() {
           <br />
           <Typography
             component="a"
-            href="mailto:info@umzugruckzuck24.de"
+            href="mailto:info@umzugruckzuck.de"
             color="primary"
           >
-            info@umzugruckzuck24.de
+            info@umzugruckzuck.de
           </Typography>
         </Typography>
       </Box>

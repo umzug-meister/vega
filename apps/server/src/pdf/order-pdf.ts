@@ -101,7 +101,7 @@ export function generateOrderPdf(
       "Alexander Berent",
       "Am Münchfeld 31, 80999 München",
       "089 30642972 | 0176 10171990",
-      "info@umzugruckzuck24.de",
+      "info@umzugruckzuck.de",
       "Steuernummer: 144/139/21180",
       "",
       "",

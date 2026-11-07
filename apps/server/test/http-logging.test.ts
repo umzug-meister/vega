@@ -191,6 +191,51 @@ test("unexpected server failures remain visible without serializing error messag
   assert.ok(!JSON.stringify(result).includes(confidential));
 });
 
+test("unmapped Prisma errors expose the original database code without driver messages", async (context) => {
+  const { base, logs } = await httpFixture(context);
+  const confidential = "synthetic-sensitive-driver-message";
+  const original = prisma.appSettings.findUniqueOrThrow;
+  const originalLimit = prisma.publicApiRateLimit.upsert;
+  Reflect.set(prisma.publicApiRateLimit, "upsert", async () => ({ count: 1 }));
+  Reflect.set(prisma.appSettings, "findUniqueOrThrow", async () => {
+    throw Object.assign(new Error(confidential), {
+      name: "PrismaClientKnownRequestError",
+      code: "P2039",
+      meta: {
+        modelName: "Order",
+        driverAdapterError: {
+          name: "DriverAdapterError",
+          cause: {
+            originalCode: "1267",
+            originalMessage: confidential,
+            kind: "mysql",
+            code: 1267,
+            state: "HY000",
+          },
+        },
+      },
+    });
+  });
+  context.after(() => {
+    Reflect.set(prisma.appSettings, "findUniqueOrThrow", original);
+    Reflect.set(prisma.publicApiRateLimit, "upsert", originalLimit);
+  });
+  const response = await fetch(`${base}/api/customer-form/config`);
+  assert.equal(response.status, 500);
+  const records = logs.map((line) => JSON.parse(line));
+  const failure = records.find((record) =>
+    String(record.msg).startsWith("request failed"),
+  );
+  assert.equal(failure?.errorCode, "P2039");
+  assert.equal(failure?.databaseErrorCode, "1267");
+  assert.equal(failure?.databaseErrorState, "HY000");
+  assert.equal(
+    failure?.msg,
+    "request failed: INTERNAL_SERVER_ERROR (PrismaClientKnownRequestError, database-request-rejected, P2039, MariaDB 1267)",
+  );
+  assert.ok(!logs.join("").includes(confidential));
+});
+
 test("server failure messages name a safe error category without the error text", async (context) => {
   const { base, logs } = await httpFixture(context);
   const confidential = "synthetic-sensitive-validation-argument";

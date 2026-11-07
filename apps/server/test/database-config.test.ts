@@ -12,7 +12,9 @@ test("database configuration decodes credentials and preserves bounded pool/UTC 
   assert.deepEqual(loadDatabaseConfig({ DATABASE_URL: base }), {
     host: "127.0.0.1", port: 3307, user: "vega", password: "test-only-password", database: "vega_test",
     connectionLimit: 5, connectTimeout: 5_000, acquireTimeout: 10_000, idleTimeout: 300,
-    minimumIdle: 0, timezone: "+00:00", logParam: false, ssl: false,
+    minimumIdle: 0, timezone: "+00:00", logParam: false,
+    charset: "utf8mb4", collation: "UTF8MB4_UNICODE_CI",
+    initSql: "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci", ssl: false,
   });
   const decoded = loadDatabaseConfig({ DATABASE_URL: "mysql://user%40test:p%3A%2F%25%2B@[::1]/db%20test" });
   assert.equal(decoded.host, "::1");
