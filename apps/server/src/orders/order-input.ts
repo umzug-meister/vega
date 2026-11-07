@@ -39,7 +39,7 @@ const ORDER_SOURCES = [
   "Moebelliste",
   "UmzugRuckZuck",
   "check24",
-  "umzugruckzuck24.de",
+  "umzugruckzuck.de",
 ] as const;
 const BUILDING_TYPES = ["Wohnung", "Haus", "Keller", "Lager", "Büro"] as const;
 const LIFT_TYPES = [

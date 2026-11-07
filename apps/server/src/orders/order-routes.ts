@@ -154,7 +154,7 @@ export function createOrderRouter(auth: AuthInstance, config: AppConfig) {
             ...validation.value,
             orderSource: validation.value.orderSource ?? "individuelle",
           }
-        : { ...validation.value, orderSource: "umzugruckzuck24.de" as const };
+        : { ...validation.value, orderSource: "umzugruckzuck.de" as const };
       const created = await createOrder(
         orderInput,
         session ? "admin" : "public",

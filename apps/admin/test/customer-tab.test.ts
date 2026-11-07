@@ -83,7 +83,7 @@ test("order source menu omits legacy Express, furniture-list and Umzug Ruck Zuck
     assert.deepEqual(optionLabels, [
       "individuelle",
       "CHECK24",
-      "umzugruckzuck24.de",
+      "umzugruckzuck.de",
     ]);
   } finally {
     await view.cleanup();

@@ -160,6 +160,7 @@ for (const kind of ["furniture", "boxes"] as const) {
       assert.equal(validateOrderCreateInput(input).ok, true);
       let writes = 0;
       let savedInput: CreateOrderInput | undefined;
+      let savedSource: string | undefined;
       context.mock.method(
         client,
         "$transaction",
@@ -172,9 +173,12 @@ for (const kind of ["furniture", "boxes"] as const) {
               },
             },
             order: {
-              create: async (args: { data: { data: CreateOrderInput } }) => {
+              create: async (args: {
+                data: { data: CreateOrderInput; source: string };
+              }) => {
                 writes++;
                 savedInput = args.data.data;
+                savedSource = args.data.source;
                 return { id: "order-test" };
               },
             },
@@ -197,6 +201,7 @@ for (const kind of ["furniture", "boxes"] as const) {
           1000,
         );
         assert.equal(savedInput?.details?.furniture.volume, 100_000);
+        assert.equal(savedSource, "umzugruckzuck.de");
         assert.equal(validateOrderCreateInput(savedInput).ok, true);
         assert.equal(writes, 3);
       }
