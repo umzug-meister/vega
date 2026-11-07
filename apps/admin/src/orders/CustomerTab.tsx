@@ -93,7 +93,7 @@ export function CustomerTab({ value, update }: CustomerTabProps) {
             >
               <MenuItem value="individuelle">individuelle</MenuItem>
               <MenuItem value="check24">CHECK24</MenuItem>
-              <MenuItem value="umzugruckzuck24.de">umzugruckzuck24.de</MenuItem>
+              <MenuItem value="umzugruckzuck.de">umzugruckzuck.de</MenuItem>
             </TextField>
           </Stack>
         </Stack>

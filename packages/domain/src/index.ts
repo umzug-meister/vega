@@ -222,7 +222,7 @@ export interface CreateOrderInput {
     | "Moebelliste"
     | "UmzugRuckZuck"
     | "check24"
-    | "umzugruckzuck24.de";
+    | "umzugruckzuck.de";
   note?: string;
   costsAssumption?: boolean;
 }
