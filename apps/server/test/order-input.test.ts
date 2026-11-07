@@ -52,6 +52,20 @@ test("validates order submission and strips fields outside the approved input co
   assert.deepEqual(result.value.from, validOrder.from);
 });
 
+test("preserves the previous public order source in stored and submitted order data", () => {
+  const input = {
+    ...orderFixture(),
+    orderSource: "umzugruckzuck24.de",
+  };
+  const result = validateOrderCreateInput(input, {
+    allowStaffPricing: true,
+    allowIncomplete: true,
+  });
+
+  assert.equal(result.ok, true);
+  if (result.ok) assert.equal(result.value.orderSource, "umzugruckzuck24.de");
+});
+
 test("rejects missing contact/address data, invalid email, and impossible dates", () => {
   const result = validateOrderCreateInput({
     ...validOrder,

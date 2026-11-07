@@ -137,6 +137,13 @@ const settings: AppSettingsDto = {
   emailFromAddress: null,
 };
 
+test("stored orders retain the previous public order source", () => {
+  const input = { ...orderFixture(), orderSource: "umzugruckzuck24.de" as const };
+  const order = storedOrder(input);
+  order.source = "umzugruckzuck24.de";
+  assert.equal(orderDataWithRelations(order).orderSource, "umzugruckzuck24.de");
+});
+
 for (const kind of ["furniture", "boxes"] as const) {
   for (const aboveLimit of [false, true]) {
     test(`public ${kind} normalized volume ${aboveLimit ? "above" : "at"} the limit is checked before writing`, async (context) => {

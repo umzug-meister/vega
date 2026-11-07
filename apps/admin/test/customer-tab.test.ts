@@ -90,6 +90,15 @@ test("order source menu omits legacy Express, furniture-list and Umzug Ruck Zuck
   }
 });
 
+test("customer tab displays the previous public order source", () => {
+  const html = renderCustomerTab({
+    ...createEmptyOrder(),
+    orderSource: "umzugruckzuck24.de",
+  });
+
+  assert.match(html, /umzugruckzuck24\.de/u);
+});
+
 test("customer cards use wider vertical spacing than horizontal spacing", () => {
   const html = renderCustomerTab(createEmptyOrder());
 

@@ -94,6 +94,9 @@ export function CustomerTab({ value, update }: CustomerTabProps) {
               <MenuItem value="individuelle">individuelle</MenuItem>
               <MenuItem value="check24">CHECK24</MenuItem>
               <MenuItem value="umzugruckzuck.de">umzugruckzuck.de</MenuItem>
+              {value.orderSource === "umzugruckzuck24.de" && (
+                <MenuItem value="umzugruckzuck24.de">umzugruckzuck24.de</MenuItem>
+              )}
             </TextField>
           </Stack>
         </Stack>
