@@ -25,10 +25,17 @@ test("packaging and services render in separate responsive cards", () => {
     assert.match(html, /Umzugskarton/u);
     assert.match(html, /Packmaterial/u);
     assert.match(html, /Einzelpreis/u);
+    assert.equal([...html.matchAll(/<thead/gu)].length, 2);
+    assert.equal(
+      [...html.matchAll(/<div class="[^"]*MuiTableContainer-root[^"]*"/gu)]
+        .length,
+      2,
+    );
+    assert.doesNotMatch(html, /Packmaterial entfernen|Leistung entfernen/u);
     assert.match(html, /role="combobox"/u);
     assert.doesNotMatch(html, /Katalog-Packmaterial|Katalogleistung/u);
     assert.match(html, />Leistungen</u);
-    assert.match(html, /Leistung hinzufügen/u);
+    assert.doesNotMatch(html, /Leistung hinzufügen|Packmaterial hinzufügen/u);
     assert.doesNotMatch(html, /Verpackung erwünscht\?/u);
     assert.doesNotMatch(html, /role="switch"/u);
     assert.doesNotMatch(html, /role="tablist"/u);

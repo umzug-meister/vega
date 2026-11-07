@@ -175,6 +175,34 @@ test("automatic route calculation runs once for a complete order without a store
   }
 });
 
+test("route calculation accepts street-and-city or city-only staff addresses without postal codes", async (context) => {
+  const calls = installRoutes(context, {
+    distance: () => json(routePayload(18)),
+  });
+  const initial = completeOrder();
+  initial.from.postalCode = "";
+  initial.to.street = "";
+  initial.to.postalCode = "";
+  initial.to.city = "Bad Aibling";
+  const app = await mount(
+    React.createElement(AddressesHarness, { initial }),
+  );
+  try {
+    await app.flush();
+    assert.equal(calls.length, 1);
+    assert.deepEqual(calls[0]!.addresses, [
+      "Senderstraße 1, München",
+      "Bad Aibling",
+    ]);
+    assert.equal(
+      app.container.querySelector('[data-testid="distance"]')?.textContent,
+      "18",
+    );
+  } finally {
+    await app.cleanup();
+  }
+});
+
 test("an asynchronously loaded complete order is calculated once it becomes ready", async (context) => {
   const calls = installRoutes(context, {
     distance: () => json(routePayload(12)),
@@ -369,14 +397,17 @@ test("a changed route field recalculates on blur exactly once and unchanged blur
   }
 });
 
-test("incomplete active addresses skip automatic route calculation", async (context) => {
+test("active route stops without both street and city still skip automatic calculation", async (context) => {
   const calls = installRoutes(context, {
     distance: () => json(routePayload(12)),
   });
   const initial = completeOrder();
   const app = await mount(
     React.createElement(AddressesHarness, {
-      initial: { ...initial, to: { ...initial.to, city: "" } },
+      initial: {
+        ...initial,
+        to: { ...initial.to, street: "", city: "", postalCode: "80333" },
+      },
     }),
   );
   try {

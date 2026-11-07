@@ -344,14 +344,8 @@ test("saving an order drops service and packing rows missing a name or unit pric
     ),
   ].find((serviceInput) => serviceInput.value === "Bohrarbeiten");
   assert.ok(bohrarbeiten);
-  const row = bohrarbeiten.closest(".MuiGrid-container");
-  assert.ok(row);
-  const priceLabel = [...row.querySelectorAll<HTMLLabelElement>("label")].find(
-    (label) => label.textContent?.trim() === "Einzelpreis (€)",
-  );
-  assert.ok(priceLabel);
   const clearedPriceInput = view.container.querySelector<HTMLInputElement>(
-    `#${priceLabel.htmlFor}`,
+    'input[aria-label="Einzelpreis für Bohrarbeiten"]',
   );
   assert.ok(clearedPriceInput);
   await view.input(clearedPriceInput, "");
@@ -377,6 +371,7 @@ test("saving keeps catalog services whose price falls back to the catalog", asyn
         services: [
           { kind: "service", catalogId: 9, name: "Bohrarbeiten", quantity: 2 },
           { kind: "packaging", catalogId: 10, name: "Karton", quantity: 1 },
+          { kind: "packaging", catalogId: 11, name: "Nicht ausgewählt", quantity: 0 },
           { kind: "service", name: "Freitext ohne Preis", quantity: 1 },
           { kind: "service", name: "  ", quantity: 1, unitPrice: 20 },
         ],

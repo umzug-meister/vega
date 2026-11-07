@@ -214,6 +214,10 @@ test("route input accepts two to four trimmed stops and the distance rounds to w
     "Straße 1",
     "Straße 2",
   ]);
+  assert.deepEqual(
+    routeAddresses({ addresses: ["Straße 1, München", "Bad Aibling"] }),
+    ["Straße 1, München", "Bad Aibling"],
+  );
   for (const body of [
     null,
     {},

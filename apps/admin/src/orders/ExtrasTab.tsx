@@ -1,11 +1,15 @@
-import { AddOutlined, DeleteOutlined } from "@mui/icons-material";
 import {
   Autocomplete,
-  Button,
   Grid,
   IconButton,
   Paper,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
   Typography,
 } from "@mui/material";
@@ -24,15 +28,22 @@ interface ExtrasTabProps {
   onExtrasChange: (extras: OrderFormValue["details"]["extras"]) => void;
 }
 
+interface CatalogItem {
+  id: number;
+  name: string;
+  price: number;
+  kind: "packaging" | "service";
+}
+
+interface ServiceRow {
+  key: string;
+  service: OrderServiceInput;
+  catalogItem: CatalogItem | null;
+  index: number | null;
+}
+
 export function ExtrasTab({ value, onExtrasChange }: ExtrasTabProps) {
-  const [catalog, setCatalog] = useState<
-    Array<{
-      id: number;
-      name: string;
-      price: number;
-      kind: "packaging" | "service";
-    }>
-  >([]);
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const extras = value.details.extras;
 
@@ -100,24 +111,26 @@ export function ExtrasTab({ value, onExtrasChange }: ExtrasTabProps) {
     });
   }
 
-  function addService(kind: "packaging" | "service") {
-    onExtrasChange({
-      ...extras,
-      services: [...extras.services, { kind, name: "", quantity: 1 }],
-    });
-  }
-
-  function removeService(
-    kind: "packaging" | "service",
-    indexInVisibleList: number,
+  function updateCatalogService(
+    item: CatalogItem,
+    index: number | null,
+    patch: Partial<OrderServiceInput>,
+    clearUnitPrice = false,
   ) {
-    const target = extras.services.filter((service) => service.kind === kind)[
-      indexInVisibleList
-    ];
-    onExtrasChange({
-      ...extras,
-      services: extras.services.filter((service) => service !== target),
-    });
+    if (index !== null) {
+      updateService(item.kind, index, patch, false, clearUnitPrice);
+      return;
+    }
+    const service: OrderServiceInput = {
+      kind: item.kind,
+      catalogId: item.id,
+      name: item.name,
+      quantity: 0,
+      unitPrice: item.price,
+      ...patch,
+    };
+    if (clearUnitPrice) delete service.unitPrice;
+    onExtrasChange({ ...extras, services: [...extras.services, service] });
   }
 
   return (
@@ -133,19 +146,51 @@ export function ExtrasTab({ value, onExtrasChange }: ExtrasTabProps) {
             kind: "packaging",
             title: "Packmaterial",
             itemLabel: "Packmaterial",
-            addLabel: "Packmaterial hinzufügen",
           },
           {
             kind: "service",
             title: "Leistungen",
             itemLabel: "Leistung",
-            addLabel: "Leistung hinzufügen",
           },
         ] as const
-      ).map(({ kind, title, itemLabel, addLabel }) => {
+      ).map(({ kind, title, itemLabel }) => {
         const visibleServices = extras.services.filter(
           (service) => service.kind === kind,
         );
+        const catalogItems = catalog.filter((item) => item.kind === kind);
+        const usedServiceIndexes = new Set<number>();
+        const rows: ServiceRow[] = catalogItems.map((item) => {
+          const index = visibleServices.findIndex(
+            (service, serviceIndex) =>
+              !usedServiceIndexes.has(serviceIndex) &&
+              service.catalogId === item.id,
+          );
+          if (index >= 0) usedServiceIndexes.add(index);
+          return {
+            key: `catalog-${item.id}`,
+            service:
+              index >= 0
+                ? visibleServices[index]!
+                : {
+                    catalogId: item.id,
+                    name: item.name,
+                    kind,
+                    quantity: 0,
+                    unitPrice: item.price,
+                  },
+            catalogItem: item,
+            index: index >= 0 ? index : null,
+          };
+        });
+        visibleServices.forEach((service, index) => {
+          if (!usedServiceIndexes.has(index))
+            rows.push({
+              key: `saved-${index}`,
+              service,
+              catalogItem: null,
+              index,
+            });
+        });
         return (
           <Grid size={{ xs: 12, lg: 6 }} key={kind}>
             <Paper variant="outlined" sx={{ p: 2.5, height: "100%" }}>
@@ -158,134 +203,174 @@ export function ExtrasTab({ value, onExtrasChange }: ExtrasTabProps) {
                     Kunde möchte Verpackungsmaterial kaufen.
                   </Typography>
                 )}
-                {visibleServices.map((service, index) => (
-                  <Grid
-                    container
-                    spacing={1}
-                    key={`${kind}-${index}`}
-                    sx={{ alignItems: "center" }}
-                  >
-                    <Grid size={{ xs: 12, sm: 7 }}>
-                      <Autocomplete
-                        freeSolo
-                        options={catalog.filter((item) => item.kind === kind)}
-                        value={
-                          catalog.find(
-                            (item) =>
-                              item.kind === kind &&
-                              item.id === service.catalogId,
-                          ) ?? null
-                        }
-                        inputValue={service.name}
-                        getOptionLabel={(option) =>
-                          typeof option === "string" ? option : option.name
-                        }
-                        isOptionEqualToValue={(option, selected) =>
-                          typeof selected !== "string" &&
-                          option.id === selected.id
-                        }
-                        onInputChange={(_, inputValue, reason) => {
-                          if (reason === "input" || reason === "clear")
-                            updateService(
-                              kind,
-                              index,
-                              {
-                                name: inputValue,
-                              },
-                              true,
-                            );
-                        }}
-                        onChange={(_, selected) => {
-                          if (typeof selected === "string")
-                            updateService(
-                              kind,
-                              index,
-                              {
-                                name: selected,
-                              },
-                              true,
-                            );
-                          else if (selected)
-                            updateService(kind, index, {
-                              catalogId: selected.id,
-                              name: selected.name,
-                              quantity: 1,
-                              unitPrice: selected.price,
-                            });
-                          else updateService(kind, index, {}, true);
-                        }}
-                        renderInput={(params) => (
-                          <TextField {...params} label={itemLabel} />
-                        )}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 3, sm: 2 }}>
-                      <TextField
-                        type="number"
-                        label="Anzahl"
-                        value={service.quantity}
-                        onChange={(event) =>
-                          updateService(kind, index, {
-                            quantity: Number(event.target.value),
-                          })
-                        }
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 6, sm: 2 }}>
-                      <TextField
-                        type="number"
-                        label="Einzelpreis (€)"
-                        value={
-                          service.unitPrice ??
-                          (service.catalogId === undefined
-                            ? ""
-                            : (catalog.find(
-                                (item) =>
-                                  item.id === service.catalogId &&
-                                  item.kind === kind,
-                              )?.price ?? ""))
-                        }
-                        onChange={(event) => {
-                          if (event.target.value === "")
-                            updateService(kind, index, {}, false, true);
-                          else
-                            updateService(kind, index, {
-                              unitPrice: Number(event.target.value),
-                            });
-                        }}
-                        slotProps={{
-                          htmlInput: { min: 0, max: 1_000_000, step: 0.01 },
-                        }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 3, sm: 1 }}>
-                      <Stack
-                        direction="row"
-                        sx={{
-                          alignItems: "center",
-                          justifyContent: "center",
-                          minHeight: 40,
-                        }}
-                      >
-                        <IconButton
-                          size="small"
-                          color="error"
-                          aria-label={`${itemLabel} entfernen`}
-                          onClick={() => removeService(kind, index)}
-                        >
-                          <DeleteOutlined />
-                        </IconButton>
-                      </Stack>
-                    </Grid>
-                  </Grid>
-                ))}
-                <Button
-                  startIcon={<AddOutlined />}
-                  onClick={() => addService(kind)}
-                  sx={{ alignSelf: "flex-end" }}
+                <TableContainer
+                  sx={{ width: "100%", maxWidth: "100%", overflowX: "auto" }}
                 >
-                  {addLabel}
-                </Button>
+                  <Table
+                    size="small"
+                    aria-label={title}
+                    sx={{
+                      minWidth: 480,
+                      "& .MuiTableCell-root": { py: 0.5 },
+                      "& .MuiOutlinedInput-root": { minHeight: 38 },
+                    }}
+                  >
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>{itemLabel}</TableCell>
+                        <TableCell>Anzahl</TableCell>
+                        <TableCell>Einzelpreis (€)</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                    {rows.map(({ key, service, catalogItem, index }) => {
+                  const updateRow = (
+                    patch: Partial<OrderServiceInput>,
+                    clearCatalogSelection = false,
+                    clearUnitPrice = false,
+                  ) => {
+                    if (catalogItem) {
+                      updateCatalogService(
+                        catalogItem,
+                        index,
+                        patch,
+                        clearUnitPrice,
+                      );
+                    } else if (index !== null) {
+                      updateService(
+                        kind,
+                        index,
+                        patch,
+                        clearCatalogSelection,
+                        clearUnitPrice,
+                      );
+                    }
+                  };
+                  const isSelected = service.quantity > 0;
+                  return (
+                    <TableRow
+                      key={key}
+                      sx={{ "& td": { fontWeight: isSelected ? 700 : 400 } }}
+                    >
+                      <TableCell sx={{ minWidth: 180 }}>
+                        {catalogItem ? (
+                          <Typography
+                            sx={{ fontWeight: isSelected ? 700 : 400 }}
+                          >
+                            {catalogItem.name}
+                          </Typography>
+                        ) : (
+                          <Autocomplete
+                            freeSolo
+                            options={catalogItems}
+                            value={
+                              catalogItems.find(
+                                (item) => item.id === service.catalogId,
+                              ) ?? null
+                            }
+                            inputValue={service.name}
+                            getOptionLabel={(option) =>
+                              typeof option === "string" ? option : option.name
+                            }
+                            isOptionEqualToValue={(option, selected) =>
+                              typeof selected !== "string" &&
+                              option.id === selected.id
+                            }
+                            onInputChange={(_, inputValue, reason) => {
+                              if (reason === "input" || reason === "clear")
+                                updateRow({ name: inputValue }, true);
+                            }}
+                            onChange={(_, selected) => {
+                              if (typeof selected === "string")
+                                updateRow({ name: selected }, true);
+                              else if (selected)
+                                updateRow({
+                                  catalogId: selected.id,
+                                  name: selected.name,
+                                  quantity: 1,
+                                  unitPrice: selected.price,
+                                });
+                              else updateRow({}, true);
+                            }}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                aria-label={itemLabel}
+                                sx={{
+                                  "& .MuiInputBase-input": {
+                                    fontWeight: isSelected ? 700 : 400,
+                                  },
+                                }}
+                              />
+                            )}
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell sx={{ width: 110 }}>
+                        <TextField
+                          type="number"
+                          value={service.quantity || ""}
+                          onChange={(event) =>
+                            updateRow({
+                              quantity:
+                                event.target.value === ""
+                                  ? 0
+                                  : Number(event.target.value),
+                            })
+                          }
+                          slotProps={{
+                            htmlInput: {
+                              min: 0,
+                              "aria-label": `Anzahl ${service.name}`,
+                            },
+                          }}
+                          sx={{
+                            "& .MuiInputBase-input": {
+                              fontWeight: isSelected ? 700 : 400,
+                            },
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ width: 150 }}>
+                        <TextField
+                          type="number"
+                          value={
+                            service.unitPrice ??
+                            (service.catalogId === undefined
+                              ? ""
+                              : (catalogItems.find(
+                                  (item) => item.id === service.catalogId,
+                                )?.price ?? ""))
+                          }
+                          onChange={(event) => {
+                            if (event.target.value === "")
+                              updateRow({}, false, true);
+                            else
+                              updateRow({
+                                unitPrice: Number(event.target.value),
+                              });
+                          }}
+                          slotProps={{
+                            htmlInput: {
+                              min: 0,
+                              max: 1_000_000,
+                              step: 0.01,
+                              "aria-label": `Einzelpreis für ${service.name}`,
+                            },
+                          }}
+                          sx={{
+                            "& .MuiInputBase-input": {
+                              fontWeight: isSelected ? 700 : 400,
+                            },
+                          }}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                    })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               </Stack>
             </Paper>
           </Grid>

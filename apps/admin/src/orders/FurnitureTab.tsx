@@ -425,16 +425,12 @@ export function FurnitureTab({
               )}
               <Grid container spacing={1} sx={{ alignItems: "center" }}>
                 <Grid size={{ xs: 12, sm: 7, md: 7 }}>
-                  <TextField
-                    fullWidth
-                    type="number"
+                  <NonNegativeNumberField
                     label="Berechnetes Umzugsvolumen (m³)"
                     value={furniture.volume}
-                    onChange={(event) =>
-                      updateFurniture({
-                        volume: Number(event.target.value),
-                        volumeComplete: true,
-                      })
+                    step="any"
+                    onChange={(volume) =>
+                      updateFurniture({ volume, volumeComplete: true })
                     }
                   />
                 </Grid>

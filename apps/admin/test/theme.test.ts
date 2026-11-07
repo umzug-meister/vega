@@ -47,6 +47,8 @@ test("admin headings use semantic colors without replacing explicit colors", () 
 
 test("admin typography and compact fields are preserved", () => {
   assert.match(adminTheme.typography.fontFamily, /-apple-system/u);
+  assert.equal(adminTheme.typography.h4.fontWeight, 500);
+  assert.equal(customerTheme.typography.h4.fontWeight, 500);
   assert.equal(adminTheme.typography.button.textTransform, "none");
   assert.equal(adminTheme.shape.borderRadius, 8);
   assert.equal(

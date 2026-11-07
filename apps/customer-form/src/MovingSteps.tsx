@@ -273,7 +273,7 @@ export function MovingStep({
             onChange={(floor) => update({ floor })}
           />
           <SelectField
-            label="Fahrstuhl"
+            label="Aufzug"
             value={address.liftType}
             options={liftTypes}
             onChange={(liftType) => update({ liftType })}

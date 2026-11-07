@@ -14,6 +14,7 @@ import type {
 } from "@vega/domain";
 import { SERVICE_RATE_KEYS } from "@vega/domain";
 import { prisma } from "../prisma.js";
+import { sanitizeRichTextHtml } from "../rich-text.js";
 
 function toCategoryDto(category: { id: number; name: string; sort: number }): CatalogCategoryDto {
   return { id: category.id, name: category.name, sort: category.sort };
@@ -44,7 +45,7 @@ function toServiceDto(service: { id: number; name: string; price: unknown; sort:
 }
 
 function toPackingDto(packing: { id: number; name: string; price: unknown; description: string; media: string | null; sort: number; show: boolean }): CatalogPackingDto {
-  return { id: packing.id, name: packing.name, price: Number(packing.price), description: packing.description, media: packing.media, sort: packing.sort, show: packing.show };
+  return { id: packing.id, name: packing.name, price: Number(packing.price), description: sanitizeRichTextHtml(packing.description), media: packing.media, sort: packing.sort, show: packing.show };
 }
 
 function toOfferDto(offer: { id: number; name: string; workers: number; trucks: number; includedHours: number; sum: unknown; hourPrice: unknown; ridingCosts: unknown; sort: number }): CatalogOfferDto {

@@ -28,7 +28,9 @@ test("healthcheck has security/request-id headers and obeys the CORS allowlist",
   assert.deepEqual(await response.json(), { status: "ok", service: "vega" });
   assert.equal(response.headers.get("access-control-allow-origin"), "https://www.example.test");
   assert.ok(response.headers.get("x-request-id"));
-  assert.ok(response.headers.get("content-security-policy"));
+  const contentSecurityPolicy = response.headers.get("content-security-policy");
+  assert.ok(contentSecurityPolicy);
+  assert.match(contentSecurityPolicy, /img-src[^;]*https:/u);
 
   const deniedResponse = await fetch(`http://127.0.0.1:${address.port}/health`, {
     headers: { Origin: "https://untrusted.example" },

@@ -136,7 +136,7 @@ export function createRouteRouter(config: AppConfig) {
             error: {
               code: "INVALID_ROUTE",
               message:
-                "Bitte geben Sie zwei bis vier vollständige Be-/Entladeadressen ein.",
+                "Bitte geben Sie für jede Be-/Entladestelle mindestens eine Straße oder einen Ort ein.",
             },
           });
       if (

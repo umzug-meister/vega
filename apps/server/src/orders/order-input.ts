@@ -11,6 +11,8 @@ import {
   addInvoiceAmounts,
   isValidEmailAddress,
   MAX_TRUCKS,
+  ORDER_ADDRESS_LIFT_TYPES,
+  ORDER_ADDRESS_MOVEMENT_OBJECTS,
   roundAmountToCents,
   SERVICE_RATE_KEYS,
 } from "@vega/domain";
@@ -42,15 +44,6 @@ const ORDER_SOURCES = [
   "umzugruckzuck.de",
   "umzugruckzuck24.de",
 ] as const;
-const BUILDING_TYPES = ["Wohnung", "Haus", "Keller", "Lager", "Büro"] as const;
-const LIFT_TYPES = [
-  "kein Aufzug",
-  "2 Personen",
-  "4 Personen",
-  "6 Personen",
-  "8+ Personen",
-] as const;
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -172,8 +165,8 @@ function validateAddress(
   if (rawMovementObject !== undefined) {
     if (
       typeof rawMovementObject === "string" &&
-      BUILDING_TYPES.includes(
-        rawMovementObject as (typeof BUILDING_TYPES)[number],
+      ORDER_ADDRESS_MOVEMENT_OBJECTS.includes(
+        rawMovementObject as (typeof ORDER_ADDRESS_MOVEMENT_OBJECTS)[number],
       )
     ) {
       movementObject = rawMovementObject as NonNullable<
@@ -188,7 +181,12 @@ function validateAddress(
   const liftType = text(value, "liftType", `${prefix}.liftType`, issues, {
     max: 32,
   });
-  if (liftType && !LIFT_TYPES.includes(liftType as (typeof LIFT_TYPES)[number]))
+  if (
+    liftType &&
+    !ORDER_ADDRESS_LIFT_TYPES.includes(
+      liftType as (typeof ORDER_ADDRESS_LIFT_TYPES)[number],
+    )
+  )
     issues.push({
       field: `${prefix}.liftType`,
       message: "Ungültiger Aufzugtyp.",
@@ -257,18 +255,12 @@ function validateAddress(
     } else stockwerke = rawFloors.map((entry) => (entry as string).trim());
   }
   if (street === undefined || postalCode === undefined || city === undefined) {
-    if (allowIncomplete)
-      return {
-        street: street ?? "",
-        postalCode: postalCode ?? "",
-        city: city ?? "",
-      };
-    return undefined;
+    if (!allowIncomplete) return undefined;
   }
   return {
-    street,
-    postalCode,
-    city,
+    street: street ?? "",
+    postalCode: postalCode ?? "",
+    city: city ?? "",
     ...(floor !== undefined ? { floor } : {}),
     ...(runningDistance !== undefined ? { runningDistance } : {}),
     ...(movementObject !== undefined ? { movementObject } : {}),
@@ -1471,7 +1463,7 @@ export function validateCustomerFormInput(
       });
     if (
       !address.movementObject ||
-      !BUILDING_TYPES.includes(address.movementObject)
+      !ORDER_ADDRESS_MOVEMENT_OBJECTS.includes(address.movementObject)
     )
       issues.push({
         field: `${key}.movementObject`,
@@ -1494,11 +1486,13 @@ export function validateCustomerFormInput(
         });
       if (
         !address.liftType ||
-        !LIFT_TYPES.includes(address.liftType as (typeof LIFT_TYPES)[number])
+        !ORDER_ADDRESS_LIFT_TYPES.includes(
+          address.liftType as (typeof ORDER_ADDRESS_LIFT_TYPES)[number],
+        )
       )
         issues.push({
           field: `${key}.liftType`,
-          message: "Bitte wählen Sie den Fahrstuhl.",
+          message: "Bitte wählen Sie den Aufzug.",
         });
     } else if (
       address.stockwerke?.some(

@@ -146,6 +146,7 @@ test("furniture numeric inputs start empty and accept explicit zero or cleared v
         "pre",
         { "data-testid": "numeric-state" },
         JSON.stringify({
+          volume: value.details.furniture.volume,
           boxes: value.details.furniture.boxes,
           wardrobeBoxes: value.details.furniture.wardrobeBoxes,
           bedNumber: value.from.bedNumber,
@@ -176,6 +177,7 @@ test("furniture numeric inputs start empty and accept explicit zero or cleared v
     };
 
     for (const label of [
+      "Berechnetes Umzugsvolumen (m³)",
       "Betten",
       "Schränke-Gesamtbreite",
       "Küche-Gesamtbreite",
@@ -207,6 +209,29 @@ test("furniture numeric inputs start empty and accept explicit zero or cleared v
         view.container.querySelector('[data-testid="numeric-state"]')!
           .textContent!,
       ).boxes,
+      0,
+    );
+
+    const volume = getInput("Berechnetes Umzugsvolumen (m³)");
+    await view.input(volume, "12");
+    await view.flush();
+    assert.equal(volume.value, "12");
+    assert.equal(
+      JSON.parse(
+        view.container.querySelector('[data-testid="numeric-state"]')!
+          .textContent!,
+      ).volume,
+      12,
+    );
+
+    await view.input(volume, "");
+    await view.flush();
+    assert.equal(volume.value, "");
+    assert.equal(
+      JSON.parse(
+        view.container.querySelector('[data-testid="numeric-state"]')!
+          .textContent!,
+      ).volume,
       0,
     );
   } finally {

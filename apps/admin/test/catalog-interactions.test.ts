@@ -6,6 +6,7 @@ import {
   furnitureCategoryChoices,
   FurniturePage,
 } from "../src/catalog/FurniturePage.js";
+import { PackingsPage } from "../src/catalog/PackingsPage.js";
 import { ExtrasTab } from "../src/orders/ExtrasTab.js";
 import { createEmptyOrder } from "../src/orders/order-form-types.js";
 
@@ -130,38 +131,130 @@ test("furniture editing sends selected category IDs and deletion requires confir
   }
 });
 
+test("packing description uses the rich-text editor and saves formatted HTML", async () => {
+  const originalFetch = globalThis.fetch;
+  const packing = {
+    id: 8,
+    name: "Kleiderbox",
+    price: 4,
+    description: "<p>Transportiert Kleidung <strong>knitterfrei</strong>.</p>",
+    media: "https://cdn.example.test/kleiderbox.png",
+    sort: 1,
+    show: true,
+  };
+  const writes: Array<{ method: string; body?: Record<string, unknown> }> = [];
+  globalThis.fetch = async (_url, init) => {
+    if (!init?.method || init.method === "GET")
+      return Response.json({ data: [packing] });
+    const body = init.body
+      ? (JSON.parse(String(init.body)) as Record<string, unknown>)
+      : undefined;
+    writes.push({ method: init.method, ...(body ? { body } : {}) });
+    return Response.json({ data: { ...packing, ...body } });
+  };
+  const app = await mount(createElement(PackingsPage));
+  try {
+    await app.click(
+      app.container.querySelector('button[aria-label="Aktionen für Eintrag 8"]')!,
+    );
+    await app.click(
+      [...app.window.document.querySelectorAll('[role="menuitem"]')].find(
+        (item) => item.textContent?.includes("Bearbeiten"),
+      )!,
+    );
+    await app.flush();
+    const dialog = app.window.document.querySelector('[role="dialog"]')!;
+    assert.ok(dialog.classList.contains("MuiDialog-paperWidthLg"));
+    const preview = dialog.querySelector(
+      '[aria-label="Vorschau im Kundenformular"]',
+    );
+    assert.ok(preview);
+    assert.equal(preview.querySelector("strong")?.textContent, "knitterfrei");
+    const previewImage = preview.querySelector<HTMLImageElement>("img");
+    assert.equal(previewImage?.src, packing.media);
+    assert.equal(previewImage?.alt, packing.name);
+    assert.equal(previewImage?.getAttribute("referrerpolicy"), "no-referrer");
+    assert.ok(dialog.querySelector('button[aria-label="Fett"]'));
+    assert.equal(dialog.querySelector("strong")?.textContent, "knitterfrei");
+    await app.click(
+      [...dialog.querySelectorAll("button")].find(
+        (button) => button.textContent === "Speichern",
+      )!,
+    );
+    assert.equal(writes.length, 1);
+    assert.equal(writes[0]?.method, "PUT");
+    assert.match(String(writes[0]?.body?.description), /<strong>knitterfrei<\/strong>/u);
+  } finally {
+    globalThis.fetch = originalFetch;
+    await app.cleanup();
+  }
+});
+
 test("admin order extras load the full staff catalogs, including entries hidden from the customer form", async () => {
   const originalFetch = globalThis.fetch;
   const requested: string[] = [];
   globalThis.fetch = async (url) => {
     const path = String(url);
     requested.push(path);
-    const item = path.endsWith("/packings")
-      ? {
-          id: 21,
-          name: "Interne Verpackung",
-          price: 3,
-          description: "",
-          media: null,
-          sort: 1,
-          show: false,
-        }
-      : { id: 22, name: "Interne Leistung", price: 15, sort: 2, show: false };
-    return Response.json({ data: [item] });
+    const items = path.endsWith("/packings")
+      ? [
+          {
+            id: 21,
+            name: "Interne Verpackung",
+            price: 3,
+            description: "",
+            media: null,
+            sort: 1,
+            show: false,
+          },
+          {
+            id: 23,
+            name: "Nicht ausgewählter Karton",
+            price: 2,
+            description: "",
+            media: null,
+            sort: 2,
+            show: true,
+          },
+        ]
+      : [{ id: 22, name: "Interne Leistung", price: 15, sort: 2, show: false }];
+    return Response.json({ data: items });
   };
+  const order = createEmptyOrder();
+  order.details.extras.services = [
+    {
+      catalogId: 21,
+      name: "Interne Verpackung",
+      unitPrice: 3,
+      quantity: 2,
+      kind: "packaging",
+    },
+  ];
   const app = await mount(
     createElement(ExtrasTab, {
-      value: createEmptyOrder(),
+      value: order,
       onExtrasChange: () => {},
     }),
   );
   try {
+    await app.flush();
     assert.deepEqual(requested.sort(), [
       "/api/admin/catalog/packings",
       "/api/admin/catalog/services",
     ]);
     assert.ok(app.container.textContent?.includes("Packmaterial"));
     assert.ok(app.container.textContent?.includes("Leistungen"));
+    const labels = [...app.container.querySelectorAll("p")];
+    const selectedPacking = labels.find(
+      (label) => label.textContent === "Interne Verpackung",
+    );
+    const unselectedPacking = labels.find(
+      (label) => label.textContent === "Nicht ausgewählter Karton",
+    );
+    assert.ok(selectedPacking);
+    assert.ok(unselectedPacking);
+    assert.equal(app.window.getComputedStyle(selectedPacking).fontWeight, "700");
+    assert.equal(app.window.getComputedStyle(unselectedPacking).fontWeight, "400");
   } finally {
     globalThis.fetch = originalFetch;
     await app.cleanup();

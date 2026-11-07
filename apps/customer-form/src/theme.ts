@@ -7,6 +7,7 @@ export const theme = createTheme({
     fontFamily: '"Montserrat","Arial",sans-serif',
     fontSize: 14,
     fontWeightRegular: 400,
+    h4: { fontWeight: 500 },
   },
   components: {
     MuiFormLabel: {

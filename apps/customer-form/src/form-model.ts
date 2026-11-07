@@ -8,9 +8,13 @@ import type {
   CustomerFormConfig,
   OrderAddressInput,
 } from "@vega/domain";
-import { isValidEmailAddress } from "@vega/domain";
+import {
+  isValidEmailAddress,
+  ORDER_ADDRESS_LIFT_TYPES,
+  ORDER_ADDRESS_MOVEMENT_OBJECTS,
+} from "@vega/domain";
 
-export const movementObjects = ["Wohnung", "Haus", "Keller", "Lager", "Büro"];
+export const movementObjects = ORDER_ADDRESS_MOVEMENT_OBJECTS;
 export const parkingDistances = Array.from(
   { length: 10 },
   (_, i) => `${(i + 1) * 10} m.`,
@@ -22,13 +26,7 @@ export const floors = [
   "9+ Etage",
 ];
 export const areas = Array.from({ length: 15 }, (_, i) => `${(i + 1) * 10} m²`);
-export const liftTypes = [
-  "kein Aufzug",
-  "2 Personen",
-  "4 Personen",
-  "6 Personen",
-  "8+ Personen",
-];
+export const liftTypes = ORDER_ADDRESS_LIFT_TYPES;
 export const steps = ["Kontakt", "Auszug", "Einzug", "Verpackung", "Fertig"];
 export const paths = ["", "auszug", "einzug", "verpackung", "absenden"];
 export const EMAIL_PATTERN = String.raw`^[^\s@]+@[^\s@.]+(?:\.[^\s@.]*)*\.[^\s@.]+$`;
@@ -211,7 +209,7 @@ export function validateStep(draft: FormDraft, step: number): string | null {
       ...(address.movementObject !== "Haus"
         ? ([
             ["floor", "Stockwerk"],
-            ["liftType", "Fahrstuhl"],
+            ["liftType", "Aufzug"],
           ] as Array<[keyof AddressDraft, string]>)
         : []),
     ];

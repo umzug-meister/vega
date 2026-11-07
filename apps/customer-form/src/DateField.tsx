@@ -1,14 +1,6 @@
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { format, isValid, parseISO } from "date-fns";
-import { de } from "date-fns/locale/de";
-import { deDE } from "@mui/x-date-pickers/locales";
-import { createTheme, ThemeProvider } from "@mui/material/styles";
+import { TextField } from "@mui/material";
 import { useFieldValidation } from "./components.js";
-import { theme } from "./theme.js";
-
-const dateTheme = createTheme(theme, deDE);
+import { localDate } from "./form-model.js";
 
 export function DateField({ label, value, onChange, min }: {
   label: string;
@@ -17,29 +9,25 @@ export function DateField({ label, value, onChange, min }: {
   min?: string;
 }) {
   const validation = useFieldValidation(label);
+  const minDate = min && min > localDate() ? min : localDate();
   return (
-    <ThemeProvider theme={dateTheme}>
-    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
-      <DatePicker
-        label={label}
-        disablePast
-        {...(min ? { minDate: parseISO(min) } : {})}
-        value={value ? parseISO(value) : null}
-        onChange={(date) => {
-          onChange(date && isValid(date) ? format(date, "yyyy-MM-dd") : "");
-          if (validation.error) validation.clear();
-        }}
-        slotProps={{
-          textField: {
-            required: true,
-            fullWidth: true,
-            size: "small",
-            error: validation.error,
-            sx: { "& .MuiPickersInputBase-root": { minHeight: 43 } },
-          },
-        }}
-      />
-    </LocalizationProvider>
-    </ThemeProvider>
+    <TextField
+      label={label}
+      type="date"
+      value={value}
+      onChange={(event) => {
+        onChange(event.target.value);
+        if (validation.error) validation.clear();
+      }}
+      required
+      fullWidth
+      size="small"
+      error={validation.error}
+      slotProps={{
+        inputLabel: { shrink: true },
+        htmlInput: { min: minDate },
+      }}
+      sx={{ "& .MuiInputBase-root": { minHeight: 43 } }}
+    />
   );
 }

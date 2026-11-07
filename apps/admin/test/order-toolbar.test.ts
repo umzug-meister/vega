@@ -54,7 +54,7 @@ test("only admins can create an invoice from the saved order", () => {
   const html = toolbar("Admin");
   const header = html.slice(0, html.indexOf("</header>"));
   const invoiceButton = header.match(
-    /<button\b[^>]*aria-label="Rechnung aus Auftrag anlegen"[^>]*>/u,
+    /<button\b[^>]*aria-label="Rechnung zum Auftrag"[^>]*>/u,
   )?.[0];
   assert.ok(invoiceButton);
   for (const attribute of [
@@ -65,7 +65,7 @@ test("only admins can create an invoice from the saved order", () => {
     assert.ok(invoiceButton.includes(attribute));
   assert.ok(
     !toolbar("Kundenberater").includes(
-      'aria-label="Rechnung aus Auftrag anlegen"',
+      'aria-label="Rechnung zum Auftrag"',
     ),
   );
 });
@@ -198,7 +198,7 @@ test("dirty documents allow only saving and clean saved documents enable follow-
                   "PDF erzeugen",
                   "E-Mail versenden",
                   "Auftrag archivieren",
-                  "Rechnung aus Auftrag anlegen",
+                  "Rechnung zum Auftrag",
                 ]
               : [
                   saveLabel,
@@ -229,6 +229,104 @@ test("dirty documents allow only saving and clean saved documents enable follow-
         }
       }
     }
+  }
+});
+
+test("small-screen order and invoice actions are grouped in the overflow menu", async () => {
+  const originalMatchMedia = window.matchMedia;
+  window.matchMedia = (query: string) => ({
+    matches: true,
+    media: query,
+    onchange: null,
+    addListener() {},
+    removeListener() {},
+    addEventListener() {},
+    removeEventListener() {},
+    dispatchEvent: () => true,
+  });
+  const user: StaffUser = {
+    id: "test",
+    name: "Test",
+    email: "test@example.test",
+    role: "Admin",
+    twoFactorEnabled: true,
+    mustChangePassword: false,
+    blocked: false,
+  };
+  const menuLabels = (document: Document) =>
+    [...document.querySelectorAll('[role="menuitem"]')].map((item) => {
+      const clone = item.cloneNode(true) as HTMLElement;
+      clone
+        .querySelectorAll(".MuiListItemIcon-root, style")
+        .forEach((node) => node.remove());
+      return clone.textContent?.trim();
+    });
+
+  try {
+    const orderRoute = resolveAdminRoute("/edit/1004");
+    assert.ok(orderRoute);
+    const orderApp = await mount(
+      createElement(AdminShell, {
+        user,
+        route: orderRoute,
+        pathname: orderRoute.path,
+        navigate: () => {},
+        orderIsCopy: true,
+        children: null,
+      }),
+      orderRoute.path,
+    );
+    try {
+      await orderApp.click(
+        orderApp.container.querySelector(
+          'button[aria-label="Weitere Aktionen öffnen"]',
+        )!,
+      );
+      const orderActions = menuLabels(orderApp.window.document);
+      assert.deepEqual(orderActions, [
+        "Speichern",
+        "Angebotskopie anlegen",
+        "PDF speichern",
+        "Angebot versenden",
+        "2 Angebote versenden",
+        "Absage versenden",
+        "Archivieren",
+        "Rechnung zum Auftrag",
+      ]);
+    } finally {
+      await orderApp.cleanup();
+    }
+
+    const invoiceRoute = resolveAdminRoute("/invoices/invoice-test");
+    assert.ok(invoiceRoute);
+    const invoiceApp = await mount(
+      createElement(AdminShell, {
+        user,
+        route: invoiceRoute,
+        pathname: invoiceRoute.path,
+        navigate: () => {},
+        children: null,
+      }),
+      invoiceRoute.path,
+    );
+    try {
+      await invoiceApp.click(
+        invoiceApp.container.querySelector(
+          'button[aria-label="Weitere Aktionen öffnen"]',
+        )!,
+      );
+      const invoiceActions = menuLabels(invoiceApp.window.document);
+      assert.deepEqual(invoiceActions, [
+        "Speichern",
+        "PDF speichern",
+        "Rechnung per E-Mail versenden",
+        "Archivieren",
+      ]);
+    } finally {
+      await invoiceApp.cleanup();
+    }
+  } finally {
+    window.matchMedia = originalMatchMedia;
   }
 });
 
@@ -408,7 +506,7 @@ test("archived orders offer PDF and restoration without editing", async () => {
     new URL("../src/orders/OrdersPage.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(source, /archived \? order\.orderNumber : <Button/u);
+  assert.match(source, /archived \? \(\s*order\.orderNumber/u);
   assert.match(source, /if \(!archived &&/u);
   assert.match(source, /aria-label="Auftrags-PDF herunterladen"/u);
   assert.match(source, /aria-label="Auftrag wiederherstellen"/u);

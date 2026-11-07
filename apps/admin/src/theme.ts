@@ -55,7 +55,7 @@ export const adminTheme = createTheme({
       fontWeight: 600,
       letterSpacing: "-0.015em",
     },
-    h4: { fontSize: "1.125rem", lineHeight: 1.4, fontWeight: 600 },
+    h4: { fontSize: "1.125rem", lineHeight: 1.4, fontWeight: 500 },
     h5: { fontSize: "1rem", lineHeight: 1.45, fontWeight: 600 },
     h6: { fontSize: "0.9375rem", lineHeight: 1.45, fontWeight: 600 },
     body1: { fontSize: "0.9375rem", lineHeight: 1.55 },

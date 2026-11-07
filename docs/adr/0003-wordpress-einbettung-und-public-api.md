@@ -70,16 +70,18 @@ Der echte Google-/Hostinger-Provider-Proof bleibt offen.
 Der bisherige explizite Klick ist nicht mehr die einzige Auslösung. Sobald
 Auftragsentwurf und Konfiguration geladen sind (`GET /api/admin/routes/config`),
 berechnet die Admin-Oberfläche einmal automatisch, wenn der Betriebsstandort
-gesetzt, Google-Routes verfügbar, alle
-aktiven Be-/Entladeadressen vollständig sind und noch keine manuelle oder
-berechnete Entfernung vorliegt. Ein bereits vorhandener manueller oder
-berechneter Kilometerwert wird beim Öffnen nicht überschrieben. Ändert der
+gesetzt, Google-Routes verfügbar, alle aktiven Be-/Entladeadressen mindestens
+Straße oder Ort enthalten und noch keine manuelle oder berechnete Entfernung
+vorliegt. Ein bereits vorhandener manueller oder
+berechnete Kilometerwert wird beim Öffnen nicht überschrieben. Ändert der
 Mitarbeiter Straße, PLZ oder Ort einer aktiven Adresse, wird die Route beim
-Verlassen des Felds neu berechnet, sobald alle aktiven Adressen vollständig
-sind; unveränderte Blurs und Änderungen an nicht routenrelevanten Feldern
+Verlassen des Felds neu berechnet, sobald alle aktiven Be-/Entladestellen
+mindestens Straße oder Ort enthalten. Die Postleitzahl ist für Mitarbeiter
+optional; auch ein ausschließlich eingetragener Ort wird als Routenstopp
+verwendet. Unveränderte Blurs und Änderungen an nicht routenrelevanten Feldern
 lösen keine Anfrage aus. Laufende Berechnungen werden bei einer neueren
 Adressversion abgebrochen, veraltete Antworten ignoriert. Fehlender Key,
-fehlender Betriebsstandort oder unvollständige Adressen setzen die Automatik
+fehlender Betriebsstandort oder eine aktive Adresse ohne Straße und Ort setzen die Automatik
 aus, ohne die manuelle Eingabe zu blockieren; Providerfehler zeigen einen
 Fehler, ohne den zuletzt gespeicherten Kilometerwert zu löschen. Der Button
 „Fahrstrecke berechnen" bleibt als manueller Retry erhalten. Browser rufen
