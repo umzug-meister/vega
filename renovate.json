@@ -10,7 +10,7 @@
       "allowedVersions": "/^11\\./"
     },
     {
-      "matchUpdateTypes": ["patch"],
+      "matchUpdateTypes": ["minor", "patch"],
       "automerge": true
     }
   ]
