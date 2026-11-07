@@ -26,6 +26,7 @@ import {
   orderRelations,
 } from "./order-relations.js";
 import { renderOrderPdf } from "./order-pdf-service.js";
+import { orderGrossTotal } from "../pdf/order-pdf.js";
 import { registerOrderEmailRoutes } from "./order-email-routes.js";
 import type { AppConfig } from "../config.js";
 import { normalizeOrderSearch, orderListWhere } from "./order-search.js";
@@ -625,7 +626,8 @@ const orderDetailSelect = {
 function toOrderListItem(
   order: Prisma.OrderGetPayload<{ select: typeof orderListSelect }>,
 ) {
-  const data = asRecord(orderDataWithRelations(order));
+  const orderData = orderDataWithRelations(order);
+  const data = asRecord(orderData);
   const from = asRecord(data?.from);
   const to = asRecord(data?.to);
   const basis = asRecord(asRecord(data?.details)?.basis);
@@ -633,6 +635,7 @@ function toOrderListItem(
     orderNumber: order.orderNumber,
     source: order.source,
     customerName: order.customerName,
+    grossTotal: orderGrossTotal(orderData),
     movingDate: stringValue(data?.movingDate),
     fromAddress: addressValue(from),
     fromParkingSlot: from?.parkingSlot === true,
@@ -651,10 +654,12 @@ function toOrderDetail(
   order: Prisma.OrderGetPayload<{ select: typeof orderDetailSelect }>,
 ) {
   const { addresses: _addresses, positions: _positions, ...detail } = order;
+  const data = orderDataWithRelations(order);
   return {
     ...detail,
     isCopy: order.originOrderId !== null,
-    data: orderDataWithRelations(order),
+    data,
+    grossTotal: orderGrossTotal(data),
   };
 }
 function parsePositiveInteger(value: unknown): number | null {

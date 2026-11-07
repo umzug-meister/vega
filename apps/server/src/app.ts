@@ -107,6 +107,8 @@ export function createApp(
             "'self'",
             "data:",
             "blob:",
+            "http:",
+            "https:",
             ...(config.gcs ? ["https://storage.googleapis.com"] : []),
           ],
           objectSrc: ["'none'"],

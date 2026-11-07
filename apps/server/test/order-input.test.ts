@@ -52,6 +52,20 @@ test("validates order submission and strips fields outside the approved input co
   assert.deepEqual(result.value.from, validOrder.from);
 });
 
+test("accepts Maisonette-Wohnung as an address object type", () => {
+  const input = orderFixture();
+  for (const address of [input.from, input.to]) {
+    address.movementObject = "Maisonette-Wohnung";
+    address.floor = "EG";
+    address.liftType = "Lastenaufzug";
+    address.runningDistance = "10 m.";
+  }
+  assert.equal(
+    validateOrderCreateInput(input, { allowStaffPricing: true }).ok,
+    true,
+  );
+});
+
 test("preserves the previous public order source in stored and submitted order data", () => {
   const input = {
     ...orderFixture(),
@@ -213,6 +227,46 @@ test("allows a staff draft with empty legacy fields but still requires public su
   assert.equal(staffResult.ok, true);
   if (staffResult.ok) assert.equal(staffResult.value.customer.firstName, "");
   assert.equal(validateOrderCreateInput(draft).ok, false);
+});
+
+test("staff drafts accept partial route addresses and preserve other address fields", () => {
+  const input = structuredClone(orderFixture()) as unknown as Record<
+    string,
+    unknown
+  >;
+  input.from = {
+    street: "Senderstraße 1",
+    city: "München",
+    floor: "EG",
+    movementObject: "Wohnung",
+  };
+  input.to = {
+    street: "",
+    city: "Bad Aibling",
+    floor: "EG",
+    movementObject: "Haus",
+  };
+
+  const result = validateOrderCreateInput(input, {
+    allowIncomplete: true,
+    allowStaffPricing: true,
+  });
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.deepEqual(result.value.from, {
+    street: "Senderstraße 1",
+    postalCode: "",
+    city: "München",
+    floor: "EG",
+    movementObject: "Wohnung",
+  });
+  assert.deepEqual(result.value.to, {
+    street: "",
+    postalCode: "",
+    city: "Bad Aibling",
+    floor: "EG",
+    movementObject: "Haus",
+  });
 });
 
 test("anonymous orders cannot forge staff distance provenance", () => {

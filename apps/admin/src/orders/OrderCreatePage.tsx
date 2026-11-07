@@ -66,6 +66,7 @@ export function orderForSave(value: OrderFormValue): OrderFormValue {
         ...value.details.extras,
         services: value.details.extras.services.filter(
           (service) =>
+              service.quantity > 0 &&
             service.name.trim().length > 0 &&
             (service.catalogId !== undefined ||
               (typeof service.unitPrice === "number" &&

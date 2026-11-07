@@ -4,7 +4,7 @@ import { Field } from "./components.js";
 export function SelectField({ label, value, options, onChange, required = true }: {
   label: string;
   value: string | undefined;
-  options: string[];
+  options: readonly string[];
   onChange: (value: string) => void;
   required?: boolean;
 }) {

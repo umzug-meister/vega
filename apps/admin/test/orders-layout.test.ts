@@ -101,7 +101,7 @@ test("order cards use aligned responsive columns without squeezing list controls
   assert.match(furniture, /Volumen neu berechnen/u);
   assert.match(furniture, /Möbel \/ Beschreibung/u);
   assert.doesNotMatch(furniture, /Katalogmöbel \(optional\)/u);
-  assert.equal([...furniture.matchAll(/min="0"/gu)].length, 5);
+  assert.equal([...furniture.matchAll(/min="0"/gu)].length, 6);
   assert.match(furniture, /Schränke-Gesamtbreite/u);
   assert.match(furniture, /Küche-Gesamtbreite/u);
   const basis = render(

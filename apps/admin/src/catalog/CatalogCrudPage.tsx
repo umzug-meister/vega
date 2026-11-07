@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import {
+  Box,
   Button,
   Checkbox,
   Dialog,
@@ -30,6 +31,7 @@ import {
   Typography,
 } from "@mui/material";
 import { AdminAlert as Alert } from "../components/AdminNotifications.js";
+import { RichTextEditor } from "../components/RichTextEditor.js";
 import { AddOutlined, DeleteOutlined, EditOutlined, MoreVert } from "@mui/icons-material";
 import { useCatalogCollection, type IdentifiedCatalogRecord } from "./useCatalogCollection.js";
 
@@ -41,7 +43,7 @@ export interface CatalogChoice {
 export interface CatalogField {
   name: string;
   label: string;
-  type: "text" | "number" | "money" | "multiline" | "boolean" | "multiple" | "checkboxes";
+  type: "text" | "number" | "money" | "multiline" | "richtext" | "boolean" | "multiple" | "checkboxes";
   options?: CatalogChoice[];
   min?: number;
   max?: number;
@@ -60,6 +62,7 @@ interface CatalogCrudPageProps<T extends IdentifiedCatalogRecord> {
   fields: CatalogField[];
   columns: CatalogColumn<T>[];
   defaults: Record<string, unknown>;
+  previewPanel?: (form: Record<string, unknown>) => ReactNode;
   toolbarContent?: ReactNode;
   filterPanel?: ReactNode;
   filterItem?: (item: T) => boolean;
@@ -71,6 +74,7 @@ export function CatalogCrudPage<T extends IdentifiedCatalogRecord>({
   fields,
   columns,
   defaults,
+  previewPanel,
   toolbarContent,
   filterPanel,
   filterItem,
@@ -176,6 +180,28 @@ export function CatalogCrudPage<T extends IdentifiedCatalogRecord>({
         </FormControl>
       );
     }
+    if (field.type === "richtext") {
+      return (
+        <Stack
+          key={`${field.name}-${dialogOpen ? "open" : "closed"}-${editing?.id ?? "new"}`}
+          spacing={0.75}
+        >
+          <FormLabel>{field.label}</FormLabel>
+          <RichTextEditor
+            ariaLabel={field.label}
+            initialHtml={typeof value === "string" ? value : ""}
+            disabled={saving}
+            onChange={(html) =>
+              setForm((current) =>
+                current[field.name] === html
+                  ? current
+                  : { ...current, [field.name]: html },
+              )
+            }
+          />
+        </Stack>
+      );
+    }
     return (
       <TextField
         key={field.name}
@@ -244,13 +270,43 @@ export function CatalogCrudPage<T extends IdentifiedCatalogRecord>({
           <ListItemIcon sx={{ color: "inherit" }}><DeleteOutlined fontSize="small" /></ListItemIcon>Löschen
         </MenuItem>
       </Menu>
-      <Dialog open={dialogOpen} onClose={() => !saving && setDialogOpen(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={dialogOpen}
+        onClose={() => !saving && setDialogOpen(false)}
+        fullWidth
+        maxWidth={previewPanel ? "lg" : "sm"}
+      >
         <DialogTitle>{dialogTitle}</DialogTitle>
         <DialogContent>
-          <Stack spacing={1.25} sx={{ pt: 1 }}>
-            {catalog.error && <Alert severity="error">{catalog.error}</Alert>}
-            {fields.map(renderField)}
-          </Stack>
+          {previewPanel ? (
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "minmax(0, 1fr)",
+                  md: "minmax(280px, 0.9fr) minmax(0, 1.1fr)",
+                },
+                gap: 3,
+                alignItems: "start",
+              }}
+            >
+              <Stack spacing={1.25} role="region" aria-label="Vorschau im Kundenformular">
+                <Typography component="h3" variant="h6">
+                  Vorschau
+                </Typography>
+                {previewPanel(form)}
+              </Stack>
+              <Stack spacing={1.25} sx={{ pt: 1 }}>
+                {catalog.error && <Alert severity="error">{catalog.error}</Alert>}
+                {fields.map(renderField)}
+              </Stack>
+            </Box>
+          ) : (
+            <Stack spacing={1.25} sx={{ pt: 1 }}>
+              {catalog.error && <Alert severity="error">{catalog.error}</Alert>}
+              {fields.map(renderField)}
+            </Stack>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)} disabled={saving}>Abbrechen</Button>

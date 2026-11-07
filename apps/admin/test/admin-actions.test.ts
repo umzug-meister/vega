@@ -101,7 +101,10 @@ test("archived orders remain read-only and restoration failures keep the list us
   const originalFetch = globalThis.fetch;
   const item = {
     orderNumber: 1001, source: "UmzugRuckZuck", customerName: "Test Kunde",
-    movingDate: "2026-11-01", fromAddress: "Start", toAddress: "Ziel",
+    grossTotal: 1234.56,
+    movingDate: "2026-11-01",
+    fromAddress: "Eine sehr lange Auszugsadresse, die in der Tabelle gekürzt werden muss, München",
+    toAddress: "Eine ebenso lange Einzugsadresse, die in der Tabelle gekürzt werden muss, München",
     fromParkingSlot: false, toParkingSlot: false, workers: null, trucks: null, hours: null,
     createdAt: "2026-10-01T00:00:00.000Z", editedAt: null, isCopy: false, archivedAt: "2026-10-02T00:00:00.000Z",
   };
@@ -112,6 +115,21 @@ test("archived orders remain read-only and restoration failures keep the list us
   };
   const app = await mount(createElement(OrdersPage, { archived: true, navigate: () => assert.fail("archive list must not open an editor") }), "/orders/archived");
   try {
+    const headers = [...app.container.querySelectorAll("thead th")].map((cell) => cell.textContent?.trim());
+    assert.equal(headers.includes("Quelle"), false);
+    assert.ok(headers.includes("LKW"));
+    assert.equal(headers.includes("3,5t"), false);
+    assert.equal(headers.at(-1), "Summe");
+    const row = app.container.querySelector("tbody tr")!;
+    const cells = row.querySelectorAll("td");
+    const fromAddress = cells[3]!.querySelector<HTMLElement>("[title]")!;
+    assert.equal(fromAddress.getAttribute("title"), item.fromAddress);
+    assert.equal(app.window.getComputedStyle(fromAddress).whiteSpace, "nowrap");
+    assert.equal(app.window.getComputedStyle(fromAddress).textOverflow, "ellipsis");
+    assert.equal(
+      cells[cells.length - 1]!.textContent?.trim(),
+      new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(item.grossTotal),
+    );
     assert.equal(app.container.querySelector('a[href="/api/admin/orders/1001/pdf"]') !== null, true);
     assert.equal([...app.container.querySelectorAll("button")].some((button) => button.textContent === "1001"), false);
     const restore = app.container.querySelector<HTMLButtonElement>('button[aria-label="Auftrag wiederherstellen"]')!;
@@ -121,4 +139,56 @@ test("archived orders remain read-only and restoration failures keep the list us
     assert.ok(app.container.textContent!.includes("Aktion konnte nicht ausgeführt werden."));
     assert.ok(app.container.textContent!.includes("Test Kunde"));
   } finally { globalThis.fetch = originalFetch; await app.cleanup(); }
+});
+
+test("small-screen order search and creation stay on one line with an icon-only create action", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalMatchMedia = window.matchMedia;
+  globalThis.fetch = async () =>
+    Response.json({ data: { items: [], total: 0 } });
+  window.matchMedia = (query: string) => ({
+    matches: true,
+    media: query,
+    onchange: null,
+    addListener() {},
+    removeListener() {},
+    addEventListener() {},
+    removeEventListener() {},
+    dispatchEvent: () => true,
+  });
+  const navigation: string[] = [];
+  const app = await mount(
+    createElement(OrdersPage, {
+      navigate: (path) => navigation.push(path),
+    }),
+    "/",
+  );
+  try {
+    const createButton = app.container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Auftrag anlegen"]',
+    );
+    assert.ok(createButton);
+    assert.ok(createButton.classList.contains("MuiIconButton-root"));
+    assert.ok(createButton.querySelector('[data-testid="AddOutlinedIcon"]'));
+    assert.equal(createButton.textContent?.trim(), "");
+    assert.equal(
+      app.window.getComputedStyle(createButton.parentElement!).flexDirection,
+      "row",
+    );
+    assert.equal(
+      app.window.getComputedStyle(createButton.parentElement!).justifyContent,
+      "space-between",
+    );
+    assert.ok(
+      createButton.parentElement?.querySelector(
+        'button[aria-label="Aufträge suchen"]',
+      ),
+    );
+    await app.click(createButton);
+    assert.deepEqual(navigation, ["/edit/-1"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    window.matchMedia = originalMatchMedia;
+    await app.cleanup();
+  }
 });

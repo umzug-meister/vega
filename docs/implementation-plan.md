@@ -60,6 +60,7 @@ Exakte Versionen sind in `package.json`/`package-lock.json` gepinnt; offen ist n
   Fallback bei `503`/`502`). Kein generischer Google-Proxy, kein Place-/Auftragsspeicher,
   kein öffentlicher Order-Read.
 - Öffentliche Datenantworten enthalten ausschließlich freigegebene Felder, beispielsweise Name, Beschreibung, Auswahloption und Kundenpreis. Es gibt keine öffentlichen Auftrags-/Kundenlese-Endpunkte und keine generischen Optionsendpunkte.
+- Verpackungsbeschreibungen unterstützen redaktionelle Formatierung. Der Server verwendet für Speicherung und Safe DTOs dieselbe enge HTML-Allowlist wie im E-Mail-Editor; der Kundenformular-Client rendert ausschließlich diese normalisierte Ausgabe. Optionale HTTP(S)-Medienlinks werden als Bilder in Kundenformular und Admin-Vorschau ohne Referrer übertragen.
 - Der Formular-POST wird serverseitig validiert und vor Mailversand dauerhaft gespeichert.
 - CORS wird auf die konfigurierte WordPress-Origin begrenzt. CORS ist kein Authentifizierungs- oder Zugriffsschutz.
 - Öffentliche Requests erhalten Rate-Limits. Es gibt zunächst weder CAPTCHA noch Honeypot.

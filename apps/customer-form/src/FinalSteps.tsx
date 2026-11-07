@@ -8,6 +8,7 @@ import {
   Card,
   CardContent,
   CardHeader,
+  CardMedia,
   Checkbox,
   CircularProgress,
   FormControlLabel,
@@ -67,11 +68,27 @@ export function Packaging({ draft, setDraft, resources }: StepProps) {
                       </Box>
                     }
                   />
+                  {packing.media && (
+                    <CardMedia
+                      component="img"
+                      image={packing.media}
+                      alt={packing.name}
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      sx={{
+                        height: 240,
+                        objectFit: "contain",
+                        px: 2,
+                      }}
+                    />
+                  )}
                   <CardContent>
                     <Column>
-                      <Typography variant="body2">
-                        {packing.description}
-                      </Typography>
+                      <Typography
+                        component="div"
+                        variant="body2"
+                        dangerouslySetInnerHTML={{ __html: packing.description }}
+                      />
                       <Box sx={{ display: "flex", justifyContent: "end" }}>
                         <Field
                           label="Anzahl"

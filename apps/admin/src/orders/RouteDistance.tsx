@@ -170,12 +170,16 @@ export function RouteDistance({
       ? [value.details.secondaryTo]
       : []),
   ];
-  const complete = addresses.every(
-    (address) =>
-      address.street.trim() && address.postalCode.trim() && address.city.trim(),
+  const routeReady = addresses.every(
+    (address) => address.street.trim() || address.city.trim(),
   );
-  const texts = addresses.map(
-    (address) => `${address.street}, ${address.postalCode} ${address.city}`,
+  const texts = addresses.map((address) =>
+    [
+      address.street.trim(),
+      [address.postalCode.trim(), address.city.trim()].filter(Boolean).join(" "),
+    ]
+      .filter(Boolean)
+      .join(", "),
   );
   const routeKey = texts.join("\n");
   // A stored manual or calculated distance must not be overwritten by the initial calculation.
@@ -188,7 +192,7 @@ export function RouteDistance({
   // Effects only observe blur tokens and config; the latest draft is read from this ref.
   const latest = useRef({
     texts,
-    complete,
+    routeReady,
     routeKey,
     config,
     storedRoute,
@@ -198,7 +202,7 @@ export function RouteDistance({
   });
   latest.current = {
     texts,
-    complete,
+    routeReady,
     routeKey,
     config,
     storedRoute,
@@ -213,7 +217,7 @@ export function RouteDistance({
       !current.ready ||
       !current.config?.origin ||
       !current.config.available ||
-      !current.complete
+      !current.routeReady
     )
       return;
     requestedKey.current = current.routeKey;
@@ -296,13 +300,13 @@ export function RouteDistance({
     if (
       !config.available ||
       !config.origin ||
-      !current.complete ||
+      !current.routeReady ||
       current.storedRouteMatches
     )
       return;
     void calculate();
   }, [config, ready, calculate]);
-  // Recalculate after a route-relevant field lost focus, but only for a changed, complete address.
+  // Recalculate after a route-relevant field loses focus when every active stop has a street or city.
   useEffect(() => {
     if (blurToken === 0) return;
     const current = latest.current;
@@ -310,7 +314,7 @@ export function RouteDistance({
       !current.ready ||
       !current.config?.origin ||
       !current.config.available ||
-      !current.complete
+      !current.routeReady
     )
       return;
     if (requestedKey.current === current.routeKey) return;

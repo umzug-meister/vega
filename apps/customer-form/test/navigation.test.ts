@@ -63,7 +63,7 @@ test("invalid fields show an error toast, focus and scroll again on repeated val
   assert.ok(scrolled.at(-1)?.contains(lastName));
 });
 
-test("lazy form steps retain contact input and load the German date picker", async (context) => {
+test("lazy form steps retain contact input and load the native date input", async (context) => {
   const requests: string[] = [];
   context.mock.method(globalThis, "fetch", async (url: string) => {
     requests.push(url);
@@ -87,7 +87,11 @@ test("lazy form steps retain contact input and load the German date picker", asy
     await import("../src/DateField.js");
   });
   await dom.flush();
-  assert.ok(dom.container.querySelector('[aria-label^="Datum auswählen"]'));
+  const dateInput = dom.container.querySelector<HTMLInputElement>(
+    'input[type="date"]',
+  );
+  assert.ok(dateInput);
+  assert.match(dateInput.value, /^\d{4}-\d{2}-\d{2}$/);
   for (const [autocomplete, value] of [
     ["given-name", "Ada"],
     ["family-name", "Beispiel"],

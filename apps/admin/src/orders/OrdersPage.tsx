@@ -5,7 +5,7 @@ import AddOutlined from "@mui/icons-material/AddOutlined";
 import FileDownloadOutlined from "@mui/icons-material/FileDownloadOutlined";
 import RestoreOutlined from "@mui/icons-material/RestoreOutlined";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Box, Button, CircularProgress, IconButton, InputAdornment, Paper, Stack, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, TextField, Tooltip } from "@mui/material";
+import { Box, Button, CircularProgress, IconButton, InputAdornment, Paper, Stack, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, TextField, Tooltip, useMediaQuery, useTheme } from "@mui/material";
 import { AdminAlert as Alert } from "../components/AdminNotifications.js";
 import type { AdminOrderListItem } from "@vega/domain";
 import { apiRequest } from "../api/api-request.js";
@@ -13,6 +13,8 @@ import { apiRequest } from "../api/api-request.js";
 const PAGE_SIZE = 10;
 
 export function OrdersPage({ archived = false, navigate }: { archived?: boolean; navigate: (path: string) => void }) {
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
   const [items, setItems] = useState<AdminOrderListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
@@ -81,11 +83,16 @@ export function OrdersPage({ archived = false, navigate }: { archived?: boolean;
 
   return <Stack spacing={2}>
     <Stack
-      direction={{ xs: "column", sm: "row" }}
+      direction="row"
       spacing={1}
-      sx={{ justifyContent: "space-between", alignItems: { sm: "center" } }}
+      sx={{
+        alignItems: "center",
+        justifyContent: "space-between",
+        width: "100%",
+        flexWrap: "nowrap",
+      }}
     >
-      <Box sx={{ width: 420, maxWidth: "100%" }}>
+      <Box sx={{ flex: "1 1 420px", maxWidth: 420, minWidth: 0 }}>
         <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
           <TextField
             size="small"
@@ -111,28 +118,120 @@ export function OrdersPage({ archived = false, navigate }: { archived?: boolean;
           </IconButton>
         </Stack>
       </Box>
-      {!archived && (
-        <Button variant="contained" startIcon={<AddOutlined />} onClick={() => navigate("/edit/-1")} sx={{ alignSelf: "flex-end" }}>
-          Auftrag anlegen
-        </Button>
-      )}
+      {!archived &&
+        (isSmallScreen ? (
+          <IconButton
+            color="primary"
+            aria-label="Auftrag anlegen"
+            title="Auftrag anlegen"
+            onClick={() => navigate("/edit/-1")}
+          >
+            <AddOutlined />
+          </IconButton>
+        ) : (
+          <Button
+            variant="contained"
+            startIcon={<AddOutlined />}
+            onClick={() => navigate("/edit/-1")}
+          >
+            Auftrag anlegen
+          </Button>
+        ))}
     </Stack>
     {error && <Alert severity="error">{error}</Alert>}
     <Paper variant="outlined" sx={{ overflowX: "auto" }}>
       {loading && <Stack sx={{ height: 420, alignItems: "center", justifyContent: "center" }}><CircularProgress /></Stack>}
-      {!loading && <Table size="small" sx={{ minWidth: 1100 }}><TableHead><TableRow>
-        <TableCell>ID</TableCell><TableCell>Quelle</TableCell><TableCell>Kunde</TableCell><TableCell>Datum</TableCell><TableCell>Auszugsadresse</TableCell><TableCell padding="checkbox">HVZ</TableCell><TableCell>Einzugsadresse</TableCell><TableCell padding="checkbox">HVZ</TableCell><TableCell>Mann</TableCell><TableCell>3,5t</TableCell><TableCell>Std.</TableCell>{archived && <TableCell>Aktionen</TableCell>}
-      </TableRow></TableHead><TableBody>
-        {items.map((order) => <TableRow key={order.orderNumber} hover sx={{ "& td": { fontWeight: order.editedAt ? "normal" : 700 } }}>
-          <TableCell>{archived ? order.orderNumber : <Button size="small" onClick={() => navigate(`/edit/${order.orderNumber}`)}>{order.orderNumber}</Button>}</TableCell>
-          <TableCell>{order.source}</TableCell><TableCell>{order.customerName}</TableCell><TableCell>{formatDate(order.movingDate)}</TableCell><TableCell>{order.fromAddress}</TableCell><TableCell padding="checkbox">{order.fromParkingSlot && <CheckCircleIcon color="success" fontSize="small" />}</TableCell><TableCell>{order.toAddress}</TableCell><TableCell padding="checkbox">{order.toParkingSlot && <CheckCircleIcon color="success" fontSize="small" />}</TableCell><TableCell>{order.workers ?? ""}</TableCell><TableCell>{order.trucks ?? ""}</TableCell><TableCell>{order.hours ?? ""}</TableCell>
-          {archived && <TableCell sx={{ whiteSpace: "nowrap" }}>
-            <Tooltip title="PDF herunterladen"><IconButton component="a" href={`/api/admin/orders/${order.orderNumber}/pdf`} aria-label="Auftrags-PDF herunterladen"><FileDownloadOutlined /></IconButton></Tooltip>
-            <Tooltip title="Wiederherstellen"><IconButton disabled={archiveBusy} onClick={() => void changeArchive(order.orderNumber)} aria-label="Auftrag wiederherstellen"><RestoreOutlined /></IconButton></Tooltip>
-          </TableCell>}
-        </TableRow>)}
-        {items.length === 0 && <TableRow><TableCell colSpan={archived ? 12 : 11} align="center">Keine Aufträge gefunden.</TableCell></TableRow>}
-      </TableBody></Table>}
+      {!loading && (
+        <Table size="small" sx={{ minWidth: 1100 }}>
+          <TableHead>
+            <TableRow>
+              <TableCell>ID</TableCell>
+              <TableCell>Kunde</TableCell>
+              <TableCell>Datum</TableCell>
+              <TableCell sx={{ width: 240, maxWidth: 240 }}>Auszugsadresse</TableCell>
+              <TableCell padding="checkbox">HVZ</TableCell>
+              <TableCell sx={{ width: 240, maxWidth: 240 }}>Einzugsadresse</TableCell>
+              <TableCell padding="checkbox">HVZ</TableCell>
+              <TableCell>Mann</TableCell>
+              <TableCell>LKW</TableCell>
+              <TableCell>Std.</TableCell>
+              {archived && <TableCell>Aktionen</TableCell>}
+              <TableCell align="right">Summe</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {items.map((order) => (
+              <TableRow
+                key={order.orderNumber}
+                hover
+                sx={{ "& td": { fontWeight: order.editedAt ? "normal" : 700 } }}
+              >
+                <TableCell>
+                  {archived ? (
+                    order.orderNumber
+                  ) : (
+                    <Button
+                      size="small"
+                      onClick={() => navigate(`/edit/${order.orderNumber}`)}
+                    >
+                      {order.orderNumber}
+                    </Button>
+                  )}
+                </TableCell>
+                <TableCell>{order.customerName}</TableCell>
+                <TableCell>{formatDate(order.movingDate)}</TableCell>
+                <AddressCell address={order.fromAddress} />
+                <TableCell padding="checkbox">
+                  {order.fromParkingSlot && (
+                    <CheckCircleIcon color="success" fontSize="small" />
+                  )}
+                </TableCell>
+                <AddressCell address={order.toAddress} />
+                <TableCell padding="checkbox">
+                  {order.toParkingSlot && (
+                    <CheckCircleIcon color="success" fontSize="small" />
+                  )}
+                </TableCell>
+                <TableCell>{order.workers ?? ""}</TableCell>
+                <TableCell>{order.trucks ?? ""}</TableCell>
+                <TableCell>{order.hours ?? ""}</TableCell>
+                {archived && (
+                  <TableCell sx={{ whiteSpace: "nowrap" }}>
+                    <Tooltip title="PDF herunterladen">
+                      <IconButton
+                        component="a"
+                        href={`/api/admin/orders/${order.orderNumber}/pdf`}
+                        aria-label="Auftrags-PDF herunterladen"
+                      >
+                        <FileDownloadOutlined />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Wiederherstellen">
+                      <IconButton
+                        disabled={archiveBusy}
+                        onClick={() => void changeArchive(order.orderNumber)}
+                        aria-label="Auftrag wiederherstellen"
+                      >
+                        <RestoreOutlined />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                )}
+                <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                  {formatCurrency(order.grossTotal)}
+                </TableCell>
+              </TableRow>
+            ))}
+            {items.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={archived ? 12 : 11} align="center">
+                  Keine Aufträge gefunden.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      )}
       <TablePagination component="div" count={total} page={page - 1} onPageChange={(_, next) => setCurrentPage(next + 1)} rowsPerPage={PAGE_SIZE} rowsPerPageOptions={[PAGE_SIZE]} labelDisplayedRows={({ from, to, count }) => `${from}–${to} von ${count}`} />
     </Paper>
   </Stack>;
@@ -140,3 +239,25 @@ export function OrdersPage({ archived = false, navigate }: { archived?: boolean;
 
 function pageFromUrl(): number { const value = Number(new URLSearchParams(window.location.search).get("page")); return Number.isInteger(value) && value > 0 ? value : 1; }
 function formatDate(value: string): string { return value ? new Date(`${value}T00:00:00`).toLocaleDateString("de-DE") : ""; }
+function formatCurrency(value: number): string { return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(value); }
+
+function AddressCell({ address }: { address: string }) {
+  return (
+    <TableCell sx={{ width: 240, maxWidth: 240 }}>
+      <Box
+        component="span"
+        title={address}
+        sx={{
+          display: "block",
+          width: 240,
+          maxWidth: "100%",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {address}
+      </Box>
+    </TableCell>
+  );
+}

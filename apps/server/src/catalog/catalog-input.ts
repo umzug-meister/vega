@@ -9,6 +9,7 @@ import {
   type CatalogServiceRateDto,
   type ServiceRateKey,
 } from "@vega/domain";
+import { sanitizeRichTextHtml } from "../rich-text.js";
 
 export interface CatalogInputIssue {
   field: string;
@@ -144,7 +145,10 @@ export function validatePackingInput(input: unknown): CatalogValidation<CatalogP
   const value = {
     name,
     price: parsePrice(record, "price", issues),
-    description: typeof description === "string" ? description.trim() : "",
+    description:
+      typeof description === "string"
+        ? sanitizeRichTextHtml(description.trim())
+        : "",
     media,
     sort: parseSort(record, issues),
     show: parseBoolean(record, "show", issues),

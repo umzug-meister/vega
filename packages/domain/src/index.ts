@@ -53,6 +53,24 @@ export interface HealthStatus {
   service: "vega";
 }
 
+export const ORDER_ADDRESS_MOVEMENT_OBJECTS = [
+  "Wohnung",
+  "Maisonette-Wohnung",
+  "Haus",
+  "Keller",
+  "Lager",
+  "Büro",
+] as const;
+
+export const ORDER_ADDRESS_LIFT_TYPES = [
+  "kein Aufzug",
+  "2 Personen",
+  "4 Personen",
+  "6 Personen",
+  "8+ Personen",
+  "Lastenaufzug",
+] as const;
+
 export interface OrderAddressInput {
   street: string;
   postalCode: string;
@@ -60,7 +78,7 @@ export interface OrderAddressInput {
   floor?: string;
   runningDistance?: string;
   parkingSlot?: boolean;
-  movementObject?: "Wohnung" | "Haus" | "Keller" | "Lager" | "Büro";
+  movementObject?: (typeof ORDER_ADDRESS_MOVEMENT_OBJECTS)[number];
   liftType?: string;
   isAltbau?: boolean;
   hasLoft?: boolean;
@@ -266,6 +284,7 @@ export interface AdminOrderListItem {
   orderNumber: number;
   source: string;
   customerName: string;
+  grossTotal: number;
   movingDate: string;
   fromAddress: string;
   fromParkingSlot: boolean;

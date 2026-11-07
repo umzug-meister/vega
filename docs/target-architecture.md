@@ -59,7 +59,9 @@ denselben Sperrregeln: Beim Auftrag öffnet ein Menü „Angebot versenden",
 Rechnungen (Admin-only) „Rechnung versenden". Der Versanddialog lädt einen
 serverseitigen Entwurf, lässt Empfänger, Betreff und Text bearbeiten und sendet
 über die Outbox. Der Auftragseditor zeigt Links zwischen Ursprungsauftrag und
-seinen Kopien.
+seinen Kopien. Auf kleinen Bildschirmen fasst ein Drei-Punkte-Menü alle
+verfügbaren Dokumentaktionen einschließlich der einzelnen E-Mail-Aktionen
+zusammen; dieselben Sperr- und Rollenregeln gelten.
 
 Archivierte Aufträge und Rechnungen sind nicht bearbeitbar. Die Archivlisten
 bieten PDF-Download zum Drucken sowie Wiederherstellung; direkte Editoraufrufe

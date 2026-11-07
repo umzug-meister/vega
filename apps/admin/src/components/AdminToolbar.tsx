@@ -2,10 +2,12 @@ import * as React from "react";
 import { useEffect, useState } from "react";
 import {
   ArchiveOutlined,
+  CloseOutlined,
   ContentCopyOutlined,
   EmailOutlined,
   FileDownloadOutlined,
   MenuOutlined,
+  MoreVert,
   ReceiptLongOutlined,
   SaveOutlined,
 } from "@mui/icons-material";
@@ -14,11 +16,14 @@ import {
   Badge,
   Divider,
   IconButton,
+  ListItemIcon,
   Menu,
   MenuItem,
   Toolbar,
   Tooltip,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 
 interface AdminToolbarProps {
@@ -72,15 +77,26 @@ export function AdminToolbar({
   onInvoiceEmail,
   onArchiveInvoice,
 }: AdminToolbarProps) {
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down("md"));
+  const [actionsMenuAnchor, setActionsMenuAnchor] = useState<HTMLElement | null>(
+    null,
+  );
   const [emailMenuAnchor, setEmailMenuAnchor] = useState<HTMLElement | null>(
     null,
   );
 
   useEffect(() => {
+    setActionsMenuAnchor(null);
     setEmailMenuAnchor(null);
-  }, [pathname]);
+  }, [isSmallScreen, pathname]);
+
+  function closeActionsMenu() {
+    setActionsMenuAnchor(null);
+  }
 
   function selectOrderEmail(kind: "offer" | "offer-pair" | "decline") {
+    setActionsMenuAnchor(null);
     setEmailMenuAnchor(null);
     onOrderEmail(kind);
   }
@@ -113,86 +129,319 @@ export function AdminToolbar({
         </Typography>
         {isOrderEditor && (
           <>
-            <Tooltip title="Speichern">
-              <span>
-                <IconButton
-                  color="inherit"
-                  type="submit"
-                  form="order-create-form"
-                  disabled={actionBusy || orderBusy}
-                  aria-label="Auftrag speichern"
-                >
-                  <Badge
-                    color="error"
-                    variant="dot"
-                    invisible={!orderHasChanges}
-                  >
-                    <SaveOutlined />
-                  </Badge>
-                </IconButton>
-              </span>
-            </Tooltip>
-            {editedOrderNumber && (
+            {!isSmallScreen ? (
               <>
-                <Tooltip title="Angebotskopie anlegen">
-                  <span>
-                    <IconButton
-                      color="inherit"
-                      disabled={orderActionsDisabled}
-                      onClick={onCopyOrder}
-                      aria-label="Angebotskopie anlegen"
-                    >
-                      <ContentCopyOutlined />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <Tooltip title="Als PDF speichern">
+                <Tooltip title="Speichern">
                   <span>
                     <IconButton
                       color="inherit"
                       type="submit"
                       form="order-create-form"
-                      name="action"
-                      value="pdf"
-                      disabled={orderActionsDisabled}
-                      aria-label="PDF erzeugen"
+                      disabled={actionBusy || orderBusy}
+                      aria-label="Auftrag speichern"
+                    >
+                      <Badge
+                        color="error"
+                        variant="dot"
+                        invisible={!orderHasChanges}
+                      >
+                        <SaveOutlined />
+                      </Badge>
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                {editedOrderNumber && (
+                  <>
+                    <Tooltip title="Angebotskopie anlegen">
+                      <span>
+                        <IconButton
+                          color="inherit"
+                          disabled={orderActionsDisabled}
+                          onClick={onCopyOrder}
+                          aria-label="Angebotskopie anlegen"
+                        >
+                          <ContentCopyOutlined />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title="Als PDF speichern">
+                      <span>
+                        <IconButton
+                          color="inherit"
+                          type="submit"
+                          form="order-create-form"
+                          name="action"
+                          value="pdf"
+                          disabled={orderActionsDisabled}
+                          aria-label="PDF erzeugen"
+                        >
+                          <FileDownloadOutlined />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title="E-Mail versenden">
+                      <span>
+                        <IconButton
+                          color="inherit"
+                          disabled={orderActionsDisabled}
+                          onClick={(event) =>
+                            setEmailMenuAnchor(event.currentTarget)
+                          }
+                          aria-label="E-Mail versenden"
+                          aria-haspopup="menu"
+                        >
+                          <EmailOutlined />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Menu
+                      anchorEl={emailMenuAnchor}
+                      open={emailMenuAnchor !== null}
+                      onClose={() => setEmailMenuAnchor(null)}
+                    >
+                      <MenuItem onClick={() => selectOrderEmail("offer")}>
+                        Angebot versenden
+                      </MenuItem>
+                      {orderIsCopy && (
+                        <MenuItem
+                          onClick={() => selectOrderEmail("offer-pair")}
+                        >
+                          2 Angebote versenden
+                        </MenuItem>
+                      )}
+                      <MenuItem onClick={() => selectOrderEmail("decline")}>
+                        <ListItemIcon>
+                          <CloseOutlined fontSize="small" />
+                        </ListItemIcon>
+                        Absage versenden
+                      </MenuItem>
+                    </Menu>
+                    <Divider
+                      orientation="vertical"
+                      flexItem
+                      sx={{ mx: 1.5, my: 1 }}
+                    />
+                    <Tooltip title="Archivieren">
+                      <span>
+                        <IconButton
+                          color="warning"
+                          disabled={orderActionsDisabled}
+                          onClick={onArchiveOrder}
+                          aria-label="Auftrag archivieren"
+                        >
+                          <ArchiveOutlined />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    {isAdmin && (
+                      <>
+                        <Divider
+                          orientation="vertical"
+                          flexItem
+                          sx={{ mx: 1.5, my: 1 }}
+                        />
+                        <Tooltip title="Rechnung zum Auftrag">
+                          <span>
+                            <IconButton
+                              color="inherit"
+                              type="submit"
+                              form="order-create-form"
+                              name="action"
+                              value="invoice"
+                              disabled={orderActionsDisabled}
+                              aria-label="Rechnung zum Auftrag"
+                            >
+                              <ReceiptLongOutlined />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      </>
+                    )}
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <IconButton
+                  color="inherit"
+                  onClick={(event) => setActionsMenuAnchor(event.currentTarget)}
+                  aria-label="Weitere Aktionen öffnen"
+                  aria-haspopup="menu"
+                  aria-expanded={actionsMenuAnchor !== null}
+                >
+                  <MoreVert />
+                </IconButton>
+                <Menu
+                  anchorEl={actionsMenuAnchor}
+                  open={actionsMenuAnchor !== null}
+                  onClose={closeActionsMenu}
+                >
+                  <MenuItem
+                    component="button"
+                    type="submit"
+                    form="order-create-form"
+                    disabled={actionBusy || orderBusy}
+                    onClick={closeActionsMenu}
+                  >
+                    <ListItemIcon>
+                      <Badge
+                        color="error"
+                        variant="dot"
+                        invisible={!orderHasChanges}
+                      >
+                        <SaveOutlined fontSize="small" />
+                      </Badge>
+                    </ListItemIcon>
+                    Speichern
+                  </MenuItem>
+                  {editedOrderNumber && (
+                    <>
+                      <Divider />
+                      <MenuItem
+                        disabled={orderActionsDisabled}
+                        onClick={() => {
+                          closeActionsMenu();
+                          onCopyOrder();
+                        }}
+                      >
+                        <ListItemIcon>
+                          <ContentCopyOutlined fontSize="small" />
+                        </ListItemIcon>
+                        Angebotskopie anlegen
+                      </MenuItem>
+                      <MenuItem
+                        component="button"
+                        type="submit"
+                        form="order-create-form"
+                        name="action"
+                        value="pdf"
+                        disabled={orderActionsDisabled}
+                        onClick={closeActionsMenu}
+                      >
+                        <ListItemIcon>
+                          <FileDownloadOutlined fontSize="small" />
+                        </ListItemIcon>
+                        PDF speichern
+                      </MenuItem>
+                      <Divider />
+                      <MenuItem
+                        disabled={orderActionsDisabled}
+                        onClick={() => selectOrderEmail("offer")}
+                      >
+                        <ListItemIcon>
+                          <EmailOutlined fontSize="small" />
+                        </ListItemIcon>
+                        Angebot versenden
+                      </MenuItem>
+                      {orderIsCopy && (
+                        <MenuItem
+                          disabled={orderActionsDisabled}
+                          onClick={() => selectOrderEmail("offer-pair")}
+                        >
+                          2 Angebote versenden
+                        </MenuItem>
+                      )}
+                      <MenuItem
+                        disabled={orderActionsDisabled}
+                        onClick={() => selectOrderEmail("decline")}
+                      >
+                        <ListItemIcon>
+                          <CloseOutlined fontSize="small" />
+                        </ListItemIcon>
+                        Absage versenden
+                      </MenuItem>
+                      <Divider />
+                      <MenuItem
+                        disabled={orderActionsDisabled}
+                        onClick={() => {
+                          closeActionsMenu();
+                          onArchiveOrder();
+                        }}
+                      >
+                        <ListItemIcon>
+                          <ArchiveOutlined fontSize="small" />
+                        </ListItemIcon>
+                        Archivieren
+                      </MenuItem>
+                      {isAdmin && (
+                        <MenuItem
+                          component="button"
+                          type="submit"
+                          form="order-create-form"
+                          name="action"
+                          value="invoice"
+                          disabled={orderActionsDisabled}
+                          onClick={closeActionsMenu}
+                        >
+                          <ListItemIcon>
+                            <ReceiptLongOutlined fontSize="small" />
+                          </ListItemIcon>
+                          Rechnung zum Auftrag
+                        </MenuItem>
+                      )}
+                    </>
+                  )}
+                </Menu>
+              </>
+            )}
+          </>
+        )}
+        {isInvoiceEditor && (
+          <>
+            {!isSmallScreen ? (
+              <>
+                <Tooltip title="Speichern">
+                  <span>
+                    <IconButton
+                      color="inherit"
+                      type="submit"
+                      form="invoice-editor-form"
+                      disabled={
+                        actionBusy ||
+                        invoiceBusy ||
+                        (invoiceAccountingDirty && !invoiceHasChanges)
+                      }
+                      aria-label="Rechnung speichern"
+                    >
+                      <Badge
+                        color="error"
+                        variant="dot"
+                        invisible={!invoiceHasChanges}
+                      >
+                        <SaveOutlined />
+                      </Badge>
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip title="PDF speichern">
+                  <span>
+                    <IconButton
+                      color="inherit"
+                      component="a"
+                      href={
+                        !invoiceActionsDisabled && editedInvoiceId
+                          ? `/api/admin/invoices/${editedInvoiceId}/pdf`
+                          : undefined
+                      }
+                      disabled={invoiceActionsDisabled}
+                      aria-label="Rechnungs-PDF speichern"
                     >
                       <FileDownloadOutlined />
                     </IconButton>
                   </span>
                 </Tooltip>
-                <Tooltip title="E-Mail versenden">
+                <Tooltip title="Rechnung per E-Mail versenden">
                   <span>
                     <IconButton
                       color="inherit"
-                      disabled={orderActionsDisabled}
-                      onClick={(event) =>
-                        setEmailMenuAnchor(event.currentTarget)
-                      }
-                      aria-label="E-Mail versenden"
-                      aria-haspopup="menu"
+                      disabled={invoiceActionsDisabled || !editedInvoiceId}
+                      onClick={onInvoiceEmail}
+                      aria-label="Rechnung per E-Mail versenden"
                     >
                       <EmailOutlined />
                     </IconButton>
                   </span>
                 </Tooltip>
-                <Menu
-                  anchorEl={emailMenuAnchor}
-                  open={emailMenuAnchor !== null}
-                  onClose={() => setEmailMenuAnchor(null)}
-                >
-                  <MenuItem onClick={() => selectOrderEmail("offer")}>
-                    Angebot versenden
-                  </MenuItem>
-                  {orderIsCopy && (
-                    <MenuItem onClick={() => selectOrderEmail("offer-pair")}>
-                      2 Angebote versenden
-                    </MenuItem>
-                  )}
-                  <MenuItem onClick={() => selectOrderEmail("decline")}>
-                    Absage versenden
-                  </MenuItem>
-                </Menu>
                 <Divider
                   orientation="vertical"
                   flexItem
@@ -202,113 +451,96 @@ export function AdminToolbar({
                   <span>
                     <IconButton
                       color="warning"
-                      disabled={orderActionsDisabled}
-                      onClick={onArchiveOrder}
-                      aria-label="Auftrag archivieren"
+                      disabled={invoiceActionsDisabled}
+                      onClick={onArchiveInvoice}
+                      aria-label="Rechnung archivieren"
                     >
                       <ArchiveOutlined />
                     </IconButton>
                   </span>
                 </Tooltip>
-                {isAdmin && (
-                  <>
-                    <Divider
-                      orientation="vertical"
-                      flexItem
-                      sx={{ mx: 1.5, my: 1 }}
-                    />
-                    <Tooltip title="Rechnung aus Auftrag anlegen">
-                      <span>
-                        <IconButton
-                          color="inherit"
-                          type="submit"
-                          form="order-create-form"
-                          name="action"
-                          value="invoice"
-                          disabled={orderActionsDisabled}
-                          aria-label="Rechnung aus Auftrag anlegen"
-                        >
-                          <ReceiptLongOutlined />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                  </>
-                )}
+              </>
+            ) : (
+              <>
+                <IconButton
+                  color="inherit"
+                  onClick={(event) => setActionsMenuAnchor(event.currentTarget)}
+                  aria-label="Weitere Aktionen öffnen"
+                  aria-haspopup="menu"
+                  aria-expanded={actionsMenuAnchor !== null}
+                >
+                  <MoreVert />
+                </IconButton>
+                <Menu
+                  anchorEl={actionsMenuAnchor}
+                  open={actionsMenuAnchor !== null}
+                  onClose={closeActionsMenu}
+                >
+                  <MenuItem
+                    component="button"
+                    type="submit"
+                    form="invoice-editor-form"
+                    disabled={
+                      actionBusy ||
+                      invoiceBusy ||
+                      (invoiceAccountingDirty && !invoiceHasChanges)
+                    }
+                    onClick={closeActionsMenu}
+                  >
+                    <ListItemIcon>
+                      <Badge
+                        color="error"
+                        variant="dot"
+                        invisible={!invoiceHasChanges}
+                      >
+                        <SaveOutlined fontSize="small" />
+                      </Badge>
+                    </ListItemIcon>
+                    Speichern
+                  </MenuItem>
+                  <MenuItem
+                    component="a"
+                    href={
+                      !invoiceActionsDisabled && editedInvoiceId
+                        ? `/api/admin/invoices/${editedInvoiceId}/pdf`
+                        : undefined
+                    }
+                    disabled={invoiceActionsDisabled || !editedInvoiceId}
+                    onClick={closeActionsMenu}
+                  >
+                    <ListItemIcon>
+                      <FileDownloadOutlined fontSize="small" />
+                    </ListItemIcon>
+                    PDF speichern
+                  </MenuItem>
+                  <MenuItem
+                    disabled={invoiceActionsDisabled || !editedInvoiceId}
+                    onClick={() => {
+                      closeActionsMenu();
+                      onInvoiceEmail();
+                    }}
+                  >
+                    <ListItemIcon>
+                      <EmailOutlined fontSize="small" />
+                    </ListItemIcon>
+                    Rechnung per E-Mail versenden
+                  </MenuItem>
+                  <Divider />
+                  <MenuItem
+                    disabled={invoiceActionsDisabled}
+                    onClick={() => {
+                      closeActionsMenu();
+                      onArchiveInvoice();
+                    }}
+                  >
+                    <ListItemIcon>
+                      <ArchiveOutlined fontSize="small" />
+                    </ListItemIcon>
+                    Archivieren
+                  </MenuItem>
+                </Menu>
               </>
             )}
-          </>
-        )}
-        {isInvoiceEditor && (
-          <>
-            <Tooltip title="Speichern">
-              <span>
-                <IconButton
-                  color="inherit"
-                  type="submit"
-                  form="invoice-editor-form"
-                  disabled={
-                    actionBusy ||
-                    invoiceBusy ||
-                    (invoiceAccountingDirty && !invoiceHasChanges)
-                  }
-                  aria-label="Rechnung speichern"
-                >
-                  <Badge
-                    color="error"
-                    variant="dot"
-                    invisible={!invoiceHasChanges}
-                  >
-                    <SaveOutlined />
-                  </Badge>
-                </IconButton>
-              </span>
-            </Tooltip>
-            <Tooltip title="PDF speichern">
-              <span>
-                <IconButton
-                  color="inherit"
-                  component="a"
-                  href={
-                    !invoiceActionsDisabled && editedInvoiceId
-                      ? `/api/admin/invoices/${editedInvoiceId}/pdf`
-                      : undefined
-                  }
-                  disabled={invoiceActionsDisabled}
-                  aria-label="Rechnungs-PDF speichern"
-                >
-                  <FileDownloadOutlined />
-                </IconButton>
-              </span>
-            </Tooltip>
-            <Tooltip title="Rechnung per E-Mail versenden">
-              <span>
-                <IconButton
-                  color="inherit"
-                  disabled={invoiceActionsDisabled || !editedInvoiceId}
-                  onClick={onInvoiceEmail}
-                  aria-label="Rechnung per E-Mail versenden"
-                >
-                  <EmailOutlined />
-                </IconButton>
-              </span>
-            </Tooltip>
-            <Divider
-              orientation="vertical"
-              flexItem
-              sx={{ mx: 1.5, my: 1 }}
-            />
-            <Tooltip title="Archivieren">
-              <span>
-                <IconButton
-                  color="warning"
-                  disabled={invoiceActionsDisabled}
-                  onClick={onArchiveInvoice}
-                  aria-label="Rechnung archivieren"
-                >
-                  <ArchiveOutlined />
-                </IconButton>
-              </span>
-            </Tooltip>
           </>
         )}
       </Toolbar>

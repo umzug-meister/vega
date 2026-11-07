@@ -5,7 +5,9 @@ import {
   createPayload,
   EMAIL_PATTERN,
   initialDraft,
+  liftTypes,
   localDate,
+  movementObjects,
   suggestVisit,
   validateStep,
   validationFieldLabel,
@@ -88,6 +90,8 @@ function completeDraft() {
   return draft;
 }
 test("initial contact defaults and all five long-form steps match the legacy flow", () => {
+  assert.ok(movementObjects.includes("Maisonette-Wohnung"));
+  assert.equal(liftTypes.at(-1), "Lastenaufzug");
   const draft = initialDraft();
   assert.equal(draft.dateFixed, true);
   assert.equal(draft.movingDate, localDate());
@@ -112,7 +116,7 @@ test("validates full contact, date ranges, addresses and conditional lift fields
   assert.match(validateStep(draft, 1)!, /Hausnummer/);
   draft.from.street = "Straße 1";
   delete draft.from.liftType;
-  assert.match(validateStep(draft, 1)!, /Fahrstuhl/);
+  assert.match(validateStep(draft, 1)!, /Aufzug/);
   draft.from.movementObject = "Haus";
   assert.equal(validateStep(draft, 1), null);
 });

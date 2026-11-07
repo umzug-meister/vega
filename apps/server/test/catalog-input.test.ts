@@ -46,6 +46,27 @@ test("service and packing data validate customer-visible prices and safe media U
   assert.equal(validatePackingInput({ name: "Karton", price: 2.5, description: "", media: "javascript:alert(1)", sort: 1, show: true }).ok, false);
 });
 
+test("packing descriptions keep safe rich formatting and strip executable markup", () => {
+  const result = validatePackingInput({
+    name: "Karton",
+    price: 2.5,
+    description:
+      '<p onclick="alert(1)">Doppelwellig <strong>stabil</strong><script>alert(2)</script><span style="color: rgb(198, 40, 40); font-size: 80px">rot</span><a href="javascript:alert(3)">Link</a></p>',
+    media: null,
+    sort: 1,
+    show: true,
+  });
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.match(result.value.description, /<strong>stabil<\/strong>/u);
+  assert.match(result.value.description, /<span style="color:#c62828">rot<\/span>/u);
+  assert.doesNotMatch(
+    result.value.description,
+    /onclick|<script|javascript:|font-size/u,
+  );
+});
+
 test("offers validate bounded workforce and prices; service rates only accept allowlisted keys", () => {
   assert.equal(validateOfferInput({ name: "3 Träger · 1 LKW", workers: 3, trucks: 1, includedHours: 4, sum: 850, hourPrice: 120, ridingCosts: 20, sort: 0 }).ok, true);
   assert.equal(validateOfferInput({ name: "Bad offer", workers: 0, trucks: 1, includedHours: 4, sum: 850, hourPrice: 120, ridingCosts: 20, sort: 0 }).ok, false);

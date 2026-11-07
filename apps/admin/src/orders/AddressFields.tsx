@@ -9,6 +9,10 @@ import {
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
+import {
+  ORDER_ADDRESS_LIFT_TYPES,
+  ORDER_ADDRESS_MOVEMENT_OBJECTS,
+} from "@vega/domain";
 import type { OrderAddressInput } from "@vega/domain";
 import { PlaceAutocompleteField } from "../places/PlaceAutocompleteField.js";
 
@@ -19,14 +23,6 @@ const floors = [
   "9+ Etage",
 ];
 const houseFloors = ["UG", "EG", "1.OG", "2.OG"] as const;
-const liftTypes = [
-  "kein Aufzug",
-  "2 Personen",
-  "4 Personen",
-  "6 Personen",
-  "8+ Personen",
-];
-const buildings = ["Wohnung", "Haus", "Keller", "Lager", "Büro"] as const;
 const parkingDistances = Array.from(
   { length: 10 },
   (_, index) => `${(index + 1) * 10} m.`,
@@ -125,7 +121,7 @@ export function AddressFields({
           })
         }
       >
-        {buildings.map((building) => (
+        {ORDER_ADDRESS_MOVEMENT_OBJECTS.map((building) => (
           <MenuItem key={building} value={building}>
             {building}
           </MenuItem>
@@ -176,7 +172,7 @@ export function AddressFields({
             value={value.liftType ?? "kein Aufzug"}
             onChange={(event) => onChange({ liftType: event.target.value })}
           >
-            {liftTypes.map((lift) => (
+            {ORDER_ADDRESS_LIFT_TYPES.map((lift) => (
               <MenuItem key={lift} value={lift}>
                 {lift}
               </MenuItem>
