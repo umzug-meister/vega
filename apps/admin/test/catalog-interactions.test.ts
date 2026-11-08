@@ -174,6 +174,13 @@ test("packing description uses the rich-text editor and saves formatted HTML", a
     assert.equal(previewImage?.src, packing.media);
     assert.equal(previewImage?.alt, packing.name);
     assert.equal(previewImage?.getAttribute("referrerpolicy"), "no-referrer");
+    assert.equal(app.window.getComputedStyle(previewImage!).width, "100%");
+    assert.equal(app.window.getComputedStyle(previewImage!).height, "auto");
+    const nameInput = [...dialog.querySelectorAll<HTMLInputElement>("input")].find(
+      (input) => input.value === "Kleiderbox",
+    )!;
+    await app.input(nameInput, "Neue Kleiderbox");
+    assert.ok(preview.textContent?.includes("Neue Kleiderbox"));
     assert.ok(dialog.querySelector('button[aria-label="Fett"]'));
     assert.equal(dialog.querySelector("strong")?.textContent, "knitterfrei");
     await app.click(
@@ -183,7 +190,83 @@ test("packing description uses the rich-text editor and saves formatted HTML", a
     );
     assert.equal(writes.length, 1);
     assert.equal(writes[0]?.method, "PUT");
+    assert.equal(writes[0]?.body?.name, "Neue Kleiderbox");
     assert.match(String(writes[0]?.body?.description), /<strong>knitterfrei<\/strong>/u);
+  } finally {
+    globalThis.fetch = originalFetch;
+    await app.cleanup();
+  }
+});
+
+test("packing creation and edited sort order update the customer preview", async () => {
+  const originalFetch = globalThis.fetch;
+  const packings = [
+    { id: 1, name: "Erster Karton", price: 4, description: "", media: null, sort: 1, show: true },
+    { id: 2, name: "Zweiter Karton", price: 5, description: "", media: null, sort: 2, show: true },
+  ];
+  globalThis.fetch = async (url, init) => {
+    if (!init?.method || init.method === "GET") return Response.json({ data: packings });
+    const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+    const original = packings.find((packing) => String(url).endsWith(`/${packing.id}`));
+    return Response.json({ data: { ...(original ?? { id: 3 }), ...body } });
+  };
+  const app = await mount(createElement(PackingsPage));
+  try {
+    await app.click(app.container.querySelector('[aria-label="Aktionen für Eintrag 2"]')!);
+    await app.click([...app.window.document.querySelectorAll('[role="menuitem"]')].find((item) => item.textContent?.includes("Bearbeiten"))!);
+    let dialog = app.window.document.querySelector('[role="dialog"]')!;
+    const sort = [...dialog.querySelectorAll<HTMLInputElement>('input[type="number"]')].find((input) => input.value === "2")!;
+    await app.input(sort, "0");
+    await app.click([...dialog.querySelectorAll("button")].find((button) => button.textContent === "Speichern")!);
+    const visible = app.container.querySelector('[aria-label="Im Kundenformular sichtbar"]')!;
+    assert.deepEqual(
+      [...visible.querySelectorAll('button[aria-haspopup="menu"]')].map((button) => button.getAttribute("aria-label")),
+      ["Aktionen für Eintrag 2", "Aktionen für Eintrag 1"],
+    );
+    await app.click([...app.container.querySelectorAll("button")].find((button) => button.textContent?.includes("Eintrag anlegen"))!);
+    dialog = app.window.document.querySelector('[role="dialog"]')!;
+    const name = [...dialog.querySelectorAll<HTMLInputElement>("input")].find((input) => input.labels?.[0]?.textContent === "Name")!;
+    await app.input(name, "Neuer Karton");
+    await app.click([...dialog.querySelectorAll("button")].find((button) => button.textContent === "Speichern")!);
+    assert.ok(visible.textContent?.includes("Neuer Karton"));
+    assert.ok(visible.querySelector('[aria-label="Aktionen für Eintrag 3"]'));
+  } finally {
+    globalThis.fetch = originalFetch;
+    await app.cleanup();
+  }
+});
+
+test("packing cards show the customer order and retain actions for hidden entries", async () => {
+  const originalFetch = globalThis.fetch;
+  const packings = [
+    { id: 2, name: "Später", price: 4, description: "<p>Beschreibung</p>", media: "https://cdn.example.test/box.png", sort: 2, show: true },
+    { id: 3, name: "Intern", price: 5, description: "", media: null, sort: 0, show: false },
+    { id: 1, name: "Zuerst", price: 3, description: "", media: null, sort: 1, show: true },
+  ];
+  const writes: string[] = [];
+  globalThis.fetch = async (url, init) => {
+    if (!init?.method || init.method === "GET") return Response.json({ data: packings });
+    writes.push(`${init.method} ${String(url)}`);
+    return Response.json({ data: { deleted: true } });
+  };
+  const app = await mount(createElement(PackingsPage));
+  try {
+    assert.equal(app.container.querySelector("table"), null);
+    assert.ok([...app.container.querySelectorAll("button")].some((button) => button.textContent?.includes("Eintrag anlegen")));
+    const visible = app.container.querySelector('[aria-label="Im Kundenformular sichtbar"]')!;
+    const hidden = app.container.querySelector('[aria-label="Im Kundenformular ausgeblendet"]')!;
+    assert.deepEqual(
+      [...visible.querySelectorAll('button[aria-haspopup="menu"]')].map((button) => button.getAttribute("aria-label")),
+      ["Aktionen für Eintrag 1", "Aktionen für Eintrag 2"],
+    );
+    assert.ok(hidden.textContent?.includes("Intern"));
+    assert.ok(visible.textContent?.includes("4,00"));
+    assert.equal(visible.querySelector("img")?.getAttribute("referrerpolicy"), "no-referrer");
+    assert.equal(visible.querySelector("input")?.readOnly, true);
+    await app.click(hidden.querySelector('button[aria-haspopup="menu"]')!);
+    await app.click([...app.window.document.querySelectorAll('[role="menuitem"]')].find((item) => item.textContent?.includes("Löschen"))!);
+    assert.deepEqual(writes, ["DELETE /api/admin/catalog/packings/3"]);
+    assert.equal(app.container.querySelector('[aria-label="Im Kundenformular ausgeblendet"]'), null);
   } finally {
     globalThis.fetch = originalFetch;
     await app.cleanup();

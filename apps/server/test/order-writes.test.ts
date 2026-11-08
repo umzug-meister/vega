@@ -144,6 +144,35 @@ test("stored orders retain the previous public order source", () => {
   assert.equal(orderDataWithRelations(order).orderSource, "umzugruckzuck24.de");
 });
 
+test("archived order list returns the stored purge deadline", async (context) => {
+  const archivedAt = new Date("2026-10-02T12:00:00Z");
+  const purgeAt = new Date("2026-12-05T12:00:00Z");
+  const withCompany = orderFixture();
+  withCompany.customer.company = " Beispiel GmbH ";
+  const order = { ...storedOrder(withCompany), archivedAt, purgeAt };
+  const withoutCompany = { ...storedOrder(), archivedAt, purgeAt };
+  context.mock.method(client.order, "count", async () => 2);
+  context.mock.method(client.order, "findMany", async () => [order, withoutCompany]);
+  context.mock.method(client, "$transaction", async (operations: unknown) =>
+    Promise.all(operations as Promise<unknown>[]));
+  const app = express();
+  app.use("/orders", createAdminOrderRouter());
+  const server = app.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  context.after(() => new Promise<void>((resolve, reject) =>
+    server.close((error) => error ? reject(error) : resolve())));
+  const address = server.address();
+  assert.ok(address && typeof address !== "string");
+  const response = await fetch(`http://127.0.0.1:${address.port}/orders?archived=true`);
+  assert.equal(response.status, 200);
+  const body = await response.json() as { data: { items: Array<{ archivedAt: string; purgeAt: string; customerCompany: string; customerName: string }> } };
+  assert.equal(body.data.items[0]?.archivedAt, archivedAt.toISOString());
+  assert.equal(body.data.items[0]?.purgeAt, purgeAt.toISOString());
+  assert.equal(body.data.items[0]?.customerCompany, "Beispiel GmbH");
+  assert.equal(body.data.items[0]?.customerName, "Test Kunde");
+  assert.equal(body.data.items[1]?.customerCompany, "");
+});
+
 for (const kind of ["furniture", "boxes"] as const) {
   for (const aboveLimit of [false, true]) {
     test(`public ${kind} normalized volume ${aboveLimit ? "above" : "at"} the limit is checked before writing`, async (context) => {

@@ -555,7 +555,14 @@ import(${JSON.stringify(asset)}).catch(() => { root.textContent = "Das Umzugsfor
 
   app.use(
     assetRateLimit,
-    express.static(adminBuild, { index: false, fallthrough: true }),
+    express.static(adminBuild, {
+      index: false,
+      fallthrough: true,
+      setHeaders(res, path) {
+        if (path.endsWith("/sw.js") || path.endsWith("/manifest.webmanifest"))
+          res.setHeader("Cache-Control", "no-cache");
+      },
+    }),
   );
   app.get("/", assetRateLimit, async (req, res, next) => {
     try {

@@ -68,6 +68,7 @@ export function toInvoiceDto(invoice: Prisma.InvoiceGetPayload<object>) {
     entries: invoice.entries,
     dueDates: invoice.dueDates,
     archivedAt: invoice.archivedAt,
+    purgeAt: invoice.purgeAt,
     createdAt: invoice.createdAt,
     updatedAt: invoice.updatedAt,
   };

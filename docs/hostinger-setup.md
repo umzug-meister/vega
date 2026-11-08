@@ -7,10 +7,10 @@ SSH/CLI-Zugriff, Datenbankzugriff, Build/Start und Cron im tatsächlichen Tarif
 nachgewiesen werden (siehe [ADR 0008](./adr/0008-hostinger-deployment.md)).
 
 > **Wichtig:** Der lokale Build und die Tests belegen noch keinen erfolgreichen
-> Hostinger-Betrieb. Laut [Implementierungsstand](./implementation-status.md)
-> sind Provider-, Cron-, WordPress- und Archivierungs-Proofs weiterhin
-> Go-live-Arbeit. Die lokalen 60-/30-Tage-Purge-Läufe ersetzen weder den
-> Cron-Proof noch die externe gesetzliche Rechnungs-/Gutschriftenaufbewahrung.
+> Hostinger-Betrieb. Provider-, Cron-, WordPress- und Archivierungsnachweise
+> müssen für die konkrete Umgebung geprüft werden. Die lokalen 60-/30-Tage-
+> Purge-Läufe ersetzen weder den Cron-Proof noch die externe gesetzliche
+> Rechnungs-/Gutschriftenaufbewahrung (siehe [Betriebsrisiken](./operations.md#betriebsrisiken-und-nachweise)).
 
 ## 1. Vorbereitungen
 
@@ -391,5 +391,4 @@ Weiterführend:
 - [Betrieb und Konfiguration](./operations.md)
 - [Mail-Retry-Cron und `UNKNOWN`-Abgleich](./hostinger-mail-cron.md)
 - [GCS-Bucket einrichten](./gcs-bucket-setup.md)
-- [Implementierungsstand und offene Arbeit](./implementation-status.md)
 - [ADR 0008 – Verwaltete Hostinger Node.js-App](./adr/0008-hostinger-deployment.md)

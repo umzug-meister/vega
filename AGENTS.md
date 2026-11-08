@@ -11,12 +11,11 @@ zusätzlich dessen `AGENTS.md` lesen; insbesondere gelten die Legacy-Regeln in
 
 - `docs/` ist die maßgebliche und stets zu verwendende Produkt- und
   Architekturquelle für Vega. Vor jeder Implementierung die betroffenen
-  Abschnitte in `docs/implementation-plan.md`,
-  `docs/target-architecture.md` und den relevanten ADRs lesen. Den aktuellen
-  Stand führt `docs/implementation-status.md`, Betrieb/Konfiguration
-  `docs/operations.md`. Glossar und Integrations-Proofs in `docs/` ergänzen bei Bedarf Begriffe und
-  technische Randbedingungen. Für Vega keine parallelen Dokumentkopien
-  außerhalb von `docs/` als Quelle verwenden.
+  Abschnitte in `docs/target-architecture.md` und den relevanten ADRs lesen.
+  Für Betrieb, Konfiguration und Prüfungen `docs/operations.md` und die dort
+  verlinkten Runbooks heranziehen; das Glossar erläutert Fachbegriffe.
+  Für Vega keine parallelen Dokumentkopien außerhalb von `docs/` als Quelle
+  verwenden.
 - `old-app/` enthält das zu modernisierende Bestandssystem. Untersuche dort
   die tatsächlichen Abläufe, Formulare, Datenfelder, Vorlagen und PDFs, wenn
   eine Funktion portiert wird. Übernimm nur Verhalten, das mit den Zieldokumenten
@@ -37,9 +36,9 @@ zusätzlich dessen `AGENTS.md` lesen; insbesondere gelten die Legacy-Regeln in
 
 ## Vorgehen bei Änderungen
 
-1. Prüfe zuerst die Zielarchitektur und den passenden Schritt im
-   Implementierungsplan. Arbeite Abhängigkeiten und Freigabe-Gates in deren
-   Reihenfolge ab; bei offenen Fach-, Sicherheits- oder Compliance-Entscheidungen
+1. Prüfe zuerst die Zielarchitektur, relevante ADRs und Betriebsanforderungen.
+   Arbeite Abhängigkeiten und Freigabe-Gates in deren Reihenfolge ab; bei
+   offenen Fach-, Sicherheits- oder Compliance-Entscheidungen
    dokumentiere den Blocker, statt eine Regel zu erfinden.
 2. Vergleiche zu portierende Funktionalität mit `old-app/`, aber setze sie
    in der Zielstruktur des Vega-Repositories neu um. Keine Bestandsdatenmigration
@@ -80,7 +79,7 @@ zusätzlich dessen `AGENTS.md` lesen; insbesondere gelten die Legacy-Regeln in
   Antworten außer `204`; `204` hat keinen Antwortkörper. Fehler maschinell über
   `code` behandeln, niemals Tokens, Passwörter oder E-Mail-Inhalte loggen.
   Anhänge, Timeouts, Idempotenz und Retry-Verhalten gemäß API-Spezifikation und
-  Umsetzungsplan prüfen.
+  `docs/hostinger-mail-cron.md` prüfen.
 - Alte Abläufe dürfen nur portiert werden, wenn sie nicht den dokumentierten
   Datenschutz-, Berechtigungs-, Aufbewahrungs- oder Sicherheitsregeln
   widersprechen. Bei Konflikten gilt die freigegebene Zielarchitektur; offene

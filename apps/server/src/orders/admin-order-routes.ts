@@ -635,6 +635,7 @@ function toOrderListItem(
     orderNumber: order.orderNumber,
     source: order.source,
     customerName: order.customerName,
+    customerCompany: orderData.customer.company?.trim() ?? "",
     grossTotal: orderGrossTotal(orderData),
     movingDate: stringValue(data?.movingDate),
     fromAddress: addressValue(from),
@@ -648,6 +649,7 @@ function toOrderListItem(
     editedAt: order.edited ? order.updatedAt : null,
     isCopy: order.originOrderId !== null,
     archivedAt: order.archivedAt,
+    purgeAt: order.purgeAt,
   };
 }
 function toOrderDetail(

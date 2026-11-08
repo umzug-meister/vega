@@ -19,5 +19,5 @@ Hostinger dokumentiert Node 24.x sowie Cron-Jobs für unterstützte Webhosting-T
 
 ## Folgen
 
-- Managed-Tarif und verfügbare Cron-Kommandos werden in A0 geprüft.
+- Managed-Tarif und verfügbare Cron-Kommandos werden für den Betrieb geprüft.
 - Deployment-/Rollback-Prozess und Backup-Prozess werden dokumentiert; Backup-Automatisierung wird nicht in die Anwendung eingebaut.

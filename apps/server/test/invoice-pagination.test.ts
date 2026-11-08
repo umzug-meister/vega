@@ -12,7 +12,7 @@ test("invoice pagination reaches records beyond 100 and applies search/archive t
     id: String(index).padStart(3, "0"), invoiceNumber: `R-${index}`, revision: 0, orderNumberSnapshot: index,
     invoiceDate: now, company: "", customerNameSnapshot: index % 2 ? "Ada" : "Berta",
     customerStreet: "", customerPostalCity: "", text: "", taxPercent: 19, entries: [], dueDates: [],
-    archivedAt: index >= 230 ? now : null, createdAt: now, updatedAt: now,
+    archivedAt: index >= 230 ? now : null, purgeAt: index >= 230 ? new Date("2026-11-15T10:00:00Z") : null, createdAt: now, updatedAt: now,
   }));
   type Where = { archivedAt: { not: null } | null; OR?: Array<Record<string, unknown>> };
   function filter(where: Where) {
@@ -60,6 +60,8 @@ test("invoice pagination reaches records beyond 100 and applies search/archive t
   assert.equal(archived.total, 15);
   assert.equal(archived.items.length, 5);
   assert.ok(archived.items.every((invoice) => invoice.archivedAt));
+  assert.ok(archived.items.every((invoice) => invoice.purgeAt === "2026-11-15T10:00:00.000Z"));
+  assert.ok(pages[0]!.items.every((invoice) => invoice.purgeAt === null));
   assert.deepEqual((await page("search=259&archived=true")).items.map((invoice) => invoice.orderNumber), [259]);
   for (const query of ["page=0", "page=-1", "page=1.1", "page=Infinity", "pageSize=101", "pageSize=0", "page=1&page=2", "page=99999999999999"]) {
     assert.equal((await fetch(`${base}?${query}`)).status, 400, query);

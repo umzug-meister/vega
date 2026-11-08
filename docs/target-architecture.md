@@ -35,6 +35,11 @@ prüft Datenbank, Formular-Build und konfigurierte Mail-/Google-/GCS-Zugänge
 ohne Fachdatenänderung oder Mailversand; Einzelheiten und Prüfgrenzen stehen
 in `operations.md`.
 
+Die Admin-App ist über ein Webmanifest installierbar. Der Service Worker
+cached ausschließlich versionierte, beim Admin-Aufruf geladene Build-Assets;
+Fachdaten und Schreibvorgänge bleiben netzwerkgebunden. Die technischen
+Scope-Grenzen, Updates und Offline-Hinweise beschreibt `pwa-specification.md`.
+
 Die Admin-Oberfläche unterstützt unter „Mein Profil“ → „Darstellung“ die Auswahl
 „Hell“, „Dunkel“ und „System“, auch auf Mobilgeräten. „System“ ist der Standard
 und folgt Änderungen der Betriebssystemeinstellung automatisch. Eine Auswahl
@@ -62,9 +67,16 @@ serverseitigen Entwurf, lässt Empfänger, Betreff und Text bearbeiten und sende
 seinen Kopien. Auf kleinen Bildschirmen fasst ein Drei-Punkte-Menü alle
 verfügbaren Dokumentaktionen einschließlich der einzelnen E-Mail-Aktionen
 zusammen; dieselben Sperr- und Rollenregeln gelten.
+In den Auftrags- und Rechnungslisten stehen Suche und Anlegen-Aktion auch auf
+kleinen Bildschirmen nebeneinander; die Anlegen-Aktion wird dort als Icon
+angezeigt. Breite Tabellen bleiben horizontal scrollbar. In aktiven und
+archivierten Auftragslisten steht eine angegebene Firma vor dem Kundennamen.
 
 Archivierte Aufträge und Rechnungen sind nicht bearbeitbar. Die Archivlisten
-bieten PDF-Download zum Drucken sowie Wiederherstellung; direkte Editoraufrufe
+bieten PDF-Download zum Drucken sowie Wiederherstellung und zeigen das
+Archivierungsdatum und den gespeicherten frühesten Löschtermin. Die tatsächliche
+Löschung erfolgt erst bei einem erfolgreichen Cron-Lauf ab diesem Termin;
+fehlt ein Termin, wird keiner errechnet. Direkte Editoraufrufe
 archivierter Dokumente führen zurück ins Archiv. Auftrags-PDFs zeigen das Datum
 der letzten Bearbeitung (`updatedAt`); Archivieren und Wiederherstellen verändern
 diesen Zeitpunkt nicht. Für zuvor archivierte oder wiederhergestellte Aufträge,
@@ -81,6 +93,17 @@ und ist in der Admin-Bearbeitung schreibgeschützt. Die Admin-API weist
 Erstellen-Aktionen stehen rechts und verwenden „Objekt anlegen“;
 Formularpositionen verwenden „Objekt hinzufügen“, ebenfalls rechtsbündig.
 Katalogtabellen bündeln Bearbeiten und Löschen in Drei-Punkte-Menüs.
+Die Verpackungsverwaltung zeigt statt einer Tabelle dieselben Artikelkarten
+wie das Kundenformular, mit Drei-Punkte-Menü je Artikel. Öffentlich sichtbare
+Artikel stehen in Formularreihenfolge; ausgeblendete Artikel bleiben in einem
+gesondert gekennzeichneten Bereich bearbeitbar. Die Vorschau im
+Bearbeitungsdialog aktualisiert sich während der Eingabe.
+Verpackungskarten sind zentriert und maximal 900 px breit. Bild und
+Beschreibung stehen bei ausreichend breiten Karten gleich breit nebeneinander,
+sonst untereinander; das Bildseitenverhältnis bleibt erhalten. Der Server
+normalisiert Beschreibungen mit derselben HTML-Allowlist wie im E-Mail-Editor;
+der Formularclient rendert nur diese Ausgabe. Optionale HTTP(S)-Medienlinks
+werden im Kundenformular und in der Admin-Vorschau ohne Referrer geladen.
 
 Der Möbelkatalog enthält neben ID und Kategoriezuordnungen nur Name, Volumen,
 Schrittgröße in Vielfachen von 0,5 (Minimum 0,5, Standard 1) und Sortierung
@@ -236,6 +259,25 @@ Alle Rechte werden im Backend geprüft. `Admin` hat alle Rechte; `Kundenberater`
   Bruttosumme informativ mit fest 19 % in Netto und MwSt. aufteilen
   (`Netto = Brutto / 1,19`); diese Anzeige ändert weder Orders noch
   Rechnungssteuersätze.
+- Bei gesetzten Stunden ist `CatalogOffer.sum` der Basispreis; `hourPrice`
+  beschreibt Folgestunden, erzeugt aber keine zusätzliche Arbeitsstunde.
+  Ohne Stunden ist `basis.basePrice` der Festpreis und kein `CatalogOffer`
+  erforderlich; Fahrtkosten gelten weiterhin. Konditionen, Mail und PDF
+  enthalten dann keine Stundenhinweise. Die Personalposition nennt Träger und
+  gegebenenfalls LKW 3,5t; bei Stunden zusätzlich Mindestabnahme und
+  Folgestundenpreis, bis vier Stunden auch die maximale Abnahme (Stunden + 1).
+  Ein maximales Umzugsgutvolumen wird dort nicht genannt.
+- Halteverbotszonen kosten die Anzahl aktivierter Adressen mal `hvzPrice`.
+  Mitarbeiterzahlen sind positive Ganzzahlen und dürfen über den
+  Katalogvorschlägen liegen. Ab mehr als vier LKW wird die Anfahrt manuell
+  gepflegt. Services und Packungen werden auch bei `show=false` für Staff
+  angeboten; Preis-Snapshot und PDF-Katalogtabellen umfassen den gesamten
+  Katalogstand zur Kalkulation. Packungen tragen den Hinweis „wird nach
+  Verbrauch berechnet“. Manuelle Positionen mit Menge und Einzelpreis ergeben
+  serverseitig den gerundeten Betrag; sie bleiben bei Neuberechnung erhalten.
+- PDF und Angebotsmail nutzen gespeicherte Positionen. PDF-Preislisten nutzen
+  den Snapshot; ohne Snapshot werden keine historischen Preise erfunden.
+  Kopien übernehmen den Snapshot unverändert.
 - Berechnete Positionen bleiben im Admin-Editor anpassbar. Erneutes Ersetzen
   vorhandener Positionen verlangt eine Bestätigung. Katalognormaländerungen
   ändern gespeicherte Preise nicht. Der serverseitige `pricingSnapshot` im
@@ -288,7 +330,9 @@ Alle Rechte werden im Backend geprüft. `Admin` hat alle Rechte; `Kundenberater`
   abzufangen (siehe `hostinger-mail-cron.md`).
 - Auftragseigene Outbox-Inhalte und Mailereignisse werden beim Order-Purge
   ebenfalls gelöscht. Nicht auftragsgebundene Auth-Mails sind davon unabhängig.
-- Katalog-/Preisstammdaten werden initial manuell gepflegt.
+- Katalog-/Preisstammdaten werden manuell gepflegt; der ausdrücklich gestartete
+  Legacy-Katalogimport ersetzt den vollständigen Katalog (siehe
+  `operations.md`), nicht Auftrags- oder Kundendaten.
 
 ## API-Sicherheitsgrenze
 
@@ -309,7 +353,7 @@ Alle Rechte werden im Backend geprüft. `Admin` hat alle Rechte; `Kundenberater`
   öffentliche Clients erhalten keinen Finanzbeleg-Zugriff.
 - CORS Origins kommen aus Runtime-Umgebung. Origin-Prüfung begrenzt Browserzugriff, ersetzt aber keine Auth.
 - Better Auth Trusted Origins sind eine separate, engere Liste als CORS und umfassen nur Vega plus ausdrücklich eingerichtete lokale/Staging-Origin.
-- Rate-Limits für öffentliche GET/POST/Upload-Anbahnung; Werte werden anhand Hostinger Proxy/IP-Verhalten im A0-Proof gesetzt.
+- Rate-Limits für öffentliche GET/POST/Upload-Anbahnung; Werte berücksichtigen das geprüfte Hostinger-Proxy-/IP-Verhalten.
 - Server-Schema validiert jedes Eingabefeld, IDs, Zahlen/Preise, Arrays, Upload-Claims und Payload-Größen.
 - Finanzdaten verlangen echte Kalenderdaten, endliche nichtnegative Zahlen
   und Beträge innerhalb der Datenbankgrenzen; auch Zeilen- und Gesamtsummen

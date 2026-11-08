@@ -35,11 +35,12 @@ apps/admin/          React 19 / Vite / MUI Admin-App
 apps/customer-form/  React 19 / Vite Kundenformular
 packages/domain/     Geteilte Typen und Regeln
 prisma/              Schema und Migrationen
-docs/                Plan, Architektur, ADRs, Betrieb
+docs/                Architektur, ADRs, Betrieb
 ```
 
 ## Dokumentation
 
-- `docs/implementation-status.md` – Stand und offene Arbeit
-- `docs/operations.md` – Konfiguration, Datenbank, Recovery, Tests
-- `docs/implementation-plan.md`, `docs/target-architecture.md`, `docs/adr/` – Ziel und Entscheidungen
+- [Betrieb und Konfiguration](docs/operations.md) – Runtime, Datenbank, Recovery und Prüfungen
+- [Architektur](docs/target-architecture.md) und [ADRs](docs/adr/) – Fachregeln und Entscheidungen
+- [Glossar](docs/glossary.md) – Fachbegriffe
+- [Installierbare Admin-App](docs/pwa-specification.md) – Cache, Updates und Offline-Verhalten
