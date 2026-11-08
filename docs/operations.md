@@ -1,7 +1,38 @@
 # Betrieb und Konfiguration
 
 Betriebswissen für Entwicklung und Hostinger-Betrieb. Fachregeln stehen in
-`implementation-plan.md`, `target-architecture.md` und den ADRs.
+`target-architecture.md` und den ADRs.
+
+## Betriebsrisiken und Nachweise
+
+Die App läuft laut Betreiber produktiv. Ein laufender Dienst und lokale Tests
+belegen jedoch nicht automatisch alle folgenden Nachweise; ihren aktuellen
+Stand muss der Betreiber anhand konkreter Ergebnisse beurteilen.
+
+- **Rechnungsaufbewahrung:** Die App überschreibt Rechnungen und bewahrt keine
+  PDF-Versionen auf. Archivierte Rechnungen, Gutschriften und Mahnungen werden
+  nach 30 Tagen gelöscht. Benötigte ausgestellte Stände vor Änderung oder
+  Archivierung extern sichern. Die gesetzliche Aufbewahrung muss durch
+  Buchhaltung/Steuerberatung bestätigt sein; ein Dialog oder Runtime-Wert ist
+  kein Nachweis (Details und Rechtsquellen: `adr/0005-rechnungen-und-gesetzliche-aufbewahrung.md`).
+- **Scheduler und Wiederherstellung:** Hostinger-Cron für Order-Purge nach
+  60 Tagen, Finanz-Purge nach 30 Tagen und Mail-Retries mit fälligen
+  Testdatensätzen prüfen; Backups und Restore praktisch nachweisen. Vorgehen
+  und Umgang mit unklarem Versand stehen in `hostinger-mail-cron.md`.
+- **Provider und Einbettung:** Mailversand einschließlich Reset, Anhängen,
+  Ablehnung und unklarem Ergebnis, WordPress-Loader/CORS/CSP, Formular und
+  Upload sowie Google Places/Routes mit echten Testzugängen prüfen. Schlüssel
+  auf die benötigten APIs beschränken; Distanz-/Preisabnahme und die offene
+  Fachfrage zur Mehrfachadress-Reihenfolge mit dem Betreiber klären.
+- **Teilnachweise:** Eine Hostinger-Erstinstallation wurde am 2026-10-18 als
+  erfolgreich bestätigt; sie ersetzt keine vollständige Prüfung des Tarifs,
+  Proxys oder Crons. GCS-Bucket-Konfiguration und Rollenbindungen wurden am
+  2026-10-18 geprüft; Credentials, App-Zugriff und vollständiger Browser-Upload
+  waren damals noch offen (`gcs-bucket-setup.md`).
+- **Änderungen:** CI, Node-/Paketkompatibilität und Deployment im Zieltarif
+  nachweisen. Für Order-/Copy-/Archive-/Mail-/PDF-Abläufe sowie
+  Berechtigungs-, HTML-, CORS-, Rate-Limit- und Upload-Grenzen sind E2E- und
+  Sicherheitsprüfungen einzuplanen; lokale Tests ersetzen sie nicht.
 
 ## Runtime-Konfiguration
 
@@ -137,8 +168,15 @@ npm run db:check-schema                              # Drift-Prüfung
 
 Prisma 7.10.0 generiert nach `apps/server/src/generated/prisma/` (nicht
 versioniert). `dev` und `build` generieren automatisch. Migrationen seeden nicht;
-dafür `npm run db:seed`. Der `mariadb@3.5.4`-Override ist in
-`proof-01-integration-compatibility.md` begründet.
+dafür `npm run db:seed`. Der ausschließlich für `@prisma/adapter-mariadb`
+gesetzte Override auf `mariadb@3.5.4` behebt die Advisories
+[GHSA-cqhc-2h57-wpxf](https://github.com/advisories/GHSA-cqhc-2h57-wpxf),
+[GHSA-v6pj-gxxw-phfw](https://github.com/advisories/GHSA-v6pj-gxxw-phfw) und
+[GHSA-cx2f-j9fh-8g68](https://github.com/advisories/GHSA-cx2f-j9fh-8g68).
+Der Override weicht vom Adapter-Pin ab; bei Updates Versionen, Audit und echte
+DB-/Auth-Regressionen erneut prüfen. Lokale Prisma-7-DB-/Auth-Tests wurden am
+2026-10-10 mit isolierter MariaDB 10.11.19 bestanden; sie ersetzen weder Tests
+mit der aktuellen Zielversion noch den Hostinger-Verbindungsnachweis.
 
 Der Root-Build hat ein standardmäßig deaktiviertes `postbuild`: Nur mit
 `VEGA_MIGRATE_ON_BUILD=true` und gesetztem `DATABASE_URL` führt es nach dem
@@ -250,6 +288,14 @@ Migrationen und Drift-Prüfung.
 Nach dem Produktionsbuild `<APP_BASE_URL>/customer-form/loader.js` in WordPress
 einbinden (kein iframe). Den WordPress-Origin in `CORS_ALLOWED_ORIGINS` aufnehmen
 und Styles/CSP dort prüfen.
+
+### Installierbare Admin-App
+
+Die Admin-App bietet ein Manifest und einen Service Worker. Installation,
+Update-Freigabe, Offline-Verhalten, Cache-Grenzen und die Einschränkung des
+Root-Scopes sind in [Installierbare Admin-App](./pwa-specification.md)
+beschrieben. Nach Deployment die PWA- und WordPress-Abnahme auf den tatsächlich
+unterstützten Geräten durchführen.
 
 ### Maintenance und Smoke-Test
 

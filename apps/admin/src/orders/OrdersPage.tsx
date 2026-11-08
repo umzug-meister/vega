@@ -9,6 +9,7 @@ import { Box, Button, CircularProgress, IconButton, InputAdornment, Paper, Stack
 import { AdminAlert as Alert } from "../components/AdminNotifications.js";
 import type { AdminOrderListItem } from "@vega/domain";
 import { apiRequest } from "../api/api-request.js";
+import { ArchiveDateCells, ArchiveDateHeaders } from "../components/ArchiveDates.js";
 
 const PAGE_SIZE = 10;
 
@@ -142,21 +143,22 @@ export function OrdersPage({ archived = false, navigate }: { archived?: boolean;
     <Paper variant="outlined" sx={{ overflowX: "auto" }}>
       {loading && <Stack sx={{ height: 420, alignItems: "center", justifyContent: "center" }}><CircularProgress /></Stack>}
       {!loading && (
-        <Table size="small" sx={{ minWidth: 1100 }}>
+        <Table size="small" sx={{ minWidth: archived ? 1350 : 1100 }}>
           <TableHead>
             <TableRow>
               <TableCell>ID</TableCell>
               <TableCell>Kunde</TableCell>
               <TableCell>Datum</TableCell>
               <TableCell sx={{ width: 240, maxWidth: 240 }}>Auszugsadresse</TableCell>
-              <TableCell padding="checkbox">HVZ</TableCell>
+              {!archived && <TableCell padding="checkbox">HVZ</TableCell>}
               <TableCell sx={{ width: 240, maxWidth: 240 }}>Einzugsadresse</TableCell>
-              <TableCell padding="checkbox">HVZ</TableCell>
+              {!archived && <TableCell padding="checkbox">HVZ</TableCell>}
               <TableCell>Mann</TableCell>
               <TableCell>LKW</TableCell>
               <TableCell>Std.</TableCell>
-              {archived && <TableCell>Aktionen</TableCell>}
+              {archived && <ArchiveDateHeaders />}
               <TableCell align="right">Summe</TableCell>
+              {archived && <TableCell>Aktionen</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -178,23 +180,27 @@ export function OrdersPage({ archived = false, navigate }: { archived?: boolean;
                     </Button>
                   )}
                 </TableCell>
-                <TableCell>{order.customerName}</TableCell>
+                <TableCell sx={{ whiteSpace: "nowrap" }}>{[order.customerCompany?.trim(), order.customerName].filter(Boolean).join(" - ")}</TableCell>
                 <TableCell>{formatDate(order.movingDate)}</TableCell>
                 <AddressCell address={order.fromAddress} />
-                <TableCell padding="checkbox">
+                {!archived && <TableCell padding="checkbox">
                   {order.fromParkingSlot && (
                     <CheckCircleIcon color="success" fontSize="small" />
                   )}
-                </TableCell>
+                </TableCell>}
                 <AddressCell address={order.toAddress} />
-                <TableCell padding="checkbox">
+                {!archived && <TableCell padding="checkbox">
                   {order.toParkingSlot && (
                     <CheckCircleIcon color="success" fontSize="small" />
                   )}
-                </TableCell>
+                </TableCell>}
                 <TableCell>{order.workers ?? ""}</TableCell>
                 <TableCell>{order.trucks ?? ""}</TableCell>
                 <TableCell>{order.hours ?? ""}</TableCell>
+                {archived && <ArchiveDateCells archivedAt={order.archivedAt} purgeAt={order.purgeAt} />}
+                <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                  {formatCurrency(order.grossTotal)}
+                </TableCell>
                 {archived && (
                   <TableCell sx={{ whiteSpace: "nowrap" }}>
                     <Tooltip title="PDF herunterladen">
@@ -217,9 +223,6 @@ export function OrdersPage({ archived = false, navigate }: { archived?: boolean;
                     </Tooltip>
                   </TableCell>
                 )}
-                <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
-                  {formatCurrency(order.grossTotal)}
-                </TableCell>
               </TableRow>
             ))}
             {items.length === 0 && (

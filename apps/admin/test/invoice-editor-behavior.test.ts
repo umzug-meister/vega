@@ -24,6 +24,7 @@ const invoice: AdminInvoiceDto = {
   entries: [],
   dueDates: [],
   archivedAt: null,
+  purgeAt: null,
   createdAt: "2026-10-11T00:00:00Z",
   updatedAt: "2026-10-11T00:00:00Z",
 };

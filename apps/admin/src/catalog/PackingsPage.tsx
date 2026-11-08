@@ -1,9 +1,8 @@
 import type { CatalogPackingDto } from "@vega/domain";
-import { Typography } from "@mui/material";
-import { CatalogCrudPage, type CatalogColumn, type CatalogField } from "./CatalogCrudPage.js";
+import { Stack, Typography } from "@mui/material";
+import { CatalogCrudPage, type CatalogField } from "./CatalogCrudPage.js";
 import { PackingPreview } from "./PackingPreview.js";
 
-const money = (value: number) => value.toLocaleString("de-DE", { style: "currency", currency: "EUR" });
 const fields: CatalogField[] = [
   { name: "name", label: "Name", type: "text" },
   { name: "price", label: "Preis (€)", type: "money", min: 0 },
@@ -13,31 +12,34 @@ const fields: CatalogField[] = [
   { name: "show", label: "Im Formular anzeigen", type: "boolean" },
 ];
 
-const columns: CatalogColumn<CatalogPackingDto>[] = [
-  { label: "ID", render: (item) => item.id },
-  { label: "Name", render: (item) => item.name },
-  { label: "Preis", render: (item) => money(item.price) },
-  {
-    label: "Beschreibung",
-    render: (item) => (
-      <Typography
-        component="div"
-        variant="body2"
-        dangerouslySetInnerHTML={{ __html: item.description }}
-      />
-    ),
-  },
-  { label: "Im Formular", render: (item) => item.show ? "Ja" : "Nein" },
-  { label: "Sortierung", render: (item) => item.sort },
-];
-
 export function PackingsPage() {
   return (
     <CatalogCrudPage<CatalogPackingDto>
       resource="packings"
       title="Verpackung"
       fields={fields}
-      columns={columns}
+      columns={[]}
+      renderItems={(items, renderAction) => {
+        const sorted = items.toSorted((a, b) => a.sort - b.sort || a.id - b.id);
+        const visible = sorted.filter((item) => item.show);
+        const hidden = sorted.filter((item) => !item.show);
+        const cards = (entries: CatalogPackingDto[]) => entries.map((item) => (
+          <PackingPreview key={item.id} {...item} action={renderAction(item)} />
+        ));
+        return (
+          <Stack spacing={4}>
+            <Stack spacing={4} role="region" aria-label="Im Kundenformular sichtbar">
+              {visible.length ? cards(visible) : <Typography color="text.secondary">Im Kundenformular ist kein Verpackungsmaterial sichtbar.</Typography>}
+            </Stack>
+            {hidden.length > 0 && (
+              <Stack spacing={4} role="region" aria-label="Im Kundenformular ausgeblendet">
+                <Typography variant="h6">Im Kundenformular ausgeblendet</Typography>
+                {cards(hidden)}
+              </Stack>
+            )}
+          </Stack>
+        );
+      }}
       previewPanel={(form) => (
         <PackingPreview
           name={typeof form.name === "string" ? form.name : ""}

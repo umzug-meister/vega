@@ -89,7 +89,7 @@ Ein bearbeiteter DB-Datensatz kann den früher ausgestellten PDF-Stand nicht rek
 - Admin-only Rechnungs-CRUD, Blanco-Rechnungen, optionale eindeutige
   Auftragsbezüge, Such-Snapshots, Archivierung/Wiederherstellung und
   serverseitiger PDF-Download sind umgesetzt.
-- `CreditNote` und `ReminderEvent` sind als A2-Datenmodell mit eigenen
+- `CreditNote` und `ReminderEvent` sind im Datenmodell mit eigenen
   Archiv-/Purge-Feldern und Such-Snapshots vorhanden. `SET NULL` beim
   Rechnungs-Purge schützt ihre unabhängige Aufbewahrung. Gutschriftennummern
   sind eindeutig, ohne eine neue Nummerierungsregel oder Dummy-Startwerte

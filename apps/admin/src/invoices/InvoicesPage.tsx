@@ -4,10 +4,11 @@ import AddOutlined from "@mui/icons-material/AddOutlined";
 import FileDownloadOutlined from "@mui/icons-material/FileDownloadOutlined";
 import RestoreOutlined from "@mui/icons-material/RestoreOutlined";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Box, Button, CircularProgress, IconButton, InputAdornment, Paper, Stack, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, TextField, Tooltip } from "@mui/material";
+import { Box, Button, CircularProgress, IconButton, InputAdornment, Paper, Stack, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, TextField, Tooltip, useMediaQuery, useTheme } from "@mui/material";
 import { AdminAlert as Alert } from "../components/AdminNotifications.js";
 import { calculateInvoiceTotals, type AdminInvoiceDto, type AdminInvoiceListDto } from "@vega/domain";
 import { apiRequest } from "../api/api-request.js";
+import { ArchiveDateCells, ArchiveDateHeaders } from "../components/ArchiveDates.js";
 
 const currencyFormatter = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
 const PAGE_SIZE = 25;
@@ -17,6 +18,8 @@ export function invoiceTotal(invoice: Pick<AdminInvoiceDto, "entries" | "taxPerc
 }
 
 export function InvoicesPage({ archived = false, navigate }: { archived?: boolean; navigate: (path: string) => void }) {
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
   const [items, setItems] = useState<AdminInvoiceDto[]>([]);
   const [search, setSearch] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
@@ -93,8 +96,8 @@ export function InvoicesPage({ archived = false, navigate }: { archived?: boolea
   }
 
   return <Stack spacing={2}>
-    <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ justifyContent: "space-between", alignItems: { sm: "center" } }}>
-      <Box sx={{ width: 420, maxWidth: "100%" }}>
+    <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifyContent: "space-between", width: "100%", flexWrap: "nowrap" }}>
+      <Box sx={{ flex: "1 1 420px", maxWidth: 420, minWidth: 0 }}>
         <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
           <TextField
             size="small"
@@ -121,19 +124,23 @@ export function InvoicesPage({ archived = false, navigate }: { archived?: boolea
           </IconButton>
         </Stack>
       </Box>
-      {!archived && (
-        <Button variant="contained" disabled={locked} startIcon={<AddOutlined />} onClick={() => navigate("/invoices/new")} sx={{ alignSelf: "flex-end" }}>
+      {!archived && (isSmallScreen ? (
+        <IconButton color="primary" aria-label="Rechnung anlegen" title="Rechnung anlegen" disabled={locked} onClick={() => navigate("/invoices/new")}>
+          <AddOutlined />
+        </IconButton>
+      ) : (
+        <Button variant="contained" disabled={locked} startIcon={<AddOutlined />} onClick={() => navigate("/invoices/new")}>
           Rechnung anlegen
         </Button>
-      )}
+      ))}
     </Stack>
     {error && <Alert severity="error">{error}</Alert>}
     <Paper variant="outlined" sx={{ overflowX: "auto" }}>
       {loading && <Stack sx={{ p: 3, alignItems: "center" }}><CircularProgress /></Stack>}
-      {!loading && <Table size="small">
+      {!loading && <Table size="small" sx={{ minWidth: archived ? 1100 : 750 }}>
         <TableHead><TableRow>
           <TableCell>Nummer</TableCell><TableCell>Kunde</TableCell><TableCell>Auftragsnummer</TableCell>
-          <TableCell>Datum</TableCell><TableCell>Rechnungssumme</TableCell>{archived && <TableCell />}
+          <TableCell>Datum</TableCell><TableCell>Rechnungssumme</TableCell>{archived && <ArchiveDateHeaders />}{archived && <TableCell>Aktionen</TableCell>}
         </TableRow></TableHead>
         <TableBody>
           {items.map((invoice) => (
@@ -143,6 +150,7 @@ export function InvoicesPage({ archived = false, navigate }: { archived?: boolea
               <TableCell>{invoice.orderNumber ?? "–"}</TableCell>
               <TableCell>{new Date(`${invoice.invoiceDate}T00:00:00`).toLocaleDateString("de-DE")}</TableCell>
               <TableCell>{currencyFormatter.format(invoiceTotal(invoice))}</TableCell>
+              {archived && <ArchiveDateCells archivedAt={invoice.archivedAt} purgeAt={invoice.purgeAt} />}
               {archived && <TableCell sx={{ whiteSpace: "nowrap" }}>
                 <Tooltip title="PDF herunterladen"><span>
                   <IconButton component="a" disabled={locked}
@@ -154,7 +162,7 @@ export function InvoicesPage({ archived = false, navigate }: { archived?: boolea
               </TableCell>}
             </TableRow>
           ))}
-          {items.length === 0 && <TableRow><TableCell colSpan={archived ? 6 : 5} align="center">Keine Rechnungen vorhanden.</TableCell></TableRow>}
+          {items.length === 0 && <TableRow><TableCell colSpan={archived ? 8 : 5} align="center">Keine Rechnungen vorhanden.</TableCell></TableRow>}
         </TableBody>
       </Table>}
       <TablePagination

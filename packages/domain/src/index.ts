@@ -284,6 +284,7 @@ export interface AdminOrderListItem {
   orderNumber: number;
   source: string;
   customerName: string;
+  customerCompany: string;
   grossTotal: number;
   movingDate: string;
   fromAddress: string;
@@ -297,9 +298,10 @@ export interface AdminOrderListItem {
   editedAt: string | null;
   isCopy: boolean;
   archivedAt: string | null;
+  purgeAt: string | null;
 }
 
-export interface AdminOrderDetail extends AdminOrderListItem {
+export interface AdminOrderDetail extends Omit<AdminOrderListItem, "customerCompany"> {
   revision: number;
   data: CreateOrderInput;
   originOrderId: string | null;
@@ -385,6 +387,7 @@ export interface AdminInvoiceDto extends InvoiceInput {
   orderNumber: number | null;
   orderOverview?: AdminInvoiceOrderOverview;
   archivedAt: string | null;
+  purgeAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

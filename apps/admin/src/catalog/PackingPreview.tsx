@@ -1,94 +1,51 @@
 import ShoppingCartCheckoutOutlined from "@mui/icons-material/ShoppingCartCheckoutOutlined";
-import {
-  Box,
-  Card,
-  CardContent,
-  CardHeader,
-  CardMedia,
-  Stack,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { TextField, ThemeProvider } from "@mui/material";
+import type { ReactNode } from "react";
+import { PackingCard } from "../../../customer-form/src/PackingCard.js";
+import { theme } from "../../../customer-form/src/theme.js";
 
 export function PackingPreview({
   name,
   price,
   description,
   media,
+  action,
 }: {
   name: string;
   price: number;
   description: string;
-  media: string;
+  media: string | null;
+  action?: ReactNode;
 }) {
-  const formattedPrice = new Intl.NumberFormat("de-DE", {
-    style: "currency",
-    currency: "EUR",
-  }).format(price);
-
   return (
-    <Card elevation={2} sx={{ bgcolor: "background.paper" }}>
-      <CardHeader
-        title={
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
+    <ThemeProvider theme={theme}>
+      <PackingCard
+        name={name || "Verpackungsmaterial"}
+        price={price}
+        description={description}
+        media={media}
+        action={action}
+        quantity={
+          <TextField
+            label="Anzahl"
+            fullWidth={false}
+            type="number"
+            value=""
+            slotProps={{
+              htmlInput: { min: 0 },
+              input: {
+                readOnly: true,
+                endAdornment: <ShoppingCartCheckoutOutlined color="disabled" />,
+              },
             }}
-          >
-            <Typography variant="h5" color="primary">
-              {name || "Verpackungsmaterial"}
-            </Typography>
-            <Typography variant="h5" color="primary">
-              {formattedPrice}
-            </Typography>
-          </Box>
+            sx={{
+              "& input": { border: "none !important", padding: "10px !important" },
+              "& input[type=number]": { appearance: "textfield", MozAppearance: "textfield" },
+              "& input[type=number]::-webkit-inner-spin-button": { display: "none" },
+            }}
+          />
         }
       />
-      {media && (
-        <CardMedia
-          component="img"
-          image={media}
-          alt={name}
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          sx={{ height: 240, objectFit: "contain", px: 2 }}
-        />
-      )}
-      <CardContent>
-        <Stack spacing={2}>
-          <Typography
-            component="div"
-            variant="body2"
-            dangerouslySetInnerHTML={{ __html: description }}
-          />
-          <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-            <TextField
-              label="Anzahl"
-              fullWidth={false}
-              type="number"
-              value=""
-              slotProps={{
-                htmlInput: { min: 0 },
-                input: {
-                  readOnly: true,
-                  endAdornment: (
-                    <ShoppingCartCheckoutOutlined color="disabled" />
-                  ),
-                },
-              }}
-              sx={{
-                width: 180,
-                "& input": {
-                  border: "none !important",
-                  padding: "10px !important",
-                },
-              }}
-            />
-          </Box>
-        </Stack>
-      </CardContent>
-    </Card>
+    </ThemeProvider>
   );
 }

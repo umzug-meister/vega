@@ -6,9 +6,6 @@ import {
   Box,
   Button,
   Card,
-  CardContent,
-  CardHeader,
-  CardMedia,
   Checkbox,
   CircularProgress,
   FormControlLabel,
@@ -28,9 +25,10 @@ import {
   Section,
   SwitchField,
 } from "./components.js";
-import { calculateVolume, euro } from "./form-model.js";
+import { calculateVolume } from "./form-model.js";
 import type { StepProps } from "./MovingSteps.js";
 import type { ReactNode } from "react";
+import { PackingCard } from "./PackingCard.js";
 
 export function Packaging({ draft, setDraft, resources }: StepProps) {
   return (
@@ -49,77 +47,40 @@ export function Packaging({ draft, setDraft, resources }: StepProps) {
             const quantity = draft.quantities[key] ?? 0;
             return (
               <Grid key={packing.id} size={12}>
-                <Card elevation={2} sx={{ bgcolor: "background.paper" }}>
-                  <CardHeader
-                    title={
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Typography variant="h5" color="primary">
-                          {packing.name}
-                        </Typography>
-                        <Typography variant="h5" color="primary">
-                          {euro(packing.price)}
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                  {packing.media && (
-                    <CardMedia
-                      component="img"
-                      image={packing.media}
-                      alt={packing.name}
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      sx={{
-                        height: 240,
-                        objectFit: "contain",
-                        px: 2,
+                <PackingCard
+                  name={packing.name}
+                  price={packing.price}
+                  description={packing.description}
+                  media={packing.media}
+                  quantity={
+                    <Field
+                      label="Anzahl"
+                      fullWidth={false}
+                      type="number"
+                      value={quantity || ""}
+                      slotProps={{
+                        htmlInput: { min: 0 },
+                        input: {
+                          endAdornment:
+                            quantity > 0 ? (
+                              <CheckOutlined color="primary" />
+                            ) : (
+                              <ShoppingCartCheckoutOutlined color="disabled" />
+                            ),
+                        },
                       }}
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          quantities: {
+                            ...current.quantities,
+                            [key]: Math.max(0, Number(event.target.value)),
+                          },
+                        }))
+                      }
                     />
-                  )}
-                  <CardContent>
-                    <Column>
-                      <Typography
-                        component="div"
-                        variant="body2"
-                        dangerouslySetInnerHTML={{ __html: packing.description }}
-                      />
-                      <Box sx={{ display: "flex", justifyContent: "end" }}>
-                        <Field
-                          label="Anzahl"
-                          fullWidth={false}
-                          type="number"
-                          value={quantity || ""}
-                          slotProps={{
-                            htmlInput: { min: 0 },
-                            input: {
-                              endAdornment:
-                                quantity > 0 ? (
-                                  <CheckOutlined color="primary" />
-                                ) : (
-                                  <ShoppingCartCheckoutOutlined color="disabled" />
-                                ),
-                            },
-                          }}
-                          onChange={(event) =>
-                            setDraft((current) => ({
-                              ...current,
-                              quantities: {
-                                ...current.quantities,
-                                [key]: Math.max(0, Number(event.target.value)),
-                              },
-                            }))
-                          }
-                        />
-                      </Box>
-                    </Column>
-                  </CardContent>
-                </Card>
+                  }
+                />
               </Grid>
             );
           })}

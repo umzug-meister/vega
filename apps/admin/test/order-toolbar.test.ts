@@ -330,6 +330,50 @@ test("small-screen order and invoice actions are grouped in the overflow menu", 
   }
 });
 
+test("small-screen invoice actions retain their save and locking behavior", async () => {
+  const originalMatchMedia = window.matchMedia;
+  window.matchMedia = (query: string) => ({
+    matches: true, media: query, onchange: null,
+    addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {},
+    dispatchEvent: () => true,
+  });
+  const user: StaffUser = {
+    id: "test", name: "Test", email: "test@example.test", role: "Admin",
+    twoFactorEnabled: true, mustChangePassword: false, blocked: false,
+  };
+  try {
+    for (const state of [
+      { path: "/invoices/invoice-test", dirty: false, accountingDirty: false, busy: false, saveDisabled: false, actionsDisabled: false },
+      { path: "/invoices/invoice-test", dirty: true, accountingDirty: false, busy: false, saveDisabled: false, actionsDisabled: true },
+      { path: "/invoices/invoice-test", dirty: false, accountingDirty: true, busy: false, saveDisabled: true, actionsDisabled: true },
+      { path: "/invoices/invoice-test", dirty: false, accountingDirty: false, busy: true, saveDisabled: true, actionsDisabled: true },
+      { path: "/invoices/new", dirty: false, accountingDirty: false, busy: false, saveDisabled: false, actionsDisabled: true },
+    ]) {
+      const route = resolveAdminRoute(state.path)!;
+      const app = await mount(createElement(AdminShell, {
+        user, route, pathname: state.path, navigate: () => {},
+        invoiceDirty: state.dirty, invoiceAccountingDirty: state.accountingDirty,
+        invoiceBusy: state.busy, children: null,
+      }), state.path);
+      try {
+        await app.click(app.container.querySelector('button[aria-label="Weitere Aktionen öffnen"]')!);
+        const actions = [...app.window.document.querySelectorAll<HTMLElement>('[role="menuitem"]')];
+        assert.equal(actions.length, 4);
+        assert.equal(actions[0]!.getAttribute("form"), "invoice-editor-form");
+        assert.equal(actions[0]!.hasAttribute("disabled"), state.saveDisabled);
+        for (const action of actions.slice(1)) {
+          assert.equal(action.hasAttribute("disabled") || action.getAttribute("aria-disabled") === "true", state.actionsDisabled, `${state.path}: ${action.textContent}`);
+        }
+        assert.equal(actions[1]!.getAttribute("href"), state.actionsDisabled ? null : "/api/admin/invoices/invoice-test/pdf");
+      } finally {
+        await app.cleanup();
+      }
+    }
+  } finally {
+    window.matchMedia = originalMatchMedia;
+  }
+});
+
 test("order and invoice editor titles show a new label or their saved number", () => {
   const user: StaffUser = {
     id: "test",

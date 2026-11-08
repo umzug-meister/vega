@@ -1,7 +1,7 @@
 # GCS-Bucket anlegen (Betriebsanweisung)
 
 Step-by-Step-Anleitung zum Anlegen des privaten Google-Cloud-Storage-Buckets
-für Kundenbilder (ADR 0006, Arbeitspaket A8). Die Vorgaben sind bindend:
+für Kundenbilder (ADR 0006). Die Vorgaben sind bindend:
 der Upload-Service in `apps/server/src/uploads/upload-service.ts` prüft die
 Bucket-Konfiguration und lehnt den Betrieb sonst mit
 `UNSAFE_BUCKET_CONFIGURATION` (503) ab.
@@ -9,7 +9,7 @@ Bucket-Konfiguration und lehnt den Betrieb sonst mit
 ## Voraussetzungen
 
 - Google Cloud Account mit aktiviertem Billing.
-- Ein GCP-Projekt (für den nichtproduktiven EU-Proof laut A0 zuerst ein
+- Ein GCP-Projekt (für den nichtproduktiven EU-Proof zuerst ein
   separates Staging-Projekt, danach ein Produktionsprojekt).
 
 ## Schritt 1 – APIs aktivieren
@@ -117,8 +117,8 @@ gcloud storage buckets update gs://vega-eu-images \
   freigeben; keine Wildcard-Origin verwenden.
 - Die CORS-Konfiguration anschließend prüfen, z. B. mit
   `gcloud storage buckets describe gs://vega-eu-images`.
-- Der tatsächliche CORS-Proof mit echtem Provider ist Teil von A0 und in
-  `proof-01-integration-compatibility.md` als offen dokumentiert.
+- Der tatsächliche Browser-/Upload-CORS-Proof mit echtem Provider bleibt
+  zusätzlich zur Konfigurationsprüfung erforderlich (siehe `operations.md`).
 
 ## Schritt 5 – Service Account für den Server
 
@@ -254,7 +254,7 @@ sicher bereitstellen, falls keyless ADC nicht unterstützt wird. Keine dieser
 Variablen gehört in `VITE_*`-Konfigurationen oder Client-Bundles.
 
 Ohne `GCS_BUCKET` bleibt der Upload-Service bewusst deaktiviert (siehe
-Implementierungsplan, A8). Die Bucket-Prüfung läuft alle 5 Minuten erneut
+`operations.md`). Die Bucket-Prüfung läuft alle 5 Minuten erneut
 beim ersten Upload.
 
 ## Schritt 8 – Verifikation (Abnahme-Check)
@@ -286,14 +286,12 @@ und vollständiger Browser-/Upload-Proof:
 5. Lifecycle prüfen (Console oder `gsutil lifecycle`): genau eine
    Delete-Regel mit Age 180, keine weiteren Regeln.
 6. Anonymen Zugriff testen: Download ohne Signatur muss fehlschlagen.
-7. Werte des Checks in `proof-01-integration-compatibility.md`
-   nachtragen (EU-GCS-Proof).
+7. Ergebnis und Datum des Checks für den Betrieb dokumentieren; keine
+   Zugangsdaten oder Bildinhalte festhalten.
 
 ## Bezug zu anderen Dokumenten
 
 - ADR 0006 (`adr/0006-gcs-und-bildlebenszyklus.md`): fachliche Entscheidung
   zu Speicherort, Lifecycle und Signed-URLs.
-- `implementation-plan.md` § 4.7 und A8: Anforderungen an Bilder und
-  Uploadanbahnung.
-- `proof-01-integration-compatibility.md`: offener Provider-Proof
-  (EU-GCS, CORS, Signed-URL-Verhalten).
+- `target-architecture.md`: Anforderungen an Bilder und Uploadanbahnung.
+- `operations.md`: Betriebsrisiken und Provider-Nachweise.

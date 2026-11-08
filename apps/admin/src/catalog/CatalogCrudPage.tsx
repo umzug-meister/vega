@@ -66,6 +66,7 @@ interface CatalogCrudPageProps<T extends IdentifiedCatalogRecord> {
   toolbarContent?: ReactNode;
   filterPanel?: ReactNode;
   filterItem?: (item: T) => boolean;
+  renderItems?: (items: T[], renderAction: (item: T) => ReactNode) => ReactNode;
 }
 
 export function CatalogCrudPage<T extends IdentifiedCatalogRecord>({
@@ -78,6 +79,7 @@ export function CatalogCrudPage<T extends IdentifiedCatalogRecord>({
   toolbarContent,
   filterPanel,
   filterItem,
+  renderItems,
 }: CatalogCrudPageProps<T>) {
   const catalog = useCatalogCollection<T>(resource);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -125,6 +127,16 @@ export function CatalogCrudPage<T extends IdentifiedCatalogRecord>({
     } catch (cause) {
       catalog.setError(cause instanceof Error ? cause.message : "Der Eintrag konnte nicht gelöscht werden.");
     }
+  }
+
+  function renderAction(item: T) {
+    return (
+      <Tooltip title="Eintragsaktionen">
+        <IconButton size="small" id={`catalog-actions-${item.id}`} aria-label={`Aktionen für Eintrag ${item.id}`} aria-haspopup="menu" aria-controls={actionMenu?.item.id === item.id ? "catalog-actions-menu" : undefined} aria-expanded={actionMenu?.item.id === item.id ? true : undefined} onClick={(event) => setActionMenu({ anchor: event.currentTarget, item })}>
+          <MoreVert />
+        </IconButton>
+      </Tooltip>
+    );
   }
 
   function renderField(field: CatalogField) {
@@ -235,7 +247,7 @@ export function CatalogCrudPage<T extends IdentifiedCatalogRecord>({
       </Stack>
       {filterPanel}
       {catalog.error && !dialogOpen && <Alert severity="error">{catalog.error}</Alert>}
-      {catalog.loading ? <Typography color="text.secondary">Wird geladen …</Typography> : (
+      {catalog.loading ? <Typography color="text.secondary">Wird geladen …</Typography> : renderItems ? renderItems(visibleItems, renderAction) : (
         <TableContainer component={Paper} variant="outlined">
           <Table size="small" aria-label={title}>
             <TableHead>
@@ -249,11 +261,7 @@ export function CatalogCrudPage<T extends IdentifiedCatalogRecord>({
                 <TableRow key={item.id} hover>
                   {columns.map((column) => <TableCell key={column.label}>{column.render(item)}</TableCell>)}
                   <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
-                    <Tooltip title="Eintragsaktionen">
-                      <IconButton size="small" id={`catalog-actions-${item.id}`} aria-label={`Aktionen für Eintrag ${item.id}`} aria-haspopup="menu" aria-controls={actionMenu?.item.id === item.id ? "catalog-actions-menu" : undefined} aria-expanded={actionMenu?.item.id === item.id ? true : undefined} onClick={(event) => setActionMenu({ anchor: event.currentTarget, item })}>
-                        <MoreVert />
-                      </IconButton>
-                    </Tooltip>
+                    {renderAction(item)}
                   </TableCell>
                 </TableRow>
               ))}

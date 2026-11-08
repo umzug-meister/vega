@@ -100,13 +100,13 @@ test("the order email menu exposes paired offers only for copies", async () => {
 test("archived orders remain read-only and restoration failures keep the list usable", async () => {
   const originalFetch = globalThis.fetch;
   const item = {
-    orderNumber: 1001, source: "UmzugRuckZuck", customerName: "Test Kunde",
+    orderNumber: 1001, source: "UmzugRuckZuck", customerName: "Test Kunde", customerCompany: " Beispiel GmbH ",
     grossTotal: 1234.56,
     movingDate: "2026-11-01",
     fromAddress: "Eine sehr lange Auszugsadresse, die in der Tabelle gekürzt werden muss, München",
     toAddress: "Eine ebenso lange Einzugsadresse, die in der Tabelle gekürzt werden muss, München",
-    fromParkingSlot: false, toParkingSlot: false, workers: null, trucks: null, hours: null,
-    createdAt: "2026-10-01T00:00:00.000Z", editedAt: null, isCopy: false, archivedAt: "2026-10-02T00:00:00.000Z",
+    fromParkingSlot: true, toParkingSlot: true, workers: null, trucks: null, hours: null,
+    createdAt: "2026-10-01T00:00:00.000Z", editedAt: null, isCopy: false, archivedAt: "2026-10-02T12:00:00.000Z", purgeAt: "2026-12-05T12:00:00.000Z",
   };
   let requests = 0;
   globalThis.fetch = async (_url, init) => {
@@ -118,18 +118,28 @@ test("archived orders remain read-only and restoration failures keep the list us
     const headers = [...app.container.querySelectorAll("thead th")].map((cell) => cell.textContent?.trim());
     assert.equal(headers.includes("Quelle"), false);
     assert.ok(headers.includes("LKW"));
+    assert.ok(headers.includes("Archiviert am"));
+    assert.ok(headers.includes("Löschung frühestens"));
+    assert.equal(headers.includes("HVZ"), false);
     assert.equal(headers.includes("3,5t"), false);
-    assert.equal(headers.at(-1), "Summe");
+    assert.deepEqual(headers.slice(-2), ["Summe", "Aktionen"]);
     const row = app.container.querySelector("tbody tr")!;
     const cells = row.querySelectorAll("td");
+    assert.equal(app.window.getComputedStyle(cells[1]!).whiteSpace, "nowrap");
+    assert.equal(cells[1]!.textContent, "Beispiel GmbH - Test Kunde");
+    assert.equal(cells[8]?.textContent, new Date(item.archivedAt).toLocaleDateString("de-DE"));
+    assert.equal(cells[9]?.textContent, new Date(item.purgeAt).toLocaleDateString("de-DE"));
+    assert.equal(row.querySelectorAll('[data-testid="CheckCircleIcon"]').length, 0);
     const fromAddress = cells[3]!.querySelector<HTMLElement>("[title]")!;
     assert.equal(fromAddress.getAttribute("title"), item.fromAddress);
     assert.equal(app.window.getComputedStyle(fromAddress).whiteSpace, "nowrap");
     assert.equal(app.window.getComputedStyle(fromAddress).textOverflow, "ellipsis");
     assert.equal(
-      cells[cells.length - 1]!.textContent?.trim(),
+      cells[cells.length - 2]!.textContent?.trim(),
       new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(item.grossTotal),
     );
+    assert.ok(cells[cells.length - 1]!.querySelector('[aria-label="Auftrags-PDF herunterladen"]'));
+    assert.ok(cells[cells.length - 1]!.querySelector('[aria-label="Auftrag wiederherstellen"]'));
     assert.equal(app.container.querySelector('a[href="/api/admin/orders/1001/pdf"]') !== null, true);
     assert.equal([...app.container.querySelectorAll("button")].some((button) => button.textContent === "1001"), false);
     const restore = app.container.querySelector<HTMLButtonElement>('button[aria-label="Auftrag wiederherstellen"]')!;
@@ -139,6 +149,24 @@ test("archived orders remain read-only and restoration failures keep the list us
     assert.ok(app.container.textContent!.includes("Aktion konnte nicht ausgeführt werden."));
     assert.ok(app.container.textContent!.includes("Test Kunde"));
   } finally { globalThis.fetch = originalFetch; await app.cleanup(); }
+});
+
+test("active orders retain both parking zone columns", async (context) => {
+  context.mock.method(globalThis, "fetch", async () => Response.json({
+    data: { items: [{
+      orderNumber: 1001, customerName: "Test", customerCompany: "   ", movingDate: "", fromAddress: "", toAddress: "",
+      fromParkingSlot: true, toParkingSlot: true, workers: null, trucks: null, hours: null,
+      grossTotal: 0, editedAt: null,
+    }], total: 1 },
+  }));
+  const app = await mount(createElement(OrdersPage, { navigate: () => {} }));
+  try {
+    await app.flush();
+    assert.equal([...app.container.querySelectorAll("thead th")].filter((cell) => cell.textContent === "HVZ").length, 2);
+    assert.equal(app.container.querySelectorAll('tbody [data-testid="CheckCircleIcon"]').length, 2);
+    assert.equal(app.window.getComputedStyle(app.container.querySelectorAll("tbody td")[1]!).whiteSpace, "nowrap");
+    assert.equal(app.container.querySelectorAll("tbody td")[1]!.textContent, "Test");
+  } finally { await app.cleanup(); }
 });
 
 test("small-screen order search and creation stay on one line with an icon-only create action", async () => {
