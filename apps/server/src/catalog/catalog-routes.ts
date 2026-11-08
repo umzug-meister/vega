@@ -1,7 +1,7 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import type { createAuth } from "../auth-config.js";
 import type { AppConfig } from "../config.js";
-import { requireAdmin } from "../auth-middleware.js";
+import { requireAdmin, requireCompletedStaff } from "../auth-middleware.js";
 import { consumePublicApiRateLimit } from "../public-rate-limit.js";
 import {
   validateCategoryInput,
@@ -91,7 +91,12 @@ export function createCatalogRouter(auth: AuthInstance, config: AppConfig) {
   publicRouter.get("/services", route(() => catalog.listServices(true)));
   publicRouter.get("/service-rates", route(() => catalog.listServiceRates()));
 
-  adminRouter.use(requireAdmin(auth));
+  // Kundenberater dürfen den Katalog lesen (Auftragseditor); Änderungen bleiben Admin-only.
+  const requireStaff = requireCompletedStaff(auth);
+  const requireAdminOnly = requireAdmin(auth);
+  adminRouter.use((req, res, next) =>
+    req.method === "GET" || req.method === "HEAD" ? requireStaff(req, res, next) : requireAdminOnly(req, res, next),
+  );
   adminRouter.get("/categories", route(() => catalog.listCategories()));
   adminRouter.post("/categories", (req, res, next) => {
     const result = validateCategoryInput(req.body);
