@@ -116,6 +116,8 @@ test("Better Auth is mounted and protected admin APIs reject anonymous requests"
     body: JSON.stringify({ name: "Not allowed", sort: 0 }),
   });
   assert.equal(protectedCatalogWrite.status, 401);
+  const protectedCatalogRead = await fetch(`${baseUrl}/api/admin/catalog/services`);
+  assert.equal(protectedCatalogRead.status, 401);
 
   const signup = await fetch(`${baseUrl}/api/auth/sign-up/email`, {
     method: "POST",
