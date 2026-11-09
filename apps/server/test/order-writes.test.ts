@@ -142,7 +142,10 @@ const settings: AppSettingsDto = {
 };
 
 test("stored orders retain the previous public order source", () => {
-  const input = { ...orderFixture(), orderSource: "umzugruckzuck24.de" as const };
+  const input = {
+    ...orderFixture(),
+    orderSource: "umzugruckzuck24.de" as const,
+  };
   const order = storedOrder(input);
   order.source = "umzugruckzuck24.de";
   assert.equal(orderDataWithRelations(order).orderSource, "umzugruckzuck24.de");
@@ -156,20 +159,39 @@ test("archived order list returns the stored purge deadline", async (context) =>
   const order = { ...storedOrder(withCompany), archivedAt, purgeAt };
   const withoutCompany = { ...storedOrder(), archivedAt, purgeAt };
   context.mock.method(client.order, "count", async () => 2);
-  context.mock.method(client.order, "findMany", async () => [order, withoutCompany]);
+  context.mock.method(client.order, "findMany", async () => [
+    order,
+    withoutCompany,
+  ]);
   context.mock.method(client, "$transaction", async (operations: unknown) =>
-    Promise.all(operations as Promise<unknown>[]));
+    Promise.all(operations as Promise<unknown>[]),
+  );
   const app = express();
   app.use("/orders", createAdminOrderRouter());
   const server = app.listen(0, "127.0.0.1");
   await once(server, "listening");
-  context.after(() => new Promise<void>((resolve, reject) =>
-    server.close((error) => error ? reject(error) : resolve())));
+  context.after(
+    () =>
+      new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      ),
+  );
   const address = server.address();
   assert.ok(address && typeof address !== "string");
-  const response = await fetch(`http://127.0.0.1:${address.port}/orders?archived=true`);
+  const response = await fetch(
+    `http://127.0.0.1:${address.port}/orders?archived=true`,
+  );
   assert.equal(response.status, 200);
-  const body = await response.json() as { data: { items: Array<{ archivedAt: string; purgeAt: string; customerCompany: string; customerName: string }> } };
+  const body = (await response.json()) as {
+    data: {
+      items: Array<{
+        archivedAt: string;
+        purgeAt: string;
+        customerCompany: string;
+        customerName: string;
+      }>;
+    };
+  };
   assert.equal(body.data.items[0]?.archivedAt, archivedAt.toISOString());
   assert.equal(body.data.items[0]?.purgeAt, purgeAt.toISOString());
   assert.equal(body.data.items[0]?.customerCompany, "Beispiel GmbH");

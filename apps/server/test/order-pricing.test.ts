@@ -305,7 +305,11 @@ test("catalog name changes are ignored but selected catalog price changes are st
   input.pricingSnapshot = preview.pricingSnapshot;
 
   packingName = "Karton";
-  const renamedSnapshot = await validatePricingSnapshot(input, undefined, client);
+  const renamedSnapshot = await validatePricingSnapshot(
+    input,
+    undefined,
+    client,
+  );
   assert.equal(renamedSnapshot?.services[0]?.name, "Karton");
 
   packingPrice = "3";
