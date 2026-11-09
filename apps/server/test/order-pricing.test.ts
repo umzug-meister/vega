@@ -273,6 +273,49 @@ test("stale pricing preview reports changed field paths without field values", a
   );
 });
 
+test("catalog name changes are ignored but selected catalog price changes are stale", async () => {
+  const input = orderFixture();
+  input.details!.showSecondaryFrom = false;
+  input.details!.showSecondaryTo = false;
+  input.details!.basis.trucks = 0;
+  input.details!.basis.hours = 0;
+  input.details!.extras.services = [
+    {
+      kind: "packaging",
+      catalogId: 22,
+      name: "Umzugskartons",
+      quantity: 2,
+    },
+  ];
+  input.from.parkingSlot = false;
+  input.to.parkingSlot = false;
+  let packingName = "Umzugskartons";
+  let packingPrice = "2";
+  const client = {
+    catalogOffer: { findUnique: async () => null },
+    catalogService: { findMany: async () => [] },
+    catalogPacking: {
+      findMany: async () => [
+        { id: 22, name: packingName, price: packingPrice, sort: 0 },
+      ],
+    },
+    catalogServiceRate: { findMany: async () => [] },
+  } as unknown as Parameters<typeof previewOrderPricing>[1];
+  const preview = await previewOrderPricing(input, client);
+  input.pricingSnapshot = preview.pricingSnapshot;
+
+  packingName = "Karton";
+  const renamedSnapshot = await validatePricingSnapshot(input, undefined, client);
+  assert.equal(renamedSnapshot?.services[0]?.name, "Karton");
+
+  packingPrice = "3";
+  await assert.rejects(
+    validatePricingSnapshot(input, undefined, client),
+    (error: unknown) =>
+      error instanceof Error && error.message === "PRICE_CATALOG_CHANGED",
+  );
+});
+
 test("pricing preview prices a saved unit price even when the catalog row is gone", async () => {
   const input = orderFixture();
   const details = input.details!;

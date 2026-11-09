@@ -15,6 +15,8 @@ import { AddressesTab } from "./AddressesTab.js";
 import { BasisTab } from "./BasisTab.js";
 import {
   ConditionsTab,
+  getChangedPricingInputFields,
+  getPricingInputSource,
   hasPricingInputsChanged,
   mergeCalculatedConditions,
 } from "./ConditionsTab.js";
@@ -66,7 +68,7 @@ export function orderForSave(value: OrderFormValue): OrderFormValue {
         ...value.details.extras,
         services: value.details.extras.services.filter(
           (service) =>
-              service.quantity > 0 &&
+            service.quantity > 0 &&
             service.name.trim().length > 0 &&
             (service.catalogId !== undefined ||
               (typeof service.unitPrice === "number" &&
@@ -87,12 +89,87 @@ interface OrderCreatePageProps {
 }
 
 interface ApiErrorResponse {
+  pricingWarning?: { code: string; changedFields: string[] };
   error?: {
     code?: string;
     message?: string;
     issues?: Array<{ field: string; message: string }>;
     changedFields?: string[];
   };
+}
+
+function pricingValue(source: unknown, field: string): unknown {
+  const path = field.replace(/\[(\d+)\]/gu, ".$1").split(".");
+  return path.reduce<unknown>((current, key) => {
+    if (Array.isArray(current)) return current[Number(key)];
+    if (typeof current === "object" && current !== null)
+      return (current as Record<string, unknown>)[key];
+    return undefined;
+  }, source);
+}
+
+function formatPricingValue(value: unknown, field: string): string {
+  if (value === undefined || value === null) return "nicht gesetzt";
+  if (field.endsWith(".unitPrice"))
+    return new Intl.NumberFormat("de-DE", {
+      style: "currency",
+      currency: "EUR",
+    }).format(Number(value));
+  if (field.endsWith(".catalogId")) return `Katalog-ID ${String(value)}`;
+  if (field.endsWith(".kind"))
+    return value === "packaging" ? "Packmaterial" : "Leistung";
+  if (typeof value === "boolean") return value ? "ja" : "nein";
+  return String(value);
+}
+
+export function describePricingField(
+  field: string,
+  value: OrderFormValue,
+): string {
+  if (field === "Katalogpreise") return field;
+  const address = /^addresses\[(\d+)\]\.(city|parkingSlot)$/u.exec(field);
+  if (address) {
+    const label = address[2] === "city" ? "Ort geändert" : "Halteverbotszone";
+    if (address[2] === "city")
+      return `Adresse ${Number(address[1]) + 1}: ${label}`;
+    const previous = pricingValue(value.pricingSnapshot?.source, field);
+    const current = pricingValue(getPricingInputSource(value), field);
+    return `Adresse ${Number(address[1]) + 1}: ${label} ${formatPricingValue(previous, field)} → ${formatPricingValue(current, field)}`;
+  }
+  const service =
+    /^services\[(\d+)\]\.(kind|catalogId|quantity|unitPrice)$/u.exec(field);
+  if (service) {
+    const index = Number(service[1]);
+    const item = value.details.extras.services[index];
+    const itemName =
+      item?.catalogId !== undefined
+        ? item.name
+        : `Freitextposition ${index + 1}`;
+    const labels = {
+      kind: "Art",
+      catalogId: "Katalogposition",
+      quantity: "Menge",
+      unitPrice: "Einzelpreis",
+    };
+    const previous = pricingValue(value.pricingSnapshot?.source, field);
+    const current = pricingValue(getPricingInputSource(value), field);
+    return `${itemName}: ${labels[service[2] as keyof typeof labels]} ${formatPricingValue(previous, field)} → ${formatPricingValue(current, field)}`;
+  }
+  const labels: Record<string, string> = {
+    offerId: "Ausgewählter Tarif",
+    workers: "Trägeranzahl",
+    trucks: "LKW-Anzahl",
+    hours: "Umzugsstunden",
+    basePrice: "Grundpreis",
+    extraHourPrice: "Preis je Zusatzstunde",
+    discountPercent: "Rabatt",
+    distanceKm: "Entfernung in Kilometern",
+    distanceSource: "Quelle der Entfernung",
+  };
+  if (!labels[field]) return field;
+  const previous = pricingValue(value.pricingSnapshot?.source, field);
+  const current = pricingValue(getPricingInputSource(value), field);
+  return `${labels[field]}: ${formatPricingValue(previous, field)} → ${formatPricingValue(current, field)}`;
 }
 
 export function OrderCreatePage({
@@ -274,12 +351,31 @@ export function OrderCreatePage({
       data?: CreateOrderResult | AdminOrderDetail;
     } & ApiErrorResponse;
     if (!response.ok || !body.data) {
-      if (body.error?.code === "PRICE_PREVIEW_STALE")
+      if (body.error?.code === "PRICE_PREVIEW_STALE") {
+        const changedFields = body.error.changedFields ?? [];
         console.error("[Vega] Preisvorschau ist veraltet.", {
           code: body.error.code,
-          changedFields: body.error.changedFields ?? [],
+          changedFields: changedFields
+            .map((field) => describePricingField(field, saveValue))
+            .join("; "),
+          action:
+            "Preisvorschau mit den aktuellen Auftragsangaben erneut berechnen und anschließend speichern.",
         });
+      }
       const issues = body.error?.issues ?? [];
+      if (issues.length > 0) {
+        console.error(
+          "[Vega] Auftrag konnte wegen ungültiger Angaben nicht gespeichert werden.",
+          {
+            code: body.error?.code,
+            missingOrInvalidFields: issues
+              .map(({ field, message }) => `${field}: ${message}`)
+              .join("\n"),
+            action:
+              "Die aufgeführten Felder im Formular korrigieren oder ergänzen und erneut speichern.",
+          },
+        );
+      }
       const fieldErrors = issues.map((issue) => issue.message);
       const firstField = issues[0]?.field ?? "";
       if (firstField.startsWith("customer")) setActiveTab(0);
@@ -320,10 +416,34 @@ export function OrderCreatePage({
       valueRef.current = savedValue;
       setValue(savedValue);
       onDirtyChange(false);
+      const needsPricingReview =
+        pricingNeedsReview || body.pricingWarning !== undefined;
+      const changedFields = [
+        ...new Set([
+          ...getChangedPricingInputFields(saveValue),
+          ...(body.pricingWarning?.changedFields ?? []),
+        ]),
+      ];
+      if (needsPricingReview) {
+        console.warn(
+          "[Vega] Preisgrundlage wurde seit der letzten Kalkulation geändert.",
+          {
+            orderNumber,
+            code: body.pricingWarning?.code,
+            changedFields: changedFields
+              .map((field) => describePricingField(field, saveValue))
+              .join("; "),
+            action:
+              "Prüfe die Positionen und berechne sie bei Bedarf über 'Positionen berechnen' neu. Speichere den Auftrag anschließend erneut.",
+          },
+        );
+      }
       notify(
-        pricingNeedsReview ? "warning" : "success",
-        pricingNeedsReview
-          ? "Auftrag gespeichert. Preisrelevante Angaben wurden geändert. Bitte prüfen und berechnen Sie die Positionen gegebenenfalls neu."
+        needsPricingReview ? "warning" : "success",
+        needsPricingReview
+          ? body.pricingWarning?.code === "PRICE_CATALOG_CHANGED"
+            ? "Auftrag gespeichert. Der Preiskatalog wurde seit der Vorschau geändert. Prüfe bitte die Positionen und berechne sie bei Bedarf neu."
+            : "Auftrag gespeichert. Preisrelevante Angaben haben sich geändert. Prüfe bitte die Positionen und berechne sie bei Bedarf neu."
           : "Auftrag gespeichert.",
       );
     }
@@ -344,12 +464,26 @@ export function OrderCreatePage({
       });
       const body = (await response.json()) as {
         data?: OrderPricingPreview;
-        error?: { message?: string; issues?: Array<{ message: string }> };
+        error?: {
+          code?: string;
+          message?: string;
+          issues?: Array<{ field: string; message: string }>;
+        };
       };
       const preview = body.data;
       if (!response.ok || !preview) {
+        const issues = body.error?.issues ?? [];
+        console.error("[Vega] Preisberechnung fehlgeschlagen.", {
+          code: body.error?.code,
+          missingOrInvalidFields: issues
+            .map(({ field, message }) => `${field}: ${message}`)
+            .join("\n"),
+          message: body.error?.message,
+          action:
+            "Die genannten Angaben korrigieren oder ergänzen und die Preisberechnung erneut starten.",
+        });
         setError(
-          body.error?.issues?.map((issue) => issue.message).join(" · ") ||
+          issues.map((issue) => issue.message).join(" · ") ||
             body.error?.message ||
             "Das Angebot konnte nicht berechnet werden.",
         );

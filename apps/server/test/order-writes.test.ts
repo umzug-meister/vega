@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import express from "express";
 import test, { type TestContext } from "node:test";
-import type { AppSettingsDto, CreateOrderInput } from "@vega/domain";
+import type {
+  AppSettingsDto,
+  CreateOrderInput,
+  OrderPricingSnapshot,
+} from "@vega/domain";
 import type { Prisma } from "../src/generated/prisma/client.js";
 import {
   OrderInputError,
@@ -608,6 +612,90 @@ test("order detail exposes revision and sequential saves require the returned re
     "relations",
     "journal",
   ]);
+});
+
+test("order save succeeds and warns when price inputs changed after preview", async (context) => {
+  const input = orderFixture();
+  const details = input.details!;
+  details.showSecondaryFrom = false;
+  details.showSecondaryTo = false;
+  details.distanceKm = 0;
+  details.furniture.items = [];
+  details.extras.services = [];
+  details.basis = {
+    workers: 0,
+    trucks: 0,
+    hours: 0,
+    basePrice: 0,
+    extraHourPrice: 0,
+    discountPercent: 0,
+  };
+  input.from.parkingSlot = false;
+  input.to.parkingSlot = false;
+  const snapshot = (hours: number): OrderPricingSnapshot => ({
+    version: 1,
+    calculatedAt: "2026-10-01T00:00:00.000Z",
+    source: {
+      offerId: null,
+      workers: 0,
+      trucks: 0,
+      hours,
+      basePrice: 0,
+      extraHourPrice: 0,
+      discountPercent: 0,
+      distanceKm: 0,
+      addresses: [
+        { city: input.from.city!, parkingSlot: false },
+        { city: input.to.city!, parkingSlot: false },
+      ],
+      services: [],
+    },
+    offer: null,
+    rates: [],
+    services: [],
+  });
+  input.pricingSnapshot = snapshot(0);
+  const existing = storedOrder(input, 7);
+  const changedInput = structuredClone(input);
+  changedInput.details!.basis.hours = 2;
+  changedInput.pricingSnapshot = snapshot(1);
+  let saved: StoredOrder | undefined;
+  const request = await serve(context, {
+    order: {
+      findUnique: async () => existing,
+      updateMany: async (args: Prisma.OrderUpdateManyArgs) => {
+        saved = storedOrder(
+          args.data.data as unknown as CreateOrderInput,
+          existing.revision + 1,
+        );
+        return { count: 1 };
+      },
+      update: async () => {
+        assert.ok(saved);
+        return saved;
+      },
+    },
+    catalogFurniture: { findMany: async () => [] },
+    catalogOffer: { findUnique: async () => null },
+    catalogService: { findMany: async () => [] },
+    catalogPacking: { findMany: async () => [] },
+    catalogServiceRate: { findMany: async () => [] },
+    orderActivityEvent: { create: async () => undefined },
+  });
+
+  const response = await request("PUT", { ...changedInput, revision: 7 });
+  assert.equal(response.status, 200);
+  const body = (await response.json()) as {
+    data: { revision: number; data: CreateOrderInput };
+    pricingWarning: { code: string; changedFields: string[] };
+  };
+  assert.equal(body.data.revision, 8);
+  assert.equal(body.data.data.details?.basis.hours, 2);
+  assert.equal(body.data.data.pricingSnapshot?.source.hours, 1);
+  assert.deepEqual(body.pricingWarning, {
+    code: "PRICE_PREVIEW_STALE",
+    changedFields: ["hours"],
+  });
 });
 
 for (const aboveLimit of [false, true]) {

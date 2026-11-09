@@ -177,7 +177,8 @@ export async function validatePricingSnapshot(
           latest.pricingSnapshot.source,
         ),
       );
-    throw new Error("PRICE_CATALOG_CHANGED");
+    if (!samePricingValues(submittedSnapshot, latest.pricingSnapshot, input))
+      throw new Error("PRICE_CATALOG_CHANGED");
   }
   return latest.pricingSnapshot;
 }
@@ -241,6 +242,77 @@ function sameSnapshot(
   const { calculatedAt: _leftCalculatedAt, ...leftValue } = left;
   const { calculatedAt: _rightCalculatedAt, ...rightValue } = right;
   return canonical(leftValue) === canonical(rightValue);
+}
+
+function samePricingValues(
+  left: OrderPricingSnapshot,
+  right: OrderPricingSnapshot,
+  input: CreateOrderInput,
+): boolean {
+  const details = input.details;
+  if (!details) return true;
+  const addresses = [
+    input.from,
+    input.to,
+    ...(details.showSecondaryFrom && details.secondaryFrom
+      ? [details.secondaryFrom]
+      : []),
+    ...(details.showSecondaryTo && details.secondaryTo
+      ? [details.secondaryTo]
+      : []),
+  ];
+  const local =
+    addresses.length > 0 &&
+    addresses.every((address) =>
+      ["munchen", "muenchen"].includes(
+        address.city
+          .trim()
+          .normalize("NFD")
+          .replace(/\p{Diacritic}/gu, "")
+          .toLocaleLowerCase("de-DE"),
+      ),
+    );
+  const rateKeys = new Set<string>();
+  if (details.basis.trucks > 0 && details.basis.trucks <= 4) {
+    rateKeys.add(`ridingCostsTruck${details.basis.trucks}`);
+    if (!local) rateKeys.add("kmPrice");
+  }
+  if (addresses.some((address) => address.parkingSlot === true))
+    rateKeys.add("hvzPrice");
+  const hasSelectedOffer =
+    details.basis.hours > 0 && details.basis.offerId !== undefined;
+  const selectedServices = details.extras.services;
+
+  function values(snapshot: OrderPricingSnapshot) {
+    const offer = hasSelectedOffer
+      ? snapshot.offer && {
+          sum: snapshot.offer.sum,
+          hourPrice: snapshot.offer.hourPrice,
+          ridingCosts: snapshot.offer.ridingCosts,
+        }
+      : null;
+    const rates = snapshot.rates
+      .filter((rate) => rateKeys.has(rate.key))
+      .map(({ key, price }) => ({ key, price }))
+      .sort((a, b) => a.key.localeCompare(b.key));
+    const services = selectedServices.map((service) => {
+      const catalogService =
+        service.catalogId !== undefined && service.unitPrice === undefined
+          ? snapshot.services.find(
+              (item) =>
+                item.id === service.catalogId && item.kind === service.kind,
+            )
+          : undefined;
+      return {
+        kind: service.kind,
+        catalogId: service.catalogId ?? null,
+        price: service.unitPrice ?? catalogService?.price ?? null,
+      };
+    });
+    return { offer, rates, services };
+  }
+
+  return canonical(values(left)) === canonical(values(right));
 }
 
 function canonical(value: unknown): string {

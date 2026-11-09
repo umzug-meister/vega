@@ -5,6 +5,11 @@ import type { CreateOrderInput, OrderPricingSnapshot } from "@vega/domain";
 import { AdminNotifications } from "../src/components/AdminNotifications.js";
 import { mount } from "./dom-test-helpers.js";
 import { createEmptyOrder } from "../src/orders/order-form-types.js";
+import {
+  getPricingInputSource,
+  hasPricingInputsChanged,
+} from "../src/orders/ConditionsTab.js";
+import { describePricingField } from "../src/orders/OrderCreatePage.js";
 
 const input: CreateOrderInput = {
   customer: { firstName: "Original", lastName: "Customer", phone: "089123456" },
@@ -371,7 +376,12 @@ test("saving keeps catalog services whose price falls back to the catalog", asyn
         services: [
           { kind: "service", catalogId: 9, name: "Bohrarbeiten", quantity: 2 },
           { kind: "packaging", catalogId: 10, name: "Karton", quantity: 1 },
-          { kind: "packaging", catalogId: 11, name: "Nicht ausgewählt", quantity: 0 },
+          {
+            kind: "packaging",
+            catalogId: 11,
+            name: "Nicht ausgewählt",
+            quantity: 0,
+          },
           { kind: "service", name: "Freitext ohne Preis", quantity: 1 },
           { kind: "service", name: "  ", quantity: 1, unitPrice: 20 },
         ],
@@ -471,6 +481,10 @@ test("saving an order removes unnamed furniture rows and preserves named rows", 
 });
 
 test("saving changed pricing inputs warns to review and recalculate order positions", async (context) => {
+  const warnings: unknown[][] = [];
+  context.mock.method(console, "warn", (...args: unknown[]) => {
+    warnings.push(args);
+  });
   const initialData: CreateOrderInput = {
     ...input,
     details: createEmptyOrder().details,
@@ -507,6 +521,10 @@ test("saving changed pricing inputs warns to review and recalculate order positi
       delete savedData.revision;
       return json({
         data: { orderNumber: 1000, revision: 8, data: savedData },
+        pricingWarning: {
+          code: "PRICE_PREVIEW_STALE",
+          changedFields: ["workers"],
+        },
       });
     },
   });
@@ -533,16 +551,91 @@ test("saving changed pricing inputs warns to review and recalculate order positi
   assert.ok(notification, "Expected a save notification");
   assert.match(
     notification.textContent ?? "",
-    /Preisrelevante Angaben wurden geändert/u,
+    /Preisrelevante Angaben haben sich geändert/u,
   );
-  assert.match(
-    notification.textContent ?? "",
-    /Positionen gegebenenfalls neu/u,
-  );
+  assert.match(notification.textContent ?? "", /berechne sie bei Bedarf neu/u);
+  assert.equal(warnings.length, 1);
+  const warning = warnings[0];
+  assert.ok(warning);
+  assert.match(String(warning[0]), /Preisgrundlage/u);
+  const warningDetails = warning[1] as {
+    code: string;
+    changedFields: string;
+    action: string;
+  };
+  assert.equal(warningDetails.code, "PRICE_PREVIEW_STALE");
+  assert.equal(warningDetails.changedFields, "Trägeranzahl: 0 → 3");
+  assert.match(warningDetails.action, /berechne sie bei Bedarf/u);
   assert.equal(
     view.container.querySelector("output")?.getAttribute("data-dirty"),
     "false",
   );
+});
+
+test("pricing console details name catalog services and show changed order values", () => {
+  const value = createEmptyOrder();
+  value.details.extras.services = [
+    {
+      kind: "packaging",
+      catalogId: 22,
+      name: "Umzugskartons",
+      quantity: 3,
+      unitPrice: 2.5,
+    },
+  ];
+  const source = getPricingInputSource(value);
+  source.services[0] = {
+    kind: "packaging",
+    catalogId: 22,
+    quantity: 2,
+    unitPrice: 2,
+  };
+  value.pricingSnapshot = {
+    version: 1,
+    calculatedAt: "2026-10-01T00:00:00.000Z",
+    source,
+    offer: null,
+    rates: [],
+    services: [],
+  } satisfies OrderPricingSnapshot;
+
+  assert.equal(
+    describePricingField("services[0].quantity", value),
+    "Umzugskartons: Menge 2 → 3",
+  );
+  assert.match(
+    describePricingField("services[0].unitPrice", value),
+    /Umzugskartons: Einzelpreis 2,00.*→ 2,50/u,
+  );
+});
+
+test("furniture volume and descriptive names do not count as pricing changes", () => {
+  const value = createEmptyOrder();
+  value.details.furniture.items = [{ name: "Sofa", quantity: 1, volume: 2 }];
+  value.details.extras.services = [
+    {
+      kind: "packaging",
+      catalogId: 22,
+      name: "Umzugskartons",
+      quantity: 2,
+      unitPrice: 2.5,
+    },
+  ];
+  value.pricingSnapshot = {
+    version: 1,
+    calculatedAt: "2026-10-01T00:00:00.000Z",
+    source: getPricingInputSource(value),
+    offer: null,
+    rates: [],
+    services: [],
+  } satisfies OrderPricingSnapshot;
+
+  value.details.furniture.volume = 3;
+  value.details.furniture.items[0]!.name = "Sofa im Schlafzimmer";
+  value.details.furniture.items[0]!.volume = 3;
+  value.details.extras.services[0]!.name = "Umzugskartons neu benannt";
+
+  assert.equal(hasPricingInputsChanged(value), false);
 });
 
 test("order creation clears dirty synchronously before navigating to the persisted editor", async (context) => {

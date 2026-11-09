@@ -27,6 +27,7 @@ import {
   type CatalogServiceDto,
   type OrderConditionInput,
   type OrderDetailsInput,
+  type OrderPricingSnapshot,
 } from "@vega/domain";
 import { useEffect, useState } from "react";
 import { apiRequest } from "../api/api-request.js";
@@ -54,10 +55,20 @@ type ConditionEditPatch = Omit<
 };
 
 export function hasPricingInputsChanged(value: OrderFormValue): boolean {
+  return getChangedPricingInputFields(value).length > 0;
+}
+
+export function getChangedPricingInputFields(value: OrderFormValue): string[] {
   const snapshot = value.pricingSnapshot;
-  if (!snapshot) return false;
+  if (!snapshot) return [];
+  return changedFieldPaths(snapshot.source, getPricingInputSource(value));
+}
+
+export function getPricingInputSource(
+  value: OrderFormValue,
+): OrderPricingSnapshot["source"] {
   const { basis, extras } = value.details;
-  const currentSource = {
+  return {
     offerId: basis.offerId ?? null,
     workers: basis.workers,
     trucks: basis.trucks,
@@ -88,13 +99,44 @@ export function hasPricingInputsChanged(value: OrderFormValue): boolean {
         catalogId: catalogId ?? null,
         quantity,
         ...(unitPrice !== undefined ||
-        snapshot.source.services[index]?.unitPrice !== undefined
+        value.pricingSnapshot?.source.services[index]?.unitPrice !== undefined
           ? { unitPrice: unitPrice ?? null }
           : {}),
       }),
     ),
   };
-  return JSON.stringify(snapshot.source) !== JSON.stringify(currentSource);
+}
+
+function changedFieldPaths(previous: unknown, current: unknown): string[] {
+  const changes: string[] = [];
+  function visit(left: unknown, right: unknown, path: string) {
+    if (JSON.stringify(left) === JSON.stringify(right)) return;
+    if (Array.isArray(left) && Array.isArray(right)) {
+      for (let index = 0; index < Math.max(left.length, right.length); index++)
+        visit(left[index], right[index], `${path}[${index}]`);
+      return;
+    }
+    if (
+      typeof left === "object" &&
+      left !== null &&
+      !Array.isArray(left) &&
+      typeof right === "object" &&
+      right !== null &&
+      !Array.isArray(right)
+    ) {
+      const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+      for (const key of keys)
+        visit(
+          (left as Record<string, unknown>)[key],
+          (right as Record<string, unknown>)[key],
+          path ? `${path}.${key}` : key,
+        );
+      return;
+    }
+    changes.push(path || "source");
+  }
+  visit(previous, current, "");
+  return changes;
 }
 
 export function calculateConditionAmount(

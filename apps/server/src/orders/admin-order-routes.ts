@@ -343,6 +343,7 @@ export function createAdminOrderRouter(
           },
         ]);
       const actorName = String(res.locals.staffUser.name);
+      let pricingWarning: { code: string; changedFields: string[] } | undefined;
       try {
         const order = await prisma.$transaction(async (tx) => {
           const existing = await tx.order.findUnique({
@@ -366,11 +367,33 @@ export function createAdminOrderRouter(
             ),
             storedInput,
           );
-          const pricingSnapshot = await validatePricingSnapshot(
-            normalized,
-            storedInput.pricingSnapshot,
-            tx,
-          );
+          let pricingSnapshot: typeof storedInput.pricingSnapshot;
+          try {
+            pricingSnapshot = await validatePricingSnapshot(
+              normalized,
+              storedInput.pricingSnapshot,
+              tx,
+            );
+          } catch (pricingError) {
+            if (pricingError instanceof PricePreviewStaleError) {
+              pricingWarning = {
+                code: "PRICE_PREVIEW_STALE",
+                changedFields: pricingError.changedFields,
+              };
+            } else if (
+              pricingError instanceof Error &&
+              pricingError.message === "PRICE_CATALOG_CHANGED"
+            ) {
+              pricingWarning = {
+                code: "PRICE_CATALOG_CHANGED",
+                changedFields: ["Katalogpreise"],
+              };
+            } else {
+              throw pricingError;
+            }
+            pricingSnapshot =
+              normalized.pricingSnapshot ?? storedInput.pricingSnapshot;
+          }
           if (pricingSnapshot) normalized.pricingSnapshot = pricingSnapshot;
           const customerName =
             `${normalized.customer.firstName} ${normalized.customer.lastName}`.trim();
@@ -410,7 +433,10 @@ export function createAdminOrderRouter(
           return updated;
         });
         res.setHeader("Cache-Control", "no-store");
-        res.json({ data: toOrderDetail(order) });
+        res.json({
+          data: toOrderDetail(order),
+          ...(pricingWarning ? { pricingWarning } : {}),
+        });
       } catch (error) {
         if (
           isMissingOrder(error) ||
