@@ -22,6 +22,7 @@ import { apiRequest } from "../api/api-request.js";
 import type { OrderFormValue } from "./order-form-types.js";
 
 interface BasisTabProps {
+  editableRange?: boolean;
   value: OrderFormValue;
   update: (patch: Partial<OrderFormValue>) => void;
   onBasisChange: (basis: OrderDetailsInput["basis"]) => void;
@@ -39,7 +40,12 @@ export function filterOffersByBasis(
   );
 }
 
-export function BasisTab({ value, update, onBasisChange }: BasisTabProps) {
+export function BasisTab({
+  value,
+  update,
+  onBasisChange,
+  editableRange,
+}: BasisTabProps) {
   const basis = value.details.basis;
   const discountRecommendation = suggestDiscountPercent(value.movingDate);
   const [offers, setOffers] = useState<CatalogOfferDto[]>([]);
@@ -96,6 +102,7 @@ export function BasisTab({ value, update, onBasisChange }: BasisTabProps) {
         >
           <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
             <AppointmentFields
+              {...(editableRange !== undefined ? { editableRange } : {})}
               value={{
                 movingDate: value.movingDate,
                 movingTime: value.movingTime ?? "",
@@ -189,7 +196,9 @@ export function BasisTab({ value, update, onBasisChange }: BasisTabProps) {
                 slotProps={{
                   htmlInput: { min: 0, step: "0.01" },
                   input: {
-                    endAdornment: <InputAdornment position="end">€</InputAdornment>,
+                    endAdornment: (
+                      <InputAdornment position="end">€</InputAdornment>
+                    ),
                   },
                 }}
               />

@@ -32,7 +32,12 @@ import { familyLabel } from "./family-label.js";
 import { EmailSendAttempt, mailAttemptStorage } from "./email-send-attempt.js";
 
 export type EmailTarget =
-  | { type: "order"; orderNumber: number; kind: OrderEmailKind }
+  | {
+      type: "order";
+      orderNumber: number;
+      kind: OrderEmailKind;
+      replyToSourceMail?: boolean;
+    }
   | { type: "invoice"; id: string }
   | { type: "credit"; id: string }
   | { type: "reminder"; id: string; level: number };
@@ -94,7 +99,7 @@ export function EmailDialog({
     target.type === "order" ? target.orderNumber : undefined;
   const query =
     target.type === "order"
-      ? `?kind=${target.kind}${isPair ? `&partner=${partner ?? ""}` : ""}`
+      ? `?kind=${target.kind}${isPair ? `&partner=${partner ?? ""}` : ""}${target.replyToSourceMail ? "&reply=1" : ""}`
       : "";
   const attempt = useMemo(
     () => new EmailSendAttempt(`vega:mail:${basePath}`, mailAttemptStorage()),
@@ -178,6 +183,9 @@ export function EmailDialog({
           ...(target.type === "order"
             ? {
                 kind: target.kind,
+                ...(target.replyToSourceMail
+                  ? { replyToSourceMail: true }
+                  : {}),
                 ...(isPair && partner !== undefined
                   ? { partnerOrderNumber: partner }
                   : {}),

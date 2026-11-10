@@ -51,6 +51,7 @@ Domains oder Secrets in Vite-Builds.
 | `HOSTINGER_MAIL_API_BASE_URL`                                          | Optional, Standard `https://api.mail.hostinger.com`                   |
 | `GOOGLE_MAPS_API_KEY`                                                  | Places-Proxy und Admin-Route; ohne Key bleibt manuelle Eingabe        |
 | `GCS_BUCKET`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_APPLICATION_CREDENTIALS` | Bild-Uploads (siehe `gcs-bucket-setup.md`)                            |
+| `GEMINI_ENABLED`, `GEMINI_LOCATION`, `GEMINI_MODEL`                    | Postfach-Analyse mit Vertex AI, Region `global` (siehe `gemini-setup.md`)   |
 
 `localhost` und `127.0.0.1` sind unterschiedliche Origins. Der Kundenformular-Origin
 gehört nur in `CORS_ALLOWED_ORIGINS`. Nach Änderungen an `.env` den Server neu starten.
@@ -341,3 +342,5 @@ werden. Der Test ersetzt diese Freigabe-Gates nicht.
 - `hostinger-setup.md` – Schritt-für-Schritt-Deployment, Runtime-Variablen, SSH, Migrationen und Go-live-Checkliste
 - `hostinger-mail-cron.md` – zentraler Hostinger-Cron für Archiv-Purges und Mail-Retries (`node scripts/cron.js`)
 - `gcs-bucket-setup.md` – GCS-Bucket, Lifecycle, CORS, Service Account
+- `gemini-setup.md` – Postfach-Analyse: Vertex AI, Variablen, Datenschutz, Nebeneffekte (`\Seen`/`\Answered`), Zitat-Aufbewahrung
+- `plan-mail-intake-gemini.md` – Plan und Entscheidungen Postfach → Auftrag

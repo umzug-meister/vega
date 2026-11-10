@@ -12,6 +12,7 @@ import {
   ExpandMore,
   FormatListNumberedOutlined,
   HandymanOutlined,
+  InboxOutlined,
   Inventory2Outlined,
   LocalOfferOutlined,
   LogoutOutlined,
@@ -247,6 +248,18 @@ export function AdminSidebar({
                 <FormatListNumberedOutlined />
               </ListItemIcon>
               {!sidebarCollapsed && <ListItemText primary="Aufträge" />}
+            </ListItemButton>
+            <ListItemButton
+              sx={listItemButtonSx}
+              title="E-Mail Postfach"
+              aria-label="E-Mail Postfach"
+              selected={pathname === "/inbox"}
+              onClick={() => navigate("/inbox")}
+            >
+              <ListItemIcon>
+                <InboxOutlined />
+              </ListItemIcon>
+              {!sidebarCollapsed && <ListItemText primary="E-Mail Postfach" />}
             </ListItemButton>
             {isAdmin && (
               <ListItemButton

@@ -773,6 +773,7 @@ test("house address shows the customer-form floor choices as multi-select toggle
       ...completeOrder().from,
       movementObject: "Haus" as const,
       stockwerke: ["EG"],
+      hasGarage: true,
     });
     return React.createElement(
       React.Fragment,
@@ -799,6 +800,17 @@ test("house address shows the customer-form floor choices as multi-select toggle
     for (const floor of ["UG", "EG", "1.OG", "2.OG"]) {
       assert.ok(app.container.querySelector(`[aria-label="${floor}"]`));
     }
+    for (const label of ["Dachboden", "Keller", "Garage"]) {
+      assert.ok(
+        [...app.container.querySelectorAll("label")].some((entry) =>
+          entry.textContent?.includes(label),
+        ),
+      );
+    }
+    const garage = [...app.container.querySelectorAll("label")].find((entry) =>
+      entry.textContent?.includes("Garage"),
+    );
+    assert.equal(garage?.querySelector("input")?.checked, true);
     assert.equal(
       app.container.querySelector("label[for]")?.textContent?.includes("Etage"),
       false,

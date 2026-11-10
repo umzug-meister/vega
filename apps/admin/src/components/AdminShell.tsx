@@ -38,6 +38,7 @@ interface AdminShellProps {
   orderDirty?: boolean;
   orderBusy?: boolean;
   orderIsCopy?: boolean;
+  orderHasSourceMail?: boolean;
   invoiceBusy?: boolean;
   invoiceDirty?: boolean;
   invoiceAccountingDirty?: boolean;
@@ -55,6 +56,7 @@ export function AdminShell({
   orderDirty = false,
   orderBusy = false,
   orderIsCopy = false,
+  orderHasSourceMail = false,
   invoiceBusy = false,
   invoiceDirty = false,
   invoiceAccountingDirty = false,
@@ -161,12 +163,13 @@ export function AdminShell({
     }, "Auftrag konnte nicht archiviert werden.");
   }
 
-  function openOrderEmail(kind: OrderEmailKind) {
+  function openOrderEmail(kind: OrderEmailKind, replyToSourceMail = false) {
     if (editedOrderNumber && !orderActionsDisabled)
       setEmailTarget({
         type: "order",
         orderNumber: Number(editedOrderNumber),
         kind,
+        ...(replyToSourceMail ? { replyToSourceMail } : {}),
       });
   }
 
@@ -213,6 +216,7 @@ export function AdminShell({
         orderActionsDisabled={orderActionsDisabled}
         orderHasChanges={orderHasChanges}
         orderIsCopy={orderIsCopy}
+        orderHasSourceMail={orderHasSourceMail}
         isAdmin={isAdmin}
         isInvoiceEditor={isInvoiceEditor}
         editedInvoiceId={editedInvoiceId}

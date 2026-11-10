@@ -28,6 +28,7 @@ export interface SendMailInput {
   contentHtml: string;
   text?: string;
   attachments?: MailAttachment[];
+  replyToMailUid?: number;
   displayName?: string;
   signatureName?: string | null;
   signatureColor?: "#000000" | "#28527A" | "#CB722F";
@@ -75,6 +76,7 @@ export class MailService {
         ? { expectedFromAddress: settings.emailFromAddress }
         : {}),
       ...(input.attachments ? { attachments: input.attachments } : {}),
+      ...(input.replyToMailUid ? { replyToMailUid: input.replyToMailUid } : {}),
     };
     await this.transport.send(message);
   }

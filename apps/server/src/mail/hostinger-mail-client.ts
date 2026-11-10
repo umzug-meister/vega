@@ -15,6 +15,7 @@ export interface OutgoingMail {
   displayName?: string;
   expectedFromAddress?: string;
   attachments?: MailAttachment[];
+  replyToMailUid?: number;
 }
 
 export class MailDeliveryError extends Error {
@@ -86,6 +87,9 @@ export class HostingerMailClient {
         ...(message.displayName ? { displayName: message.displayName } : {}),
         ...(message.attachments?.length
           ? { attachments: message.attachments }
+          : {}),
+        ...(message.replyToMailUid
+          ? { inReplyTo: { uid: message.replyToMailUid, folder: "INBOX" } }
           : {}),
       });
       sendStarted = true;

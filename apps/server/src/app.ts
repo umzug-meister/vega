@@ -35,6 +35,7 @@ import { createUploadRouter } from "./uploads/upload-routes.js";
 import { createUploadService, UploadError } from "./uploads/upload-service.js";
 import { createCustomerFormRouter } from "./customer-form-routes.js";
 import { createSettingsRouter } from "./settings/settings-routes.js";
+import { createConfiguredInboxRouter } from "./inbox/inbox-routes.js";
 import { createMaintenanceRouter } from "./maintenance/maintenance-routes.js";
 import { createRouteRouter } from "./maps/route-routes.js";
 import { createAdminPlacesRouter } from "./maps/admin-places-routes.js";
@@ -288,6 +289,7 @@ export function createApp(
     requireAdmin(auth),
     createSettingsRouter(config),
   );
+  app.use("/api/admin/inbox", createConfiguredInboxRouter(config));
   app.use(
     "/api/admin/staff",
     requireAdmin(auth),

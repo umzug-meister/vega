@@ -22,6 +22,11 @@ import type { PendingInitialPassword, StaffUser } from "./types.js";
 import { isTotpRequired, needsTotpSetup } from "@vega/domain";
 import { useLocalNavigation } from "./use-local-navigation.js";
 
+const InboxPage = lazy(() =>
+  import("./inbox/InboxPage.js").then((module) => ({
+    default: module.InboxPage,
+  })),
+);
 const ProfilePage = lazy(() =>
   import("./profile/ProfilePage.js").then((module) => ({
     default: module.ProfilePage,
@@ -80,6 +85,7 @@ export function App() {
   const [orderDirty, setOrderDirty] = useState(false);
   const [orderBusy, setOrderBusy] = useState(true);
   const [orderIsCopy, setOrderIsCopy] = useState(false);
+  const [orderHasSourceMail, setOrderHasSourceMail] = useState(false);
   const [invoiceBusy, setInvoiceBusy] = useState(true);
   const [invoiceDirty, setInvoiceDirty] = useState(false);
   const [accountingDirty, setAccountingDirty] = useState(false);
@@ -96,6 +102,7 @@ export function App() {
     setInvoiceDirty(false);
     setAccountingDirty(false);
     setOrderIsCopy(false);
+    setOrderHasSourceMail(false);
   }, [onInvoiceUnsavedChange, onOrderDirtyChange]);
   const { pathname, replacePath, navigatePath, confirmLeave } =
     useLocalNavigation(hasUnsavedChanges, clearDocumentState);
@@ -270,6 +277,8 @@ export function App() {
     }
 
     if (activeRoute.path === "/") return <OrdersPage navigate={navigatePath} />;
+    if (activeRoute.path === "/inbox")
+      return <InboxPage navigate={navigatePath} />;
     if (activeRoute.path === "/orders/archived") {
       return <OrdersPage archived navigate={navigatePath} />;
     }
@@ -311,6 +320,7 @@ export function App() {
           onDirtyChange={onOrderDirtyChange}
           onBusyChange={setOrderBusy}
           onCopyChange={setOrderIsCopy}
+          onSourceMailChange={setOrderHasSourceMail}
           dirty={orderDirty}
           {...(activeRoute.path === "/edit/-1"
             ? {}
@@ -343,6 +353,7 @@ export function App() {
       orderDirty={orderDirty || pathname === "/edit/-1"}
       orderBusy={orderBusy}
       orderIsCopy={orderIsCopy}
+      orderHasSourceMail={orderHasSourceMail}
       invoiceBusy={invoiceBusy}
       invoiceDirty={
         invoiceDirty ||

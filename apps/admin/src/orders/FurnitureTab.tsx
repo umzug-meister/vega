@@ -415,9 +415,10 @@ export function FurnitureTab({
               </Typography>
               {furniture.volumeComplete === false && (
                 <Alert severity="warning">
-                  Das übertragene Volumen ist unvollständig: Die Kartonanzahl
-                  wurde erfasst, aber die Kartonvolumina waren noch nicht
-                  konfiguriert.
+                  Das Volumen ist unvollständig: Einzelne Positionen (z. B.
+                  Kartons ohne konfiguriertes Volumen oder nicht erkannte
+                  Möbel) sind nicht enthalten. Bitte Volumen prüfen und
+                  ergänzen.
                 </Alert>
               )}
               {volumeConfigError && (

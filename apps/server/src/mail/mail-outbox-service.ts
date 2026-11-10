@@ -20,6 +20,8 @@ export interface QueueMailInput {
   subject: string;
   contentHtml: string;
   attachments?: MailAttachment[];
+  /** INBOX uid of the mail this one replies to (threading + \Answered). */
+  replyToMailUid?: number;
   actorName?: string;
   signatureName?: string | null;
   signatureColor?: SignatureColor;
@@ -39,6 +41,7 @@ export async function queueMail(input: QueueMailInput): Promise<string> {
     recipients: input.to as Prisma.InputJsonValue,
     subject: input.subject,
     contentHtml: input.contentHtml,
+    ...(input.replyToMailUid ? { replyToMailUid: input.replyToMailUid } : {}),
     ...(input.attachments
       ? { attachments: input.attachments as unknown as Prisma.InputJsonValue }
       : {}),
@@ -138,6 +141,7 @@ export async function deliverOutboxMail(
     await mailService.send({
       ...mailInput,
       signatureColor,
+      ...(row.replyToMailUid ? { replyToMailUid: row.replyToMailUid } : {}),
       ...(attachments ? { attachments } : {}),
     });
     try {

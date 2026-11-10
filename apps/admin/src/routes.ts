@@ -12,6 +12,7 @@ export interface AdminRoute {
 
 const fixedAdminRoutes: Record<string, AdminRoute> = {
   "/": { path: "/", title: "Aufträge" },
+  "/inbox": { path: "/inbox", title: "E-Mail Postfach" },
   "/invoices": {
     path: "/invoices",
     title: "Rechnungen",
