@@ -1,5 +1,5 @@
-import ExcelJS from "exceljs";
 import mammoth from "mammoth";
+import readXlsxFile from "read-excel-file/node";
 
 export const ATTACHMENT_LIMITS = {
   maxCount: 10,
@@ -137,21 +137,21 @@ export async function extractDocxText(buffer: Buffer): Promise<string> {
 
 export async function extractXlsxText(buffer: Buffer): Promise<string> {
   assertSafeZip(buffer);
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+  const sheets = await readXlsxFile(buffer, { trim: false });
   const lines: string[] = [];
-  for (const sheet of workbook.worksheets.slice(0, ATTACHMENT_LIMITS.maxSheets)) {
-    lines.push(`## ${sheet.name}`);
+  for (const sheet of sheets.slice(0, ATTACHMENT_LIMITS.maxSheets)) {
+    lines.push(`## ${sheet.sheet}`);
     let rowCount = 0;
-    sheet.eachRow({ includeEmpty: false }, (row) => {
-      if (rowCount >= ATTACHMENT_LIMITS.maxRows) return;
+    for (const row of sheet.data) {
+      if (row.every((cell) => cell === null)) continue;
+      if (rowCount >= ATTACHMENT_LIMITS.maxRows) break;
       rowCount += 1;
-      const cells: string[] = [];
-      for (let column = 1; column <= Math.min(row.cellCount, ATTACHMENT_LIMITS.maxColumns); column += 1) {
-        cells.push(row.getCell(column).text.trim());
-      }
+      const lastColumn = row.findLastIndex((cell) => cell !== null) + 1;
+      const cells = row
+        .slice(0, Math.min(lastColumn, ATTACHMENT_LIMITS.maxColumns))
+        .map((cell) => cell === null ? "" : String(cell).trim());
       if (cells.some(Boolean)) lines.push(cells.join("\t"));
-    });
+    }
   }
   return limitText(lines.join("\n"));
 }

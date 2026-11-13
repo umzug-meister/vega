@@ -64,6 +64,11 @@ Server neu starten.
 - Gelesen werden PDF, Bilder, `.docx`, `.xlsx`, `.csv`. `.doc`/`.xls` werden
   nicht gelesen (Hinweis im Panel). Limits: 10 Anhänge, 20 MB gesamt,
   10 MB je Datei, Zip-Bomb-Schutz.
+- XLSX-Anhänge werden serverseitig mit `read-excel-file` gelesen (kein
+  ExcelJS). Die Extraktion übernimmt Blattnamen und tabgetrennte Zellwerte,
+  einschließlich gespeicherter Formelergebnisse, ohne Formeln auszuführen.
+  Sie begrenzt die Ausgabe auf 5 Blätter, 500 nichtleere Zeilen je Blatt,
+  30 Spalten und insgesamt 60.000 Zeichen. Die ZIP-Prüfung läuft vor dem Parser.
 - Ein Rate-Limit begrenzt Analysen (10/Stunde je Nutzer, eine gleichzeitig).
 - Zugriff für alle angemeldeten Mitarbeiter (Admins und Kundenberater, nach
   abgeschlossener Einrichtung/TOTP). Entscheidung: Berater dürfen das gesamte

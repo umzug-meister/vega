@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import ExcelJS from "exceljs";
+import { strToU8, zipSync } from "fflate";
 import type {
   HostingerMessage,
   InboxReader,
@@ -14,6 +14,8 @@ import {
 } from "../src/inbox/analysis.js";
 import {
   classifyAttachment,
+  ATTACHMENT_LIMITS,
+  AttachmentError,
   extractCsvText,
   extractXlsxText,
   imageMimeType,
@@ -101,12 +103,84 @@ test("classifyAttachment separates supported, legacy and unknown files", () => {
   assert.equal(imageMimeType(Buffer.from("not an image")), null);
 });
 
-test("extractCsvText and extractXlsxText return text", async () => {
+function xlsxFixture(sheets: string[], sharedStrings = ""): Buffer {
+  const files: Record<string, Uint8Array> = {
+    "[Content_Types].xml": strToU8(
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/></Types>',
+    ),
+    "xl/workbook.xml": strToU8(
+      `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((_sheet, index) => `<sheet name="Liste ${index + 1}" sheetId="${index + 1}" r:id="rId${index + 1}"/>`).join("")}</sheets></workbook>`,
+    ),
+    "xl/_rels/workbook.xml.rels": strToU8(
+      `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_sheet, index) => `<Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${index + 1}.xml"/>`).join("")}<Relationship Id="styles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="strings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/></Relationships>`,
+    ),
+    "xl/styles.xml": strToU8(
+      '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cellXfs count="2"><xf numFmtId="0"/><xf numFmtId="14"/></cellXfs></styleSheet>',
+    ),
+    "xl/sharedStrings.xml": strToU8(
+      `<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${sharedStrings}</sst>`,
+    ),
+  };
+  sheets.forEach((rows, index) => {
+    files[`xl/worksheets/sheet${index + 1}.xml`] = strToU8(
+      `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rows}</sheetData></worksheet>`,
+    );
+  });
+  return Buffer.from(zipSync(files));
+}
+
+test("extractCsvText and extractXlsxText return text with sheet names and tab-separated cells", async () => {
   assert.ok(extractCsvText(Buffer.from("Sofa;2\nBett;1")).includes("Sofa"));
-  const workbook = new ExcelJS.Workbook();
-  workbook.addWorksheet("Liste").addRow(["Sofa", 2]);
-  const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
-  assert.ok((await extractXlsxText(buffer)).includes("Sofa"));
+  const buffer = xlsxFixture([
+    '<row r="1"><c r="A1" t="inlineStr"><is><t> Sofa </t></is></c><c r="B1"><v>2</v></c></row>',
+  ]);
+  assert.equal(await extractXlsxText(buffer), "## Liste 1\nSofa\t2");
+});
+
+test("XLSX extraction keeps rich strings, cached formulas, dates, booleans and interior gaps", async () => {
+  const buffer = xlsxFixture([
+    '<row r="1"><c r="A1" t="s"><v>0</v></c><c r="C1"><f>1+2</f><v>3</v></c><c r="D1" t="b"><v>0</v></c><c r="E1" s="1"><v>46023</v></c></row><row r="2"/><row r="3"><c r="A3" t="str"><f>"Bett"</f><v>Bett</v></c><c r="B3" t="b"><v>1</v></c></row>',
+  ], "<si><r><t>Grosser </t></r><r><t>Schrank</t></r></si>");
+  assert.equal(
+    await extractXlsxText(buffer),
+    `## Liste 1\nGrosser Schrank\t\t3\tfalse\t${new Date("2026-01-01T00:00:00Z")}\nBett\ttrue`,
+  );
+});
+
+test("XLSX extraction enforces sheet, nonempty-row, column and text limits", async () => {
+  const rows = Array.from({ length: ATTACHMENT_LIMITS.maxRows + 1 }, (_value, index) =>
+    `<row r="${index * 2 + 1}"><c r="A${index * 2 + 1}" t="inlineStr"><is><t>Row ${index + 1}</t></is></c><c r="AD${index * 2 + 1}"><v>30</v></c><c r="AE${index * 2 + 1}" t="inlineStr"><is><t>Beyond column limit</t></is></c></row>`,
+  ).join("");
+  const sheets = await extractXlsxText(xlsxFixture(
+    Array(ATTACHMENT_LIMITS.maxSheets + 1).fill('<row r="1"><c r="A1"><v>1</v></c></row>'),
+  ));
+  assert.equal(sheets.split("\n").filter((line) => line.startsWith("## ")).length, ATTACHMENT_LIMITS.maxSheets);
+  assert.doesNotMatch(sheets, /Liste 6/u);
+  const text = await extractXlsxText(xlsxFixture([rows]));
+  assert.equal(text.split("\n").filter((line) => line.startsWith("Row ")).length, ATTACHMENT_LIMITS.maxRows);
+  assert.ok(text.includes("Row 500"));
+  assert.doesNotMatch(text, /Row 501|Beyond column limit|Liste 6/u);
+  assert.equal(text.split("\n")[1]?.split("\t").length, ATTACHMENT_LIMITS.maxColumns);
+  const long = xlsxFixture([
+    `<row r="1"><c r="A1" t="inlineStr"><is><t>${"x".repeat(ATTACHMENT_LIMITS.maxExtractedChars + 1)}</t></is></c></row>`,
+  ]);
+  assert.equal((await extractXlsxText(long)).length, ATTACHMENT_LIMITS.maxExtractedChars);
+});
+
+test("XLSX extraction rejects invalid archives and oversized declared ZIP contents before parsing", async () => {
+  await assert.rejects(extractXlsxText(Buffer.from("not a ZIP")), AttachmentError);
+  const buffer = xlsxFixture(['<row r="1"><c r="A1"><v>1</v></c></row>']);
+  const directory = buffer.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02]));
+  assert.ok(directory >= 0);
+  buffer.writeUInt32LE(ATTACHMENT_LIMITS.maxUncompressedBytes + 1, directory + 24);
+  await assert.rejects(extractXlsxText(buffer), /entpackt zu groß/u);
+});
+
+test("XLSX extraction propagates malformed spreadsheet errors instead of returning empty success", async () => {
+  const buffer = xlsxFixture([
+    '<row r="1"><c r="A1" t="s"><v>99</v></c></row>',
+  ]);
+  await assert.rejects(extractXlsxText(buffer));
 });
 
 test("mapGeminiOutput maps the lift type enum and falls back to hasLift", () => {
