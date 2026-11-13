@@ -22,9 +22,12 @@ export function setupInfo(config: AppConfig, env: NodeJS.ProcessEnv = process.en
   variable("HOSTINGER_MAILBOX_RESOURCE_ID", "E-Mail", "required", "Gemeinsam mit dem Mail-Token setzen.");
   variable("HOSTINGER_MAIL_API_BASE_URL", "E-Mail", "optional", "Standard ist die Hostinger Mail API.", true);
   variable("GOOGLE_MAPS_API_KEY", "Google", "optional", "Für Adresssuche und Fahrstrecken; Places API (New) und Routes API freischalten.");
+  variable("GEMINI_ENABLED", "Postfach-Analyse", "optional", "Aktiviert die Vertex-AI-Analyse; standardmäßig deaktiviert und erfordert GOOGLE_CLOUD_PROJECT.");
+  variable("GEMINI_LOCATION", "Postfach-Analyse", "optional", "Vertex-AI-Region; Standard: global (keine EU-Datenresidenz).", true);
+  variable("GEMINI_MODEL", "Postfach-Analyse", "optional", "Vertex-AI-Modell; Standard: gemini-3.1-flash-lite.", true);
   variable("GCS_BUCKET", "Bilder", "optional", "Für Bilduploads erforderlich; privater EU-Bucket mit 180-Tage-Löschregel.");
-  variable("GOOGLE_CLOUD_PROJECT", "Bilder", "optional", "Kann alternativ aus Google Application Default Credentials ermittelt werden.");
-  variable("GOOGLE_APPLICATION_CREDENTIALS", "Bilder", "optional", "Pfad zur serverseitigen Service-Account-Datei; alternativ Application Default Credentials.");
+  variable("GOOGLE_CLOUD_PROJECT", "Google Cloud", "optional", "Projekt für Bilder und Vertex-AI-Analyse; alternativ aus Google Application Default Credentials ermittelt.");
+  variable("GOOGLE_APPLICATION_CREDENTIALS", "Google Cloud", "optional", "Pfad zur serverseitigen Service-Account-Datei für Bilder und Vertex AI; alternativ Application Default Credentials.");
   variable("NODE_ENV", "Server", "optional", "Beim Deployment production setzen.", true);
   variable("HOST", "Server", "optional", "Standard: 0.0.0.0.", true);
   variable("PORT", "Server", "optional", "Standard: 3000; beim Hosting ggf. vom Anbieter vorgegeben.", true);

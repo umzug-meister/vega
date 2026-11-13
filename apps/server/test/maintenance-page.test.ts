@@ -44,20 +44,37 @@ async function buildFixture(context: TestContext) {
 }
 
 test("setup info uses runtime URL and projects only allowlisted variable names and presence", () => {
-  const info = setupInfo(loadConfig(providers), { ...providers, DATABASE_URL: "mysql://private", INITIAL_ADMIN_PASSWORD: "synthetic-bootstrap", UNRELATED_SECRET: "do-not-expose" });
+  const configured = {
+    ...providers,
+    DATABASE_URL: "mysql://private",
+    INITIAL_ADMIN_PASSWORD: "synthetic-bootstrap",
+    GOOGLE_CLOUD_PROJECT: "synthetic-gcp-project",
+    GEMINI_ENABLED: "true",
+    GEMINI_LOCATION: "europe-west3",
+    GEMINI_MODEL: "synthetic-gemini-model",
+    UNRELATED_SECRET: "do-not-expose",
+  };
+  const info = setupInfo(loadConfig(configured), configured);
   assert.equal(info.loaderUrl, "https://runtime.example.test/customer-form/loader.js");
   assert.equal(info.embedCode, '<script src="https://runtime.example.test/customer-form/loader.js" defer></script>');
   assert.equal(info.variables.find((item) => item.name === "DATABASE_URL")?.status, "set");
   assert.equal(info.variables.find((item) => item.name === "GOOGLE_APPLICATION_CREDENTIALS")?.requirement, "optional");
+  assert.equal(info.variables.find((item) => item.name === "GOOGLE_CLOUD_PROJECT")?.group, "Google Cloud");
+  assert.equal(info.variables.find((item) => item.name === "GEMINI_ENABLED")?.status, "set");
+  assert.equal(info.variables.find((item) => item.name === "GEMINI_LOCATION")?.status, "set");
+  assert.equal(info.variables.find((item) => item.name === "GEMINI_MODEL")?.status, "set");
   assert.equal(info.variables.find((item) => item.name === "BETTER_AUTH_URL")?.status, "default");
   assert.equal(info.variables.find((item) => item.name === "INITIAL_ADMIN_PASSWORD")?.requirement, "bootstrap");
   const serialized = JSON.stringify(info);
-  for (const secret of ["mysql://private", "synthetic-bootstrap", "synthetic-mail-token", "synthetic-mailbox", "synthetic-google-key", "synthetic-bucket", "UNRELATED_SECRET", "do-not-expose"]) {
+  for (const secret of ["mysql://private", "synthetic-bootstrap", "synthetic-mail-token", "synthetic-mailbox", "synthetic-google-key", "synthetic-bucket", "synthetic-gcp-project", "europe-west3", "synthetic-gemini-model", "UNRELATED_SECRET", "do-not-expose"]) {
     assert.equal(serialized.includes(secret), false, secret);
   }
   const minimal = setupInfo(loadConfig(env), env);
   assert.equal(minimal.variables.find((item) => item.name === "CORS_ALLOWED_ORIGINS")?.status, "missing");
   assert.equal(minimal.variables.find((item) => item.name === "GOOGLE_MAPS_API_KEY")?.requirement, "optional");
+  assert.equal(minimal.variables.find((item) => item.name === "GEMINI_ENABLED")?.status, "missing");
+  assert.equal(minimal.variables.find((item) => item.name === "GEMINI_LOCATION")?.status, "default");
+  assert.equal(minimal.variables.find((item) => item.name === "GEMINI_MODEL")?.status, "default");
 });
 
 test("smoke test checks actual SQL, build, mailbox quota, both Google APIs and bucket policy without writes", async (context) => {

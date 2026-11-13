@@ -33,10 +33,14 @@
   `V1.Send.Request`-Spezifikation der Hostinger-API kennt kein `Reply-To`
   (weder Header noch Feld); ein solcher Header kann über den genutzten
   API-Versand daher nicht gesetzt werden. Die Firmenmail enthält stattdessen
-  Name, Auftragsnummer und einen `mailto:`-Link auf die im Formular
+  Name, Auftragsnummer, einen Link zum Auftrag (`/edit/<Auftragsnummer>`,
+  Basis aus der serverseitigen `APP_BASE_URL`) und einen `mailto:`-Link auf die im Formular
   angegebene Kundenadresse mit vorbelegtem Betreff. Ein echtes `Reply-To`
   bräuchte einen SMTP-Versandweg mit eigenen Zugangsdaten und ist als offene
   Architekturentscheidung nicht umgesetzt.
+  Der Auftragslink steht ausschließlich in der Firmenbenachrichtigung, nicht
+  in der Kundenbestätigung; der Auftragszugriff erfordert weiterhin eine
+  berechtigte Mitarbeiteranmeldung.
 - Mitarbeitende pflegen im Profil einen optionalen Signaturnamen
   (`User.signatureName`). Er wird beim Einreihen in `EmailOutbox.signatureName`
   übernommen und im Grußblock der Mailhülle über „Ihr Umzug Ruck Zuck Team“

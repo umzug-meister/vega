@@ -287,10 +287,11 @@ test("stored sender settings are used by all server mail flows", async () => {
   assert.equal(sent[0]?.expectedFromAddress, "sender@example.test");
 });
 
-test("company inquiry notification links the customer's form email for a direct reply", () => {
+test("company inquiry notification links the order and the customer's form email for a direct reply", () => {
   const draft = emailDefaults.inquiryNotification(
     "Firma & Co",
     1014,
+    new URL("https://runtime.example.test/"),
     " kunde@example.test ",
   );
   assert.equal(draft.subject, "Neue Umzugsanfrage 1014");
@@ -298,17 +299,23 @@ test("company inquiry notification links the customer's form email for a direct 
   const sanitized = sanitizeEmailHtml(draft.contentHtml);
   assert.match(
     sanitized,
+    /<a href="https:\/\/runtime\.example\.test\/edit\/1014">Auftrag in Vega öffnen<\/a>/u,
+  );
+  assert.match(
+    sanitized,
     /<a href="mailto:kunde@example\.test\?subject=Ihre%20Umzugsanfrage%201014">kunde@example\.test<\/a>/u,
   );
   // No form address (e.g. admin-created order): no reply link is invented.
   const withoutEmail = sanitizeEmailHtml(
-    emailDefaults.inquiryNotification("Ada", 1014).contentHtml,
+    emailDefaults.inquiryNotification("Ada", 1014, new URL("https://runtime.example.test/")).contentHtml,
   );
   assert.doesNotMatch(withoutEmail, /Antworten an den Kunden|mailto:/u);
   // The plain-text alternative shows the address once, without the mailto target.
   const text = htmlToPlainText(draft.contentHtml);
+  assert.match(text, /https:\/\/runtime\.example\.test\/edit\/1014/u);
   assert.match(text, /Antworten an den Kunden: kunde@example\.test/u);
-  assert.doesNotMatch(text, /\[|subject=/u);
+  assert.doesNotMatch(text, /subject=/u);
+  assert.doesNotMatch(emailDefaults.inquiryReceived("Ada", 1014).contentHtml, /\/edit\/|Auftrag in Vega öffnen/u);
 });
 
 test("configured sender address must match the actual Hostinger mailbox and is not sent as an unsupported from field", async () => {

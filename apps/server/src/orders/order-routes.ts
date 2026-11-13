@@ -160,6 +160,7 @@ export function createOrderRouter(auth: AuthInstance, config: AppConfig) {
         session ? "admin" : "public",
         session?.user.name ?? "-",
         settings,
+        config.appBaseUrl,
       );
       const mailService = createConfiguredMailService(config);
       if (mailService)

@@ -83,8 +83,10 @@ export const emailDefaults = {
   inquiryNotification(
     customerName: string,
     orderNumber: number,
+    appBaseUrl: URL,
     customerEmail?: string | null,
   ) {
+    const orderUrl = new URL(`/edit/${orderNumber}`, appBaseUrl).href;
     const email = customerEmail?.trim();
     const replyLink = email
       ? `<p>Antworten an den Kunden: <a href="${escapeHtml(
@@ -93,7 +95,7 @@ export const emailDefaults = {
       : "";
     return {
       subject: `Neue Umzugsanfrage ${orderNumber}`,
-      contentHtml: `<p>Eine neue Umzugsanfrage von ${escapeHtml(customerName)} wurde gespeichert.</p><p>Auftragsnummer: ${orderNumber}. Bitte prüfen Sie die vollständigen Angaben in der Vega-Admin-Oberfläche.</p>${replyLink}`,
+      contentHtml: `<p>Eine neue Umzugsanfrage von ${escapeHtml(customerName)} wurde gespeichert.</p><p>Auftragsnummer: ${orderNumber}. Bitte prüfen Sie die vollständigen Angaben in der Vega-Admin-Oberfläche.</p><p><a href="${escapeHtml(orderUrl)}">Auftrag in Vega öffnen</a></p>${replyLink}`,
     };
   },
   inquiryReceived(customerName: string, orderNumber: number) {
