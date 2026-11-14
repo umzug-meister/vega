@@ -70,7 +70,7 @@ export function TotpSetupPage({ initialPassword, optional = false, onCancel, onC
         <Typography variant="overline" color="primary">{optional ? "Vega · Profil" : "Vega · Ersteinrichtung"}</Typography>
         <Typography component="h1" variant="h4">Wiederherstellungscodes sichern</Typography>
         <Alert severity="warning">Diese Codes werden nur einmal angezeigt. Bewahren Sie sie sicher und getrennt vom Gerät auf.</Alert>
-        <Paper variant="outlined" sx={{ p: 2 }}>
+        <Paper variant="outlined" sx={{ p: 1 }}>
           <Stack spacing={1}>
             {backupCodes.map((backupCode) => (
               <Typography key={backupCode} component="code" align="center">{backupCode}</Typography>
@@ -115,7 +115,7 @@ export function TotpSetupPage({ initialPassword, optional = false, onCancel, onC
             <Typography color="text.secondary" align="center">
               Scannen Sie den QR-Code mit Ihrer Authenticator-App. Er wird lokal im Browser erzeugt.
             </Typography>
-            <Paper variant="outlined" sx={{ p: 2 }}>
+            <Paper variant="outlined" sx={{ p: 1 }}>
               <QRCodeSVG value={totpURI} size={192} aria-label="TOTP-Einrichtungs-QR-Code" />
             </Paper>
             <TextField

@@ -135,6 +135,7 @@ test("setup displays runtime embed, copies URL and code, and runs smoke test onl
   assert.equal(calls.length, 1);
   assert.ok(view.container.textContent?.includes("Nach Seed entfernen"));
   assert.ok(view.container.textContent?.includes("Fehlt"));
+  assert.ok(view.container.textContent?.includes("Gemini-Test"));
   const loader = view.container.querySelector<HTMLInputElement>(
     'input[value="https://runtime.example.test/customer-form/loader.js"]',
   );

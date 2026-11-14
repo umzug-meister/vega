@@ -127,7 +127,7 @@ export function AppearanceSection() {
       component="section"
       aria-labelledby="appearance-heading"
       variant="outlined"
-      sx={{ p: { xs: 2, sm: 3 } }}
+      sx={{ p: 1 }}
     >
       <Stack spacing={1.5}>
         <Typography component="h2" variant="h6" id="appearance-heading">
@@ -247,7 +247,7 @@ export function SignatureSection() {
       component="section"
       aria-labelledby="signature-heading"
       variant="outlined"
-      sx={{ p: { xs: 2, sm: 3 } }}
+      sx={{ p: 1 }}
     >
       <Stack spacing={1.5}>
         <Typography component="h2" variant="h6" id="signature-heading">
@@ -530,7 +530,7 @@ export function ProfilePage({
         component="section"
         aria-labelledby="profile-heading"
         variant="outlined"
-        sx={{ p: { xs: 2, sm: 3 } }}
+        sx={{ p: 1 }}
       >
         <Stack spacing={1.5}>
           <Typography component="h2" variant="h6" id="profile-heading">
@@ -592,7 +592,7 @@ export function ProfilePage({
         component="section"
         aria-labelledby="password-heading"
         variant="outlined"
-        sx={{ p: { xs: 2, sm: 3 } }}
+        sx={{ p: 1 }}
       >
         <Stack spacing={1.5}>
           <Typography component="h2" variant="h6" id="password-heading">
@@ -645,7 +645,7 @@ export function ProfilePage({
         component="section"
         aria-labelledby="otp-heading"
         variant="outlined"
-        sx={{ p: { xs: 2, sm: 3 } }}
+        sx={{ p: 1 }}
       >
         <Stack spacing={1.5}>
           <Typography component="h2" variant="h6" id="otp-heading">

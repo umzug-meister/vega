@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Container, Paper, Stack } from "@mui/material";
 
-const cardSx = { p: { xs: 3, sm: 5 }, width: "100%" };
+const cardSx = { p: 1, width: "100%" };
 
 export function AuthCard({ children }: { children: ReactNode }) {
   return (

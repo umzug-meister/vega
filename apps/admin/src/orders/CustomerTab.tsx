@@ -30,7 +30,7 @@ export function CustomerTab({ value, update }: CustomerTabProps) {
         rowGap: 4,
       }}
     >
-      <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, minWidth: 0 }}>
+      <Paper variant="outlined" sx={{ p: 1, minWidth: 0 }}>
         <CustomerFields
           value={value.customer}
           onChange={(customer) =>
@@ -38,7 +38,7 @@ export function CustomerTab({ value, update }: CustomerTabProps) {
           }
         />
       </Paper>
-      <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, minWidth: 0 }}>
+      <Paper variant="outlined" sx={{ p: 1, minWidth: 0 }}>
         <Stack spacing={3}>
           <Stack spacing={1.5}>
             <Typography component="h2" variant="h6">

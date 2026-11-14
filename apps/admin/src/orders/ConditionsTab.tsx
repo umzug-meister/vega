@@ -247,7 +247,7 @@ export function ConditionsTab({
         alignItems: "start",
       }}
     >
-      <Paper variant="outlined" sx={{ p: 2.5, minWidth: 0 }}>
+      <Paper variant="outlined" sx={{ p: 1, minWidth: 0 }}>
         <Stack spacing={1.5}>
           <Typography component="h2" variant="h6">
             Angebotsbasis
@@ -329,7 +329,7 @@ export function ConditionsTab({
           </Button>
         </Stack>
       </Paper>
-      <Paper variant="outlined" sx={{ p: 2.5, minWidth: 0 }}>
+      <Paper variant="outlined" sx={{ p: 1, minWidth: 0 }}>
         <Stack spacing={1.5}>
           <Typography component="h2" variant="h6">
             Positionen aus dem Auftrag

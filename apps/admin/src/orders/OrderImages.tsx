@@ -24,7 +24,7 @@ export function OrderImages({ orderNumber }: { orderNumber: number }) {
       .catch((reason: unknown) => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Die Bilder konnten nicht geladen werden."); });
     return () => controller.abort();
   }, [orderNumber, refresh]);
-  return <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}><Stack spacing={2}>
+  return <Paper variant="outlined" sx={{ p: 1 }}><Stack spacing={2}>
     <Stack direction="row" sx={{ justifyContent: "space-between" }}><Typography variant="h6">Kundenbilder</Typography><Button onClick={() => setRefresh((value) => value + 1)}>Bildlinks erneuern</Button></Stack>
     {error && <Alert severity="error">{error}</Alert>}
     {!images.length && !error && <Typography color="text.secondary">Keine verfügbaren Bilder.</Typography>}

@@ -199,7 +199,7 @@ export function OptionsPage() {
     {loading && <Alert severity="info">Einstellungen werden geladen …</Alert>}
     <Stack spacing={2}>
       <Grid container spacing={2}>{groups.map((group) => <Grid key={group.title} size={{ xs: 12, lg: 6 }}>
-        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, height: "100%" }}><Stack spacing={1.5}>
+        <Paper variant="outlined" sx={{ p: 1, height: "100%" }}><Stack spacing={1.5}>
           <Typography component="h2" variant="h6">{group.title}</Typography>
           {group.fields.map((field) => field.key === "origin"
             ? <OriginField key={field.key} value={draft?.[field.key] ?? ""} disabled={loading || draft === null}
@@ -216,7 +216,7 @@ export function OptionsPage() {
         </Stack></Paper>
       </Grid>)}
         <Grid size={{ xs: 12, lg: 6 }}>
-          <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, height: "100%" }}><Stack spacing={2}>
+          <Paper variant="outlined" sx={{ p: 1, height: "100%" }}><Stack spacing={2}>
             <Typography component="h2" variant="h6">Rechnungsnummernkreis</Typography>
             <Typography color="text.secondary">Nächste automatisch vergebene Rechnungsnummer: {invoiceNext === null ? "noch nicht geladen" : `R-${invoiceNext}`}. Bestehende Rechnungen werden nicht umnummeriert.</Typography>
             {invoiceError && <Alert severity="error">{invoiceError}</Alert>}{invoiceMessage && <Alert severity="success">{invoiceMessage}</Alert>}

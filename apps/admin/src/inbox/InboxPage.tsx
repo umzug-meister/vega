@@ -165,7 +165,7 @@ export function InboxPage({ navigate }: InboxPageProps) {
   }
 
   const listPanel = (
-    <Paper variant="outlined" sx={{ p: 2, minWidth: 0 }}>
+    <Paper variant="outlined" sx={{ p: 1, minWidth: 0 }}>
       <Stack spacing={1.5}>
         <Typography component="h2" variant="h6">
           Posteingang
@@ -218,7 +218,7 @@ export function InboxPage({ navigate }: InboxPageProps) {
   );
 
   const previewPanel = (
-    <Paper variant="outlined" sx={{ p: 2, minWidth: 0 }}>
+    <Paper variant="outlined" sx={{ p: 1, minWidth: 0 }}>
       {selected === undefined ? (
         <Typography color="text.secondary">
           Wählen Sie eine Mail aus, um sie anzuzeigen.
@@ -265,17 +265,30 @@ export function InboxPage({ navigate }: InboxPageProps) {
                 {formatDate(detail.date)}
               </Typography>
               <Divider />
-              <Typography
-                component="pre"
-                sx={{
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-word",
-                  fontFamily: "inherit",
-                  m: 0,
-                }}
-              >
-                {detail.text}
-              </Typography>
+              {detail.html ? (
+                <Box
+                  component="div"
+                  sx={{
+                    maxWidth: "100%",
+                    overflowX: "auto",
+                    overflowWrap: "anywhere",
+                    "& table": { maxWidth: "100%" },
+                  }}
+                  dangerouslySetInnerHTML={{ __html: detail.html }}
+                />
+              ) : (
+                <Typography
+                  component="pre"
+                  sx={{
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                    fontFamily: "inherit",
+                    m: 0,
+                  }}
+                >
+                  {detail.text}
+                </Typography>
+              )}
               {visibleAttachments.length > 0 && (
                 <>
                   <Divider />
@@ -305,7 +318,7 @@ export function InboxPage({ navigate }: InboxPageProps) {
   );
 
   const orderPanel = (
-    <Paper variant="outlined" sx={{ p: 2, minWidth: 0 }}>
+    <Paper variant="outlined" sx={{ p: 1, minWidth: 0 }}>
       <Stack spacing={1.5}>
         <Typography component="h2" variant="h6">
           Auftrag

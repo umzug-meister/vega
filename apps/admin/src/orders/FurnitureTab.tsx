@@ -196,7 +196,7 @@ export function FurnitureTab({
           size={{ xs: 12, sm: 6, lg: 4 }}
           sx={{ display: "flex", alignItems: "stretch" }}
         >
-          <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
+          <Paper variant="outlined" sx={{ p: 1, flex: 1 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Auszug
@@ -266,7 +266,7 @@ export function FurnitureTab({
           size={{ xs: 12, sm: 6, lg: 4 }}
           sx={{ display: "flex", alignItems: "stretch" }}
         >
-          <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
+          <Paper variant="outlined" sx={{ p: 1, flex: 1 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Einzug
@@ -304,7 +304,7 @@ export function FurnitureTab({
           size={{ xs: 12, sm: 12, lg: 4 }}
           sx={{ display: "flex", alignItems: "stretch" }}
         >
-          <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
+          <Paper variant="outlined" sx={{ p: 1, flex: 1 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Kartons
@@ -328,7 +328,7 @@ export function FurnitureTab({
 
       <Grid container spacing={2} sx={{ alignItems: "start" }}>
         <Grid size={{ xs: 12, lg: 4 }}>
-          <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, minWidth: 0 }}>
+          <Paper variant="outlined" sx={{ p: 1, minWidth: 0 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Besondere Gegenstände
@@ -408,7 +408,7 @@ export function FurnitureTab({
         </Grid>
 
         <Grid size={{ xs: 12, lg: 8 }}>
-          <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, minWidth: 0 }}>
+          <Paper variant="outlined" sx={{ p: 1, minWidth: 0 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Möbelliste

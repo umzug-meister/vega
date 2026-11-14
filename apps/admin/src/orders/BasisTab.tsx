@@ -100,7 +100,7 @@ export function BasisTab({
           size={{ xs: 12, md: 12, lg: 4 }}
           sx={{ display: "flex", alignItems: "stretch" }}
         >
-          <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
+          <Paper variant="outlined" sx={{ p: 1, flex: 1 }}>
             <AppointmentFields
               {...(editableRange !== undefined ? { editableRange } : {})}
               value={{
@@ -118,7 +118,7 @@ export function BasisTab({
           size={{ xs: 12, md: 6, lg: 4 }}
           sx={{ display: "flex", alignItems: "stretch" }}
         >
-          <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
+          <Paper variant="outlined" sx={{ p: 1, flex: 1 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Träger und LKW
@@ -165,7 +165,7 @@ export function BasisTab({
           size={{ xs: 12, md: 6, lg: 4 }}
           sx={{ display: "flex", alignItems: "stretch" }}
         >
-          <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
+          <Paper variant="outlined" sx={{ p: 1, flex: 1 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Preis
@@ -236,7 +236,7 @@ export function BasisTab({
           </Paper>
         </Grid>
       </Grid>
-      <Paper variant="outlined" sx={{ p: 2.5 }}>
+      <Paper variant="outlined" sx={{ p: 1 }}>
         <Stack spacing={1.5}>
           <Typography component="h2" variant="h6">
             Aktuelle Angebote

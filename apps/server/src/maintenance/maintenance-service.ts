@@ -3,6 +3,7 @@ import { resolve, sep } from "node:path";
 import { Storage } from "@google-cloud/storage";
 import type { SetupCheckDto, SetupInfoDto, SetupSmokeTestDto, SetupVariableDto } from "@vega/domain";
 import type { AppConfig } from "../config.js";
+import { GeminiError, VertexGeminiClient, type GeminiClient } from "../inbox/gemini-client.js";
 import { prisma } from "../prisma.js";
 import { PROVIDER_TIMEOUT_MS, providerFetch } from "../maps/provider-request.js";
 import { UploadError, verifyBucketPolicy } from "../uploads/upload-service.js";
@@ -84,7 +85,12 @@ async function providerJson(url: string, init: RequestInit, signal: AbortSignal)
   return body;
 }
 
-export async function runSetupSmokeTest(config: AppConfig, buildDirectory: string, signal: AbortSignal): Promise<SetupSmokeTestDto> {
+export async function runSetupSmokeTest(
+  config: AppConfig,
+  buildDirectory: string,
+  signal: AbortSignal,
+  geminiClient: GeminiClient | null = config.gemini ? new VertexGeminiClient(config.gemini) : null,
+): Promise<SetupSmokeTestDto> {
   async function check(id: string, label: string, enabled: boolean, run: () => Promise<void>, success: string): Promise<SetupCheckDto> {
     if (!enabled) return { id, label, status: "skipped", message: "Nicht konfiguriert. Benötigte Variablen siehe unten." };
     let onAbort: () => void = () => {};
@@ -145,6 +151,35 @@ export async function runSetupSmokeTest(config: AppConfig, buildDirectory: strin
         throw new Error("INVALID_ROUTES_RESPONSE");
       }
     }, "Routes API mit synthetischer Teststrecke erreichbar."),
+    check("gemini", "Vertex AI (Gemini)", Boolean(config.gemini), async () => {
+      if (!config.gemini || !geminiClient) throw new Error("GEMINI_NOT_CONFIGURED");
+      let result: unknown;
+      try {
+        result = await geminiClient.generateJson({
+          systemInstruction: "Return only the requested JSON object.",
+          parts: [{ text: 'Return {"ok":true}.' }],
+          responseSchema: {
+            type: "OBJECT",
+            properties: { ok: { type: "BOOLEAN" } },
+            required: ["ok"],
+          },
+        }, signal);
+      } catch (error) {
+        if (error instanceof GeminiError) {
+          if (error.code === "GEMINI_AUTH_FAILED") {
+            throw new ProbeError("Google-Authentifizierung für Vertex AI fehlgeschlagen. Service-Account oder ADC prüfen.");
+          }
+          if (error.code === "GEMINI_REQUEST_REJECTED") {
+            throw new ProbeError("Vertex AI hat die Anfrage abgelehnt. Projekt, API, Modell/Region und IAM-Rolle prüfen.");
+          }
+          if (error.code === "GEMINI_TIMEOUT") {
+            throw new ProbeError("Gemini hat nicht rechtzeitig geantwortet.");
+          }
+        }
+        throw error;
+      }
+      if (!record(result) || result.ok !== true) throw new Error("INVALID_GEMINI_RESPONSE");
+    }, "Vertex AI hat den synthetischen Testprompt beantwortet. Keine Maildaten gesendet."),
     check("gcs", "Google Cloud Storage", Boolean(config.gcs), async () => {
       const gcs = config.gcs;
       if (!gcs) throw new Error("GCS_NOT_CONFIGURED");

@@ -808,7 +808,7 @@ function ArchivedRow({
 
 function Panel({ children }: { children: ReactNode }) {
   return (
-    <Paper component="section" variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
+    <Paper component="section" variant="outlined" sx={{ p: 1 }}>
       <Stack spacing={2}>{children}</Stack>
     </Paper>
   );

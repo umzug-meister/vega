@@ -26,6 +26,8 @@ import {
   type GeminiRequest,
 } from "../src/inbox/gemini-client.js";
 import {
+  mailHtml,
+  mailPlainText,
   quoteForReply,
   redactContactData,
   splitSenderName,
@@ -42,6 +44,17 @@ const context = {
   phones: ["0171 1234567"],
   catalog,
 };
+
+test("mail HTML is rendered safely and HTML-in-text is converted for analysis", () => {
+  const rawHtml = '<!doctype html><table width="100%"><tr><td style="color:#123456">Hello <b>there</b><script>alert(1)</script><img src="https://tracker.example/pixel"><a href="javascript:alert(1)" onclick="alert(1)">unsafe</a><a href="https://example.com">safe</a></td></tr></table>';
+  const rendered = mailHtml(rawHtml, "");
+  assert.match(rendered, /<table width="100%">/u);
+  assert.match(rendered, /style="color:#123456"/u);
+  assert.match(rendered, /target="_blank" rel="noopener noreferrer"/u);
+  assert.doesNotMatch(rendered, /<script|<img|onclick|javascript:/iu);
+  assert.match(mailPlainText(rawHtml, ""), /Hello there/u);
+  assert.doesNotMatch(mailPlainText(rawHtml, ""), /<table|<script/iu);
+});
 
 test("redactContactData removes e-mails and phones but keeps dates", () => {
   const result = redactContactData(

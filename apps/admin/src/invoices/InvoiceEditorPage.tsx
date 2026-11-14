@@ -472,7 +472,7 @@ export function InvoiceEditorPage({
   function renderCustomerFields() {
     return (
       <Stack spacing={1.5}>
-        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
+        <Paper variant="outlined" sx={{ p: 1 }}>
           <Stack spacing={1.5}>
             <Typography component="h2" variant="h6">
               Rechnungsdaten
@@ -674,7 +674,7 @@ export function InvoiceEditorPage({
         width:
           orderNumber === undefined ? { xs: "100%", lg: "66.6667%" } : "100%",
         mx: orderNumber === undefined ? "auto" : 0,
-        p: { xs: 2, sm: 3 },
+        p: 1,
       }}
     >
       <Stack spacing={2}>
@@ -718,7 +718,7 @@ export function InvoiceEditorPage({
           component="aside"
           variant="outlined"
           aria-label={`Übersicht Auftrag ${orderNumber}`}
-          sx={{ p: { xs: 2, sm: 3 }, minWidth: 0 }}
+          sx={{ p: 1, minWidth: 0 }}
         >
           <Stack spacing={1.5}>
             <Typography component="h2" variant="h6">

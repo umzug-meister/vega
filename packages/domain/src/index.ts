@@ -664,6 +664,7 @@ export interface InboxMessageList {
 export interface InboxMessageDetail extends InboxMessageListItem {
   to: InboxAddress[];
   text: string;
+  html?: string;
   attachments: InboxAttachmentDto[];
 }
 

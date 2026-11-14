@@ -193,7 +193,7 @@ export function ExtrasTab({ value, onExtrasChange }: ExtrasTabProps) {
         });
         return (
           <Grid size={{ xs: 12, lg: 6 }} key={kind}>
-            <Paper variant="outlined" sx={{ p: 2.5, height: "100%" }}>
+            <Paper variant="outlined" sx={{ p: 1, height: "100%" }}>
               <Stack spacing={1.5}>
                 <Typography component="h2" variant="h6">
                   {title}

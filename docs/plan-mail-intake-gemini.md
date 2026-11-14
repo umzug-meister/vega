@@ -60,8 +60,10 @@ Speichern kann der Auftrag als Antwort (Reply) auf die Originalmail gesendet wer
 - **Quell-Mail am Auftrag:** `source = "mail"`, `sourceMailUid`, `sourceMessageId`
   (Migration). Vor dem Senden Suche per Message-ID, da UIDs sich ändern können.
 - **Mehrfachverarbeitung:** wird nicht verhindert; das Mailprogramm zeigt „beantwortet".
-- **Sicherheit Anzeige:** nur Plaintext (HTML-Mails serverseitig zu Text), Anhänge über
-  Backend-Proxy mit Content-Type-Prüfung und `nosniff`, keine Remote-Bilder.
+- **Sicherheit Anzeige:** HTML-Mails werden serverseitig mit einer engen Tag-,
+  Attribut- und CSS-Allowlist bereinigt; Skripte, aktive Inhalte und Remote-Bilder
+  werden nicht dargestellt. Plaintext bleibt Fallback und Analysegrundlage.
+  Anhänge laufen über den Backend-Proxy mit Content-Type-Prüfung und `nosniff`.
 - **Betrieb:** Rate-Limit 10 Analysen/Stunde/Nutzer, Timeout 90 s, ein Retry bei
   429/5xx, synchron mit Ladezustand und Abbruch. Audit-Eintrag in
   `OrderActivityEvent` ohne Prompt-/Mail-Inhalt. Prompt/Antwort werden nicht geloggt.
@@ -87,7 +89,7 @@ Speichern kann der Auftrag als Antwort (Reply) auf die Originalmail gesendet wer
    Anhang erweitern (Fehler über `code`, Bearer-Token aus Runtime-Config).
 3. Routen `GET /inbox/messages`, `GET /inbox/messages/:uid`,
    `GET /inbox/messages/:uid/attachments/:id` mit Rollenprüfung, Pagination, Safe DTOs.
-4. Plaintext-Anzeige, Anhangs-Proxy, keine Inhalte loggen.
+4. Bereinigte HTML-/Plaintext-Anzeige, Anhangs-Proxy, keine Inhalte loggen.
 5. Admin-App: Menüpunkt „E-Mail Postfach", Mailliste/-anzeige links, Auftragspanel rechts
    (MUI, kompakte Theme-Voreinstellung).
 6. Tests; `npm run typecheck`, `lint`, `test`, `build`.

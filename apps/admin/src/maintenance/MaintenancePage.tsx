@@ -66,7 +66,7 @@ export function MaintenancePage() {
       {loading && <Box role="status" aria-label="Maintenance wird geladen"><CircularProgress size={24} /></Box>}
       {!loading && !info && <Button onClick={() => { const controller = new AbortController(); void load(controller.signal); }}>Erneut laden</Button>}
       {info && <>
-        <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+        <Paper sx={{ p: 1 }}>
           <Stack spacing={2}>
             <Typography variant="h3" component="h2">Kundenformular einbinden</Typography>
             <Typography color="text.secondary" sx={{ maxWidth: "75ch" }}>
@@ -84,12 +84,12 @@ export function MaintenancePage() {
             </Typography>
           </Stack>
         </Paper>
-        <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+        <Paper sx={{ p: 1 }}>
           <Stack spacing={2}>
             <Typography variant="h3" component="h2">Smoke-Test</Typography>
             <Typography color="text.secondary" sx={{ maxWidth: "75ch" }}>
               Prüft Datenbank, Formular-Build und konfigurierte Provider mit echten Anfragen.
-              Keine Testmail und keine Änderungen an Fachdaten. Google-Tests verwenden synthetische Adressen und können Quota bzw. Kosten verursachen.
+              Keine Testmail und keine Änderungen an Fachdaten. Google-Tests verwenden synthetische Eingaben; der Gemini-Test sendet einen kurzen Testprompt und kann bis zu 90 Sekunden dauern. Quota und Kosten können anfallen.
               Maximal zwei Tests pro Minute.
             </Typography>
             <Button variant="outlined" startIcon={running ? <CircularProgress size={18} /> : <PlayArrowOutlined />}
@@ -111,7 +111,7 @@ export function MaintenancePage() {
             </Box>
           </Stack>
         </Paper>
-        <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+        <Paper sx={{ p: 1 }}>
           <Typography variant="h3" component="h2" sx={{ mb: 1 }}>Runtime-Konfiguration</Typography>
           <Typography color="text.secondary" sx={{ mb: 2, maxWidth: "75ch" }}>
             Nur der Status wird angezeigt, niemals geheime Werte. „Gesetzt“ bestätigt noch keinen funktionierenden Zugang.

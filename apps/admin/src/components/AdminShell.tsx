@@ -271,7 +271,7 @@ export function AdminShell({
             }}
           >
             {route.adminOnly && !isAdmin ? (
-              <Paper variant="outlined" sx={{ p: 3 }}>
+              <Paper variant="outlined" sx={{ p: 1 }}>
                 <Typography color="error">
                   Diese Route ist nur für Admins freigeschaltet.
                 </Typography>

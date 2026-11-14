@@ -8,6 +8,7 @@ import { Storage } from "@google-cloud/storage";
 import { createApp } from "../src/app.js";
 import { createAuth } from "../src/auth-config.js";
 import { loadConfig } from "../src/config.js";
+import { GeminiError, type GeminiClient } from "../src/inbox/gemini-client.js";
 import { prisma } from "../src/prisma.js";
 import { runSetupSmokeTest, setupInfo } from "../src/maintenance/maintenance-service.js";
 
@@ -77,7 +78,7 @@ test("setup info uses runtime URL and projects only allowlisted variable names a
   assert.equal(minimal.variables.find((item) => item.name === "GEMINI_MODEL")?.status, "default");
 });
 
-test("smoke test checks actual SQL, build, mailbox quota, both Google APIs and bucket policy without writes", async (context) => {
+test("smoke test checks SQL, build, mailbox quota, Google APIs, Gemini and bucket policy without writes", async (context) => {
   const directory = await buildFixture(context);
   mockDatabase(context, async (query) => {
     assert.equal(query.join(""), "SELECT 1 AS ok");
@@ -106,9 +107,19 @@ test("smoke test checks actual SQL, build, mailbox quota, both Google APIs and b
       ? { suggestions: [{ placePrediction: { placeId: "test-place" } }] }
       : { routes: [{ distanceMeters: 2000 }] });
   });
-  const result = await runSetupSmokeTest(loadConfig(providers), directory, AbortSignal.timeout(1000));
-  assert.equal(result.checks.length, 6);
+  const geminiClient: GeminiClient = {
+    async generateJson(request, signal) {
+      assert.equal(request.systemInstruction, "Return only the requested JSON object.");
+      assert.deepEqual(request.parts, [{ text: 'Return {"ok":true}.' }]);
+      assert.ok(signal);
+      return { ok: true };
+    },
+  };
+  const config = loadConfig({ ...providers, GOOGLE_CLOUD_PROJECT: "synthetic-gcp-project", GEMINI_ENABLED: "true" });
+  const result = await runSetupSmokeTest(config, directory, AbortSignal.timeout(1000), geminiClient);
+  assert.equal(result.checks.length, 7);
   assert.ok(result.checks.every((check) => check.status === "ok"), JSON.stringify(result));
+  assert.equal(result.checks.find((check) => check.id === "gemini")?.message, "Vertex AI hat den synthetischen Testprompt beantwortet. Keine Maildaten gesendet.");
   assert.equal(calls.length, 3);
   assert.ok(Number.isFinite(Date.parse(result.checkedAt)));
 });
@@ -133,9 +144,14 @@ test("provider failures are isolated and never expose messages, tokens or raw re
     if (url.includes("places.googleapis.com")) throw new TypeError("synthetic-google-key");
     return Response.json({ error: { message: "secret-provider-body" } }, { status: 403 });
   });
-  const result = await runSetupSmokeTest(loadConfig(providers), directory, AbortSignal.timeout(1000));
-  assert.equal(result.checks.filter((check) => check.status === "error").length, 5);
+  const geminiClient: GeminiClient = {
+    async generateJson() { throw new GeminiError("GEMINI_AUTH_FAILED"); },
+  };
+  const config = loadConfig({ ...providers, GOOGLE_CLOUD_PROJECT: "synthetic-gcp-project", GEMINI_ENABLED: "true" });
+  const result = await runSetupSmokeTest(config, directory, AbortSignal.timeout(1000), geminiClient);
+  assert.equal(result.checks.filter((check) => check.status === "error").length, 6);
   assert.match(result.checks.find((check) => check.id === "mail")!.message, /nicht berechtigt/u);
+  assert.match(result.checks.find((check) => check.id === "gemini")!.message, /Service-Account oder ADC prüfen/u);
   assert.match(result.checks.find((check) => check.id === "gcs")!.message, /EU-Konfiguration/u);
   for (const secret of ["mysql://secret", "synthetic-mail-token", "synthetic-google-key", "secret-provider-body"]) assert.equal(JSON.stringify(result).includes(secret), false);
 });
@@ -192,7 +208,7 @@ test("setup API rejects anonymous, advisor, blocked and incomplete admins before
     const result = await fetch(`${base}/smoke-test`, { method: "POST", headers: { Origin: "https://admin.example.test" } });
     assert.equal(result.status, 200);
     assert.equal(result.headers.get("cache-control"), "no-store");
-    assert.equal((await result.json()).data.checks.length, 6);
+    assert.equal((await result.json()).data.checks.length, 7);
   }
   assert.equal((await fetch(`${base}/smoke-test`, { method: "POST" })).status, 429);
   assert.equal(queries, 2);

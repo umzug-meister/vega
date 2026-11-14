@@ -31,7 +31,7 @@ Ebene wie Optionen und ausschließlich für Admins sichtbar und zugänglich.
 Die Seite stellt den serverseitig aus `APP_BASE_URL` erzeugten WordPress-Loadercode
 und eine explizit freigegebene Liste von Runtime-Variablennamen mit Setzstatus
 bereit, niemals geheime Werte. Ein manuell gestarteter, begrenzter Smoke-Test
-prüft Datenbank, Formular-Build und konfigurierte Mail-/Google-/GCS-Zugänge
+prüft Datenbank, Formular-Build und konfigurierte Mail-, Google-, Gemini- und GCS-Zugänge
 ohne Fachdatenänderung oder Mailversand; Einzelheiten und Prüfgrenzen stehen
 in `operations.md`.
 

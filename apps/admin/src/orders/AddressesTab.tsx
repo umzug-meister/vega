@@ -40,7 +40,7 @@ function AddressCard({
 }) {
   return (
     <Grid size={{ xs: 12, md: 6, xl: xlSize }}>
-      <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, height: "100%" }}>
+      <Paper variant="outlined" sx={{ p: 1, height: "100%" }}>
         <Stack spacing={2}>
           <Box
             sx={{
@@ -134,7 +134,7 @@ export function AddressesTab({
 
   return (
     <Stack spacing={2}>
-      <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
+      <Paper variant="outlined" sx={{ p: 1 }}>
         <Stack spacing={1.5}>
           <Typography component="h2" variant="h6">
             Fahrstrecke

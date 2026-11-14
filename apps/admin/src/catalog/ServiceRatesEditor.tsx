@@ -76,7 +76,7 @@ export function ServiceRatesEditor() {
       {error && <Alert severity="error">{error}</Alert>}
       {message && <Alert severity="success">{message}</Alert>}
       {rateGroups.map((group) => (
-        <Paper key={group.title} variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
+        <Paper key={group.title} variant="outlined" sx={{ p: 1 }}>
           <Stack spacing={1.5}>
             <Typography component="h3" variant="h6">{group.title}</Typography>
             <Grid container spacing={1.5}>

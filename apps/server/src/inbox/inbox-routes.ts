@@ -20,7 +20,7 @@ import {
   type HostingerMessage,
   type InboxReader,
 } from "./inbox-client.js";
-import { mailPlainText } from "./mail-content.js";
+import { mailHtml, mailPlainText } from "./mail-content.js";
 
 const ANALYSES_PER_HOUR = 10;
 const INLINE_IMAGE_TYPES = new Set([
@@ -201,10 +201,12 @@ export function createInboxRouter(deps: InboxRouterDeps): Router {
         deps.inbox!.getMessage(uid),
         deps.inbox!.getText(uid),
       ]);
+      const html = mailHtml(content.text, content.html);
       const detail: InboxMessageDetail = {
         ...toListItem(message),
         to: message.to,
         text: mailPlainText(content.text, content.html),
+        ...(html ? { html } : {}),
         attachments: message.attachments.map((a) => ({
           id: a.id,
           filename: a.filename ?? a.id,

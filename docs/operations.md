@@ -318,7 +318,8 @@ App weiterhin nicht; diese Fehler müssen im Deployment behoben werden.
 `POST /api/admin/maintenance/smoke-test` auf (höchstens zweimal pro Minute
 und Mitarbeiter, Origin-Prüfung, `Cache-Control: no-store`). Die Statusübersicht
 `GET /api/admin/maintenance` löst selbst keine Provider-Anfragen aus.
-Der Test prüft parallel mit einem Zeitlimit von zehn Sekunden:
+Der Test prüft parallel mit einer Obergrenze von 90 Sekunden (Gemini); Mail-,
+Maps- und Storage-Aufrufe haben zusätzlich eigene kürzere Zeitlimits:
 
 - Datenbank: `SELECT 1`, keine Änderungen an Fachdaten; kein Migrations-/Schema-Proof.
 - Formular-Build: Vite-Manifest sowie referenzierte JS-/CSS-Dateien.
@@ -327,6 +328,9 @@ Der Test prüft parallel mit einem Zeitlimit von zehn Sekunden:
 - Google Places (New) und Routes: synthetische Testadresse bzw. Testkoordinaten,
   keine Kunden-/Betriebsdaten. Die echten API-Aufrufe können Quota und Kosten
   verursachen.
+- Vertex AI Gemini: nur wenn `GEMINI_ENABLED=true`; sendet einen kurzen
+  synthetischen Prompt und erwartet eine strukturierte JSON-Antwort. Es werden
+  keine Mailinhalte gesendet; Modell-Quota und Kosten können anfallen.
 - GCS: Bucket-Metadaten und bestehende EU-/Privat-/180-Tage-Löschregeln.
   Keine Datei wird geschrieben; Schreibrechte und Signierung sind nicht geprüft.
 
