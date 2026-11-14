@@ -51,6 +51,22 @@
   `EmailOutbox.signatureColor` eingefroren, damit Retry-Mails dieselbe Farbe
   behalten. Die Farbe wird auf den vollständigen Grußblock einschließlich
   Signaturname und Teamname angewendet.
+- Antworten aus dem Postfach sind ein eigener Reply-All-Flow ohne
+  Auftragsmail-Vorlage und mit Originalzitat. `Reply-To` wird aus dem RFC822-
+  Header gelesen und hat Vorrang vor `From`; ursprüngliche `To`-/`Cc`-Adressen
+  werden als `Cc` ergänzt. Eigene Mailbox, Dubletten und `Bcc` werden nicht
+  übernommen. Der Server bestimmt Empfänger und Threading-UID; Hostinger sendet
+  mit `inReplyTo`. Mitarbeitende editieren nur den Text; die Signatur erscheint
+  nicht in der Vorschau. Beim Versand setzt der Server sie automatisch nach dem
+  Antworttext und vor das Originalzitat. Reply und Inbox-Angebotsantwort nutzen
+  Namen und Farbe aus dem Profil sowie klickbare internationale Firmendaten;
+  ohne Signaturname erscheint kein Loginname, sondern nur das Team. To/Cc,
+  Inhalt und Signatursnapshot durchlaufen die idempotente Outbox.
+- Ein im Postfach generierter Auftrag wird über den normalen Order-POST/PUT
+  gespeichert und danach mit der Quellmail verknüpft. „Auftrag versenden“ nutzt
+  den bestehenden Angebotsentwurf und PDF-Anhang, aber die einfache Reply-
+  Signatur. Dieser Versandmodus ist serverseitig auf Orders mit
+  `sourceMailUid` begrenzt.
 - Im editierbaren Mailtext kann zusätzlich die Textfarbe aus einer festen
   Palette (Schwarz, Grau, Rot, Orange, Grün, Blau) gesetzt oder auf die
   Standardfarbe zurückgesetzt werden. Der Editor schreibt sie als

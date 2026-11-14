@@ -18,7 +18,10 @@ export function draftToFormValue(draft: InboxOrderDraft): OrderFormValue {
       ...(draft.customer.email ? { email: draft.customer.email } : {}),
     },
     from: { ...base.from, ...draft.from },
-    to: { ...base.to, ...draft.to },
+    to:
+      draft.to.street?.trim() || draft.to.postalCode?.trim() || draft.to.city?.trim()
+        ? { ...createEmptyAddress(), ...draft.to }
+        : undefined,
     ...(draft.movingDate ? { movingDate: draft.movingDate } : {}),
     ...(draft.movingTime ? { movingTime: draft.movingTime } : {}),
     ...(draft.dateFixed !== undefined ? { dateFixed: draft.dateFixed } : {}),

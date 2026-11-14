@@ -5,6 +5,7 @@ import {
   htmlToPlainText,
   passwordResetEmail,
   renderEmailLayout,
+  renderReplyEmail,
   sanitizeEmailHtml,
 } from "../src/mail/email-template.js";
 import {
@@ -43,7 +44,83 @@ test("mail service keeps the established branded shell and derives plain text", 
   assert.equal(message.subject, "📦 Umzugsangebot zu Ihrer Anfrage 1042");
   assert.match(message.html, /Logo-147\.svg/);
   assert.match(message.html, /Ihr Umzug Ruck Zuck Team/);
+  assert.match(message.html, /href="tel:\+4917610171990">\+49 176 101 719 90/u);
+  assert.match(message.html, /href="tel:\+498930642972">\+49 89 306 429 72/u);
+  assert.match(message.html, /href="https:\/\/umzugruckzuck\.de\/"/u);
   assert.match(message.text, /Vielen Dank für Ihre Anfrage/);
+});
+
+test("inbox replies use the simple signed layout and preserve To/Cc threading", async () => {
+  const sent: unknown[] = [];
+  const service = new MailService({ send: async (message) => { sent.push(message); } });
+  await service.send({
+    kind: "INBOX_REPLY",
+    to: ["sender@example.test"],
+    cc: ["colleague@example.test"],
+    subject: "Re: Umzug",
+    contentHtml: '<p>Ich bestätige den Termin.</p><blockquote style="margin-left:24px;padding-left:12px;border-left:2px solid #cccccc">Original</blockquote>',
+    replyToMailUid: 42,
+    signatureName: "Alexander Berent",
+    signatureColor: "#28527A",
+  });
+
+  const message = sent[0] as {
+    to: string[];
+    cc?: string[];
+    html: string;
+    text: string;
+    replyToMailUid?: number;
+  };
+  assert.deepEqual(message.to, ["sender@example.test"]);
+  assert.deepEqual(message.cc, ["colleague@example.test"]);
+  assert.equal(message.replyToMailUid, 42);
+  assert.match(message.html, /Ich bestätige den Termin/u);
+  assert.match(message.html, /style="color:#28527A"/u);
+  assert.ok(message.html.indexOf("Freundliche Grüße") < message.html.indexOf("<blockquote"));
+  assert.ok(message.html.indexOf("<p>--</p>") < message.html.indexOf("Freundliche Grüße"));
+  assert.match(message.html, /Freundliche Grüße,<br>Alexander Berent<br>Ihr Umzug Ruck Zuck Team/u);
+  assert.match(message.html, /href="tel:\+4917610171990">\+49 176 101 719 90/u);
+  assert.match(message.html, /href="tel:\+498930642972">\+49 89 306 429 72/u);
+  assert.match(message.html, /umzugruckzuck\.de/u);
+  assert.doesNotMatch(message.html, /Logo-147\.svg|class="container"/u);
+  assert.match(message.text, /Alexander Berent/u);
+  assert.match(message.text, /umzugruckzuck\.de/u);
+});
+
+test("inbox-originated offers keep the offer body but use the simple signature", async () => {
+  const sent: unknown[] = [];
+  const service = new MailService({ send: async (message) => { sent.push(message); } });
+  await service.send({
+    kind: "INBOX_OFFER",
+    to: ["customer@example.test"],
+    subject: "Angebot",
+    contentHtml: '<p>Ihr Angebot für Montag.</p><blockquote style="margin-left:24px;padding-left:12px;border-left:2px solid #cccccc">Original</blockquote>',
+    signatureName: "Alexander Berent",
+    signatureColor: "#CB722F",
+  });
+  const message = sent[0] as { html: string; text: string };
+  assert.match(message.html, /Ihr Angebot für Montag/u);
+  assert.match(message.html, /Freundliche Grüße,<br>Alexander Berent<br>Ihr Umzug Ruck Zuck Team/u);
+  assert.match(message.html, /style="color:#CB722F"/u);
+  assert.ok(message.html.indexOf("Freundliche Grüße") < message.html.indexOf("<blockquote"));
+  assert.ok(message.html.indexOf("<p>--</p>") < message.html.indexOf("Freundliche Grüße"));
+  assert.match(message.text, /--[\s\S]*Freundliche Grüße[\s\S]*Original/u);
+  assert.match(message.html, /tel:\+4917610171990/u);
+  assert.doesNotMatch(message.html, /Logo-147\.svg|class="container"/u);
+});
+
+test("inbox reply without a saved signature uses the team greeting only", () => {
+  const html = renderReplyEmail(
+    '<p>Danke.</p><blockquote style="margin-left:24px;padding-left:12px;border-left:2px solid #cccccc">Original</blockquote>',
+    null,
+  );
+  assert.match(html, /Freundliche Grüße,<br>Ihr Umzug Ruck Zuck Team\./u);
+  assert.ok(html.indexOf("<p>--</p>") < html.indexOf("Freundliche Grüße"));
+  assert.ok(html.indexOf("Freundliche Grüße") < html.indexOf("<blockquote"));
+  assert.match(html, /<blockquote style="margin-left:24px;padding-left:12px;border-left:2px solid #cccccc">Original<\/blockquote>/u);
+  assert.match(html, /href="tel:\+4917610171990">\+49 176 101 719 90/u);
+  assert.match(html, /href="tel:\+498930642972">\+49 89 306 429 72/u);
+  assert.doesNotMatch(html, /root_user|undefined|null/u);
 });
 
 test("password reset link is escaped in the retained email shell", () => {
@@ -124,9 +201,11 @@ test("Hostinger client uses the documented 204 send response and does not read i
   );
   await client.send({
     to: ["customer@example.test"],
+    cc: ["colleague@example.test"],
     subject: "Test",
     html: "<p>Test</p>",
     text: "Test",
+    replyToMailUid: 42,
   });
   assert.equal(
     request?.url,
@@ -135,9 +214,11 @@ test("Hostinger client uses the documented 204 send response and does not read i
   assert.equal(request?.headers.get("authorization"), "Bearer test-token");
   assert.deepEqual(await request?.json(), {
     to: ["customer@example.test"],
+    cc: ["colleague@example.test"],
     subject: "Test",
     html: "<p>Test</p>",
     text: "Test",
+    inReplyTo: { uid: 42, folder: "INBOX" },
   });
 });
 

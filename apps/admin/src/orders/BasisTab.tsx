@@ -3,7 +3,6 @@ import {
   Button,
   Grid,
   InputAdornment,
-  Paper,
   Stack,
   Table,
   TableBody,
@@ -15,6 +14,7 @@ import {
   Typography,
 } from "@mui/material";
 import { AdminAlert as Alert } from "../components/AdminNotifications.js";
+import { AdminCard } from "../components/AdminCard.js";
 import type { CatalogOfferDto, OrderDetailsInput } from "@vega/domain";
 import { AppointmentFields } from "./AppointmentFields.js";
 import { suggestDiscountPercent } from "./discount-recommendation.js";
@@ -100,7 +100,7 @@ export function BasisTab({
           size={{ xs: 12, md: 12, lg: 4 }}
           sx={{ display: "flex", alignItems: "stretch" }}
         >
-          <Paper variant="outlined" sx={{ p: 1, flex: 1 }}>
+          <AdminCard variant="outlined" sx={{ flex: 1 }}>
             <AppointmentFields
               {...(editableRange !== undefined ? { editableRange } : {})}
               value={{
@@ -112,13 +112,13 @@ export function BasisTab({
               }}
               onChange={update}
             />
-          </Paper>
+          </AdminCard>
         </Grid>
         <Grid
           size={{ xs: 12, md: 6, lg: 4 }}
           sx={{ display: "flex", alignItems: "stretch" }}
         >
-          <Paper variant="outlined" sx={{ p: 1, flex: 1 }}>
+          <AdminCard variant="outlined" sx={{ flex: 1 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Träger und LKW
@@ -159,13 +159,13 @@ export function BasisTab({
                 </Button>
               )}
             </Stack>
-          </Paper>
+          </AdminCard>
         </Grid>
         <Grid
           size={{ xs: 12, md: 6, lg: 4 }}
           sx={{ display: "flex", alignItems: "stretch" }}
         >
-          <Paper variant="outlined" sx={{ p: 1, flex: 1 }}>
+          <AdminCard variant="outlined" sx={{ flex: 1 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Preis
@@ -233,10 +233,10 @@ export function BasisTab({
                 )}
               </Stack>
             </Stack>
-          </Paper>
+          </AdminCard>
         </Grid>
       </Grid>
-      <Paper variant="outlined" sx={{ p: 1 }}>
+      <AdminCard variant="outlined">
         <Stack spacing={1.5}>
           <Typography component="h2" variant="h6">
             Aktuelle Angebote
@@ -303,7 +303,7 @@ export function BasisTab({
             </TableContainer>
           )}
         </Stack>
-      </Paper>
+      </AdminCard>
     </Stack>
   );
 }

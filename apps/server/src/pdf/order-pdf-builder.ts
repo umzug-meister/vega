@@ -40,7 +40,16 @@ export class OrderPdfBuilder {
   }
 
   addPngImage(data: string, x: number, y: number, width: number, height: number) {
-    this.doc.addImage(data, "PNG", OrderPdfBuilder.mm2pt(x), OrderPdfBuilder.mm2pt(y), OrderPdfBuilder.mm2pt(width), OrderPdfBuilder.mm2pt(height));
+    this.doc.addImage(
+      data,
+      "PNG",
+      OrderPdfBuilder.mm2pt(x),
+      OrderPdfBuilder.mm2pt(y),
+      OrderPdfBuilder.mm2pt(width),
+      OrderPdfBuilder.mm2pt(height),
+      undefined,
+      "SLOW",
+    );
   }
 
   addLine(x?: number) {

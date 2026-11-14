@@ -48,7 +48,7 @@ function toFormValue(data: CreateOrderInput): OrderFormValue {
     ...data,
     customer: { ...base.customer, ...data.customer },
     from: { ...base.from, ...data.from },
-    to: { ...base.to, ...data.to },
+    to: data.to ? { ...base.to, ...data.to } : undefined,
     details: data.details ?? base.details,
   };
 }
@@ -453,7 +453,7 @@ export function OrderCreatePage({
               .map((field) => describePricingField(field, saveValue))
               .join("; "),
             action:
-              "Prüfe die Positionen und berechne sie bei Bedarf über 'Positionen berechnen' neu. Speichere den Auftrag anschließend erneut.",
+              "Prüfe die Positionen und berechne sie bei Bedarf über 'Berechnen' neu. Speichere den Auftrag anschließend erneut.",
           },
         );
       }
@@ -555,7 +555,7 @@ export function OrderCreatePage({
     try {
       if (exportPdf && orderNumber !== undefined) {
         if (
-          (value.from.parkingSlot || value.to.parkingSlot) &&
+          (value.from.parkingSlot || value.to?.parkingSlot) &&
           !value.details.conditions.some((condition) =>
             condition.description.toUpperCase().includes("HALTEVERBOT"),
           )

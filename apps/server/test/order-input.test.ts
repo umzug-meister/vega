@@ -52,6 +52,18 @@ test("validates order submission and strips fields outside the approved input co
   assert.deepEqual(result.value.from, validOrder.from);
 });
 
+test("only staff orders may omit the destination address", () => {
+  const { to: _destination, ...singleAddressOrder } = validOrder;
+  assert.equal(
+    validateOrderCreateInput(singleAddressOrder, { allowStaffPricing: true }).ok,
+    true,
+  );
+  const publicResult = validateOrderCreateInput(singleAddressOrder);
+  assert.equal(publicResult.ok, false);
+  if (!publicResult.ok)
+    assert.ok(publicResult.issues.some((issue) => issue.field === "to"));
+});
+
 test("accepts Maisonette-Wohnung as an address object type", () => {
   const input = orderFixture();
   for (const address of [input.from, input.to]) {
@@ -310,6 +322,26 @@ test("route snapshots persist validated legs for staff and are rejected for publ
   assert.equal(staff.ok, true);
   if (staff.ok)
     assert.deepEqual(staff.value.details?.routeSnapshot, routeSnapshot);
+
+  const singleAddress = structuredClone(input);
+  delete singleAddress.to;
+  singleAddress.details!.showSecondaryFrom = false;
+  delete singleAddress.details!.secondaryFrom;
+  singleAddress.details!.showSecondaryTo = false;
+  delete singleAddress.details!.secondaryTo;
+  singleAddress.details!.routeSnapshot = {
+    ...routeSnapshot,
+    addresses: ["A-Straße 1, 80332 München"],
+    legs: [
+      { distanceKm: 5, durationMinutes: 8 },
+      { distanceKm: 4, durationMinutes: 7 },
+    ],
+  };
+  const singleAddressResult = validateOrderCreateInput(singleAddress, {
+    allowStaffPricing: true,
+    allowIncomplete: true,
+  });
+  assert.equal(singleAddressResult.ok, true);
 
   const publicInput = validateOrderCreateInput(input);
   assert.equal(publicInput.ok, false);

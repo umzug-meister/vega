@@ -2,7 +2,6 @@ import {
   Autocomplete,
   Grid,
   IconButton,
-  Paper,
   Stack,
   Table,
   TableBody,
@@ -14,6 +13,7 @@ import {
   Typography,
 } from "@mui/material";
 import { AdminAlert as Alert } from "../components/AdminNotifications.js";
+import { AdminCard } from "../components/AdminCard.js";
 import type {
   CatalogPackingDto,
   CatalogServiceDto,
@@ -193,7 +193,7 @@ export function ExtrasTab({ value, onExtrasChange }: ExtrasTabProps) {
         });
         return (
           <Grid size={{ xs: 12, lg: 6 }} key={kind}>
-            <Paper variant="outlined" sx={{ p: 1, height: "100%" }}>
+            <AdminCard variant="outlined" sx={{ height: "100%" }}>
               <Stack spacing={1.5}>
                 <Typography component="h2" variant="h6">
                   {title}
@@ -372,7 +372,7 @@ export function ExtrasTab({ value, onExtrasChange }: ExtrasTabProps) {
                   </Table>
                 </TableContainer>
               </Stack>
-            </Paper>
+            </AdminCard>
           </Grid>
         );
       })}

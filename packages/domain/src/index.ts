@@ -226,7 +226,7 @@ export interface CreateOrderInput {
     phone: string;
   };
   from: OrderAddressInput;
-  to: OrderAddressInput;
+  to?: OrderAddressInput;
   details?: OrderDetailsInput;
   pricingSnapshot?: OrderPricingSnapshot;
   movingDate: string;
@@ -666,6 +666,13 @@ export interface InboxMessageDetail extends InboxMessageListItem {
   text: string;
   html?: string;
   attachments: InboxAttachmentDto[];
+}
+
+export interface InboxReplyDraft {
+  to: InboxAddress[];
+  cc: InboxAddress[];
+  subject: string;
+  quoteText: string;
 }
 
 export interface InboxUnmatchedFurniture {

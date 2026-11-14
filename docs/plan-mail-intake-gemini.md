@@ -22,9 +22,10 @@ Speichern kann der Auftrag als Antwort (Reply) auf die Originalmail gesendet wer
 - **Gemini:** Vertex AI, Region `global` (entschieden; Modelle im Projekt nur dort verfügbar), vorhandener Google-Service-Account. Modell per
   Config (Standard Flash), Structured Output (JSON-Schema), Feature-Flag `GEMINI_ENABLED`.
 - **Prompt:** Mailtext, Anhänge und Möbelkatalog. Absendername/-adresse werden nicht
-  übermittelt; im Text werden E-Mail-Adressen und Telefonnummern geschwärzt. Gemini
-  darf keine Namen/E-Mails ausgeben. Name und E-Mail im Entwurf setzt das Backend
-  aus dem Absender.
+  übermittelt; im Text werden E-Mail-Adressen und erkannte deutsche Festnetz- und
+  Mobilfunknummern geschwärzt. Datums-, Gültigkeits- und Auftragsnummern sind keine
+  Telefonnummern. Gemini darf keine Namen/E-Mails ausgeben. Name und E-Mail im
+  Entwurf setzt das Backend aus dem Absender.
 - **Weiterleitungen:** Die ursprüngliche Anfrage im Mailtext wird als Datenquelle
   ausgewertet; eindeutige spätere Korrekturen gehen vor. Nicht auflösbare
   Widersprüche gehören in die Notiz. Kunden- und Antwortadresse werden nicht
@@ -57,6 +58,28 @@ Speichern kann der Auftrag als Antwort (Reply) auf die Originalmail gesendet wer
   (setzt Threading-Header und `\Answered`). Original wird zitiert. Empfänger:
   Reply-To, sonst From, nicht editierbar. Text aus der Auftragsmail-Vorlage
   (editierbar), PDF-Anhang wie im bestehenden Flow, Versand über `EmailOutbox`.
+- **Antwort aus dem Postfach:** „Antworten“ öffnet einen einfachen Composer ohne
+  Standard-Mailvorlage; der Versand zitiert die Originalmail als Blockquote.
+  `Reply-To` der Originalmail ist
+  primärer Empfänger, andernfalls `From`; ursprüngliche `To`-/`Cc`-Empfänger
+  werden als `Cc` ergänzt. Die eigene Mailbox und Dubletten werden entfernt;
+  `Bcc` wird nicht übernommen. Hostinger `inReplyTo` erhält das Threading und
+  markiert die Originalmail als `\Answered`. Nur der Text wird eingegeben;
+  serverseitig folgen der gespeicherte Signaturname (sonst nur das Team), die
+  Profil-Signaturfarbe und die Firmendaten mit klickbaren internationalen
+  `tel:+49…`-Links sowie klickbarer Website. Versand läuft idempotent über
+  `EmailOutbox`, To und Cc bleiben getrennt. Es werden keine Order-PDFs oder
+  fremden Mailvorlagen angehängt. Nach der Generierung zeigt die Card „Auftrag“
+  nur Speichern und Angebotsversand als Icons; der Dirty-Status erscheint am
+  Speichern-Icon und der Versand ist bis zum Speichern deaktiviert.
+  „Speichern“ nutzt den normalen Order-POST/PUT und verknüpft die Order mit der
+  Quellmail, ohne die Inbox zu verlassen. Nach dem Speichern öffnet
+  „Auftrag versenden“ den bestehenden Angebots-/PDF-Dialog im Reply-Modus mit
+  Zitat der Originalmail und Threading; nur die Signaturhülle ist die einfache
+  Reply-Signatur. Vor der Generierung kann über eine Auftragsnummer ein
+  bestehender Auftrag geladen und mit der ausgewählten Mail verknüpft werden;
+  er erscheint editierbar im selben Seitenpanel und kann als Reply-Angebot
+  versendet werden.
 - **Quell-Mail am Auftrag:** `source = "mail"`, `sourceMailUid`, `sourceMessageId`
   (Migration). Vor dem Senden Suche per Message-ID, da UIDs sich ändern können.
 - **Mehrfachverarbeitung:** wird nicht verhindert; das Mailprogramm zeigt „beantwortet".

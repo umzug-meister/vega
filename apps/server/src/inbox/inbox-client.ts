@@ -34,6 +34,7 @@ export interface HostingerMessage {
   subject: string | null;
   from: HostingerAddress | null;
   to: HostingerAddress[];
+  cc: HostingerAddress[];
   messageId: string | null;
   attachments: HostingerAttachment[];
 }
@@ -70,13 +71,18 @@ export interface InboxReader {
   ): Promise<Buffer>;
 }
 
+export interface InboxReplyReader extends InboxReader {
+  getSourceHeaders(uid: number): Promise<string>;
+  getMailboxAddress(): Promise<string | null>;
+}
+
 /**
  * Read access to the INBOX of the configured Hostinger mailbox. Error bodies are
  * never logged or forwarded because they can contain mail details; callers get
  * a machine-readable code only. Note: Hostinger marks a message as \Seen when
  * its text is fetched.
  */
-export class HostingerInboxClient implements InboxReader {
+export class HostingerInboxClient implements InboxReplyReader {
   constructor(
     private readonly config: HostingerMailConfig,
     private readonly fetchImpl: typeof fetch = fetch,
@@ -136,6 +142,59 @@ export class HostingerInboxClient implements InboxReader {
       text: typeof data?.text === "string" ? data.text : "",
       html: typeof data?.html === "string" ? data.html : "",
     };
+  }
+
+  async getSourceHeaders(uid: number): Promise<string> {
+    const response = await this.fetchRaw(
+      `${this.folderPath()}/messages/${uid}/source`,
+      { headers: { Accept: "message/rfc822" } },
+    );
+    const reader = response.body?.getReader();
+    if (!reader) throw new InboxError("INBOX_BAD_SOURCE", 502);
+
+    const decoder = new TextDecoder();
+    let source = "";
+    let bytesRead = 0;
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      void reader.cancel();
+    }, this.timeoutMs);
+    try {
+      while (bytesRead <= 65_536) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (!value) continue;
+        bytesRead += value.byteLength;
+        source += decoder.decode(value, { stream: true });
+        const endOfHeaders = source.search(/\r?\n\r?\n/u);
+        if (endOfHeaders >= 0) return source.slice(0, endOfHeaders);
+      }
+      if (timedOut) throw new InboxError("INBOX_TIMEOUT", 502);
+      throw new InboxError("INBOX_BAD_SOURCE", 502);
+    } catch (error) {
+      if (error instanceof InboxError) throw error;
+      throw new InboxError(
+        timedOut ? "INBOX_TIMEOUT" : "INBOX_NETWORK_ERROR",
+        502,
+      );
+    } finally {
+      clearTimeout(timeout);
+      await reader.cancel().catch(() => undefined);
+      reader.releaseLock();
+    }
+  }
+
+  async getMailboxAddress(): Promise<string | null> {
+    const body = asRecord(await this.request("/api/v1/me"));
+    const data = asRecord(body?.data);
+    const mailboxes = Array.isArray(data?.mailboxes)
+      ? data.mailboxes.map(asRecord).filter(isPresent)
+      : [];
+    const mailbox = mailboxes.find(
+      (item) => item.resourceId === this.config.mailboxResourceId,
+    );
+    return typeof mailbox?.address === "string" ? mailbox.address : null;
   }
 
   /** Finds the current UID of a message by its Message-ID; UIDs are not stable. */
@@ -311,6 +370,9 @@ function parseMessage(value: unknown): HostingerMessage | null {
     from: parseAddress(record.from),
     to: Array.isArray(record.to)
       ? record.to.map(parseAddress).filter(isPresent)
+      : [],
+    cc: Array.isArray(record.cc)
+      ? record.cc.map(parseAddress).filter(isPresent)
       : [],
     messageId: typeof record.messageId === "string" ? record.messageId : null,
     attachments,

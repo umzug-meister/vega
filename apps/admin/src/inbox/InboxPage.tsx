@@ -1,19 +1,29 @@
 import {
+  ArrowBackOutlined,
   AutoAwesomeOutlined,
   AttachFileOutlined,
-  ArrowBackOutlined,
+  ContentCopyOutlined,
+  EmailOutlined,
+  FileDownloadOutlined,
+  ReplyAllOutlined,
+  SaveOutlined,
+  SearchOutlined,
 } from "@mui/icons-material";
 import {
   Alert,
+  Badge,
   Box,
   Button,
   CircularProgress,
   Divider,
+  IconButton,
+  InputAdornment,
   List,
   ListItemButton,
   ListItemText,
-  Paper,
   Stack,
+  TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
@@ -23,8 +33,11 @@ import type {
   InboxMessageList,
 } from "@vega/domain";
 import { apiRequest } from "../api/api-request.js";
+import { AdminCard } from "../components/AdminCard.js";
+import { useOrderEmailActions } from "../email/order-email-actions.js";
 import { OrderCreatePage } from "../orders/OrderCreatePage.js";
 import { draftToFormValue } from "./draft-to-form.js";
+import { InboxReplyDialog } from "./InboxReplyDialog.js";
 
 interface InboxPageProps {
   navigate: (path: string) => void;
@@ -59,6 +72,12 @@ export function InboxPage({ navigate }: InboxPageProps) {
   const [loadingList, setLoadingList] = useState(true);
   const [geminiEnabled, setGeminiEnabled] = useState(false);
   const [selected, setSelected] = useState<number>();
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [createdOrderNumber, setCreatedOrderNumber] = useState<number>();
+  const [linkedOrderNumber, setLinkedOrderNumber] = useState<number>();
+  const [orderNumberInput, setOrderNumberInput] = useState("");
+  const [linkingOrder, setLinkingOrder] = useState(false);
+  const [linkOrderError, setLinkOrderError] = useState("");
   const [detail, setDetail] = useState<InboxMessageDetail>();
   const [detailError, setDetailError] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
@@ -67,6 +86,7 @@ export function InboxPage({ navigate }: InboxPageProps) {
   const [analysisRun, setAnalysisRun] = useState(0);
   const [orderDirty, setOrderDirty] = useState(false);
   const [orderBusy, setOrderBusy] = useState(false);
+  const orderEmailActions = useOrderEmailActions();
 
   useEffect(() => {
     apiRequest<{ geminiEnabled: boolean }>("/api/admin/inbox/status")
@@ -117,13 +137,20 @@ export function InboxPage({ navigate }: InboxPageProps) {
 
   function selectMessage(uid: number | undefined) {
     if (orderDirty && !window.confirm(DISCARD_PROMPT)) return;
+    setReplyOpen(false);
     setOrderDirty(false);
-    if (uid === undefined) setAnalysis(undefined);
+    if (uid !== selected) {
+      setAnalysis(undefined);
+      setCreatedOrderNumber(undefined);
+      setLinkedOrderNumber(undefined);
+      setOrderNumberInput("");
+      setLinkOrderError("");
+    }
     setSelected(uid);
   }
 
   async function analyze() {
-    if (selected === undefined || analyzing) return;
+    if (selected === undefined || analyzing || orderBusy || (analysis && orderDirty)) return;
     setAnalyzing(true);
     setAnalysisError("");
     try {
@@ -149,23 +176,80 @@ export function InboxPage({ navigate }: InboxPageProps) {
         "POST",
         { orderNumber },
       );
+      setLinkedOrderNumber(orderNumber);
+      setCreatedOrderNumber(orderNumber);
+      setLinkOrderError("");
     },
     [selected],
   );
 
+  async function loadExistingOrder() {
+    const orderNumber = Number(orderNumberInput.trim());
+    if (
+      selected === undefined ||
+      linkingOrder ||
+      orderBusy ||
+      !Number.isSafeInteger(orderNumber) ||
+      orderNumber <= 0
+    )
+      return;
+    setLinkingOrder(true);
+    setLinkOrderError("");
+    try {
+      await linkOrder(orderNumber);
+    } catch (reason) {
+      setLinkOrderError(errorText(reason));
+    } finally {
+      setLinkingOrder(false);
+    }
+  }
+
+  async function copyOrder() {
+    if (
+      createdOrderNumber === undefined ||
+      selected === undefined ||
+      orderDirty ||
+      orderBusy
+    )
+      return;
+    setOrderBusy(true);
+    setLinkOrderError("");
+    try {
+      const result = await apiRequest<{ orderNumber: number }>(
+        `/api/admin/orders/${createdOrderNumber}/copy`,
+        "POST",
+      );
+      if (!Number.isSafeInteger(result.orderNumber) || result.orderNumber <= 0)
+        throw new Error("Die Angebotskopie konnte nicht geöffnet werden.");
+      await linkOrder(result.orderNumber);
+    } catch (reason) {
+      setLinkOrderError(errorText(reason));
+    } finally {
+      setOrderBusy(false);
+    }
+  }
+
+  const navigateOrder = useCallback((path: string) => {
+    const savedOrder = path.match(/^\/edit\/(\d+)$/u);
+    if (savedOrder) {
+      setCreatedOrderNumber(Number(savedOrder[1]));
+      return;
+    }
+    navigate(path);
+  }, [navigate]);
+
   const visibleAttachments =
     detail?.attachments.filter((item) => !item.inline) ?? [];
 
-  const inOrderMode = analysis !== undefined;
+  const inOrderMode =
+    analysis !== undefined || createdOrderNumber !== undefined;
 
   function backToList() {
-    if (orderDirty && !window.confirm(DISCARD_PROMPT)) return;
-    setOrderDirty(false);
-    setAnalysis(undefined);
+    selectMessage(undefined);
   }
 
   const listPanel = (
-    <Paper variant="outlined" sx={{ p: 1, minWidth: 0 }}>
+    <AdminCard variant="outlined" sx={{ minWidth: 0 }}>
       <Stack spacing={1.5}>
         <Typography component="h2" variant="h6">
           Posteingang
@@ -214,27 +298,122 @@ export function InboxPage({ navigate }: InboxPageProps) {
           </Stack>
         )}
       </Stack>
-    </Paper>
+    </AdminCard>
   );
 
   const previewPanel = (
-    <Paper variant="outlined" sx={{ p: 1, minWidth: 0 }}>
+    <AdminCard
+      variant="outlined"
+      sx={{
+        minWidth: 0,
+        height:
+          selected === undefined
+            ? "auto"
+            : { xs: "calc(100dvh - 90px)", md: "calc(100dvh - 100px)" },
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        "& .MuiCardContent-root": {
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          minHeight: 0,
+          overflow: "hidden",
+        },
+      }}
+    >
       {selected === undefined ? (
         <Typography color="text.secondary">
           Wählen Sie eine Mail aus, um sie anzuzeigen.
         </Typography>
       ) : (
-        <Stack spacing={1.5}>
-          <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1 }}>
-            {analysis && (
-              <Button startIcon={<ArrowBackOutlined />} onClick={backToList}>
-                Zur Liste
+        <Stack spacing={1.5} sx={{ flex: 1, minHeight: 0 }}>
+          <Box sx={{ display: "flex", flexWrap: "nowrap", alignItems: "center", gap: 1, overflowX: "auto" }}>
+            {inOrderMode && selected !== undefined && (
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<ArrowBackOutlined />}
+                onClick={backToList}
+                sx={{ flexShrink: 0 }}
+              >
+                Zurück
               </Button>
             )}
-            {geminiEnabled && (
+            {detail && !analysis && createdOrderNumber === undefined && (
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<ReplyAllOutlined />}
+                disabled={analyzing || orderBusy}
+                onClick={() => setReplyOpen(true)}
+                sx={{ flexShrink: 0 }}
+              >
+                Antwort
+              </Button>
+            )}
+            {detail && !analysis && createdOrderNumber === undefined && (
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flex: "1 0 220px",
+                }}
+              >
+                <TextField
+                  label="Auftragsnummer"
+                  type="text"
+                  value={orderNumberInput}
+                  onChange={(event) => {
+                    setOrderNumberInput(event.target.value);
+                    setLinkOrderError("");
+                  }}
+                  disabled={linkingOrder || orderBusy}
+                  size="small"
+                  sx={{ width: 220, maxWidth: "100%" }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void loadExistingOrder();
+                    }
+                  }}
+                  slotProps={{
+                    htmlInput: { inputMode: "numeric" },
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            type="button"
+                            aria-label="Auftrag laden"
+                            title="Auftrag laden"
+                            edge="end"
+                            size="small"
+                            disabled={
+                              linkingOrder ||
+                              orderBusy ||
+                              !orderNumberInput.trim()
+                            }
+                            onClick={() => void loadExistingOrder()}
+                          >
+                            {linkingOrder ? (
+                              <CircularProgress size={16} />
+                            ) : (
+                              <SearchOutlined />
+                            )}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                />
+              </Stack>
+            )}
+            {geminiEnabled && !analysis && createdOrderNumber === undefined && (
               <Button
                 variant="contained"
-                sx={{ ml: "auto" }}
+                size="small"
                 startIcon={
                   analyzing ? (
                     <CircularProgress size={16} color="inherit" />
@@ -244,14 +423,16 @@ export function InboxPage({ navigate }: InboxPageProps) {
                 }
                 disabled={analyzing || !detail || orderBusy}
                 onClick={() => void analyze()}
+                sx={{ flexShrink: 0 }}
               >
-                {analysis ? "Erneut analysieren" : "Mit KI analysieren"}
+                {analyzing ? "Wird generiert …" : "Generieren"}
               </Button>
             )}
           </Box>
           {!geminiEnabled && (
             <Alert severity="info">Die KI-Analyse ist nicht aktiviert.</Alert>
           )}
+          {linkOrderError && <Alert severity="error">{linkOrderError}</Alert>}
           {analysisError && <Alert severity="error">{analysisError}</Alert>}
           {detailError && <Alert severity="error">{detailError}</Alert>}
           {!detail && !detailError && <CircularProgress size={24} />}
@@ -265,106 +446,194 @@ export function InboxPage({ navigate }: InboxPageProps) {
                 {formatDate(detail.date)}
               </Typography>
               <Divider />
-              {detail.html ? (
-                <Box
-                  component="div"
-                  sx={{
-                    maxWidth: "100%",
-                    overflowX: "auto",
-                    overflowWrap: "anywhere",
-                    "& table": { maxWidth: "100%" },
-                  }}
-                  dangerouslySetInnerHTML={{ __html: detail.html }}
-                />
-              ) : (
-                <Typography
-                  component="pre"
-                  sx={{
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                    fontFamily: "inherit",
-                    m: 0,
-                  }}
-                >
-                  {detail.text}
-                </Typography>
-              )}
-              {visibleAttachments.length > 0 && (
-                <>
-                  <Divider />
-                  <Stack spacing={0.5}>
-                    {visibleAttachments.map((attachment) => (
-                      <Button
-                        key={attachment.id}
-                        component="a"
-                        href={`/api/admin/inbox/messages/${detail.uid}/attachments/${encodeURIComponent(attachment.id)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        startIcon={<AttachFileOutlined />}
-                        sx={{ justifyContent: "flex-start" }}
-                      >
-                        {attachment.filename} (
-                        {formatSize(attachment.sizeBytes)})
-                      </Button>
-                    ))}
-                  </Stack>
-                </>
-              )}
+              <Box
+                component="section"
+                aria-label="E-Mail-Inhalt"
+                sx={{
+                  minHeight: 0,
+                  flex: 1,
+                  overflow: "auto",
+                  overflowWrap: "anywhere",
+                  "& table": { maxWidth: "100%" },
+                }}
+              >
+                {detail.html ? (
+                  <Box
+                    component="div"
+                    sx={{ maxWidth: "100%", overflowWrap: "anywhere" }}
+                    dangerouslySetInnerHTML={{ __html: detail.html }}
+                  />
+                ) : (
+                  <Typography
+                    component="pre"
+                    sx={{
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                      fontFamily: "inherit",
+                      m: 0,
+                    }}
+                  >
+                    {detail.text}
+                  </Typography>
+                )}
+                {visibleAttachments.length > 0 && (
+                  <>
+                    <Divider sx={{ my: 1.5 }} />
+                    <Stack spacing={0.5}>
+                      {visibleAttachments.map((attachment) => (
+                        <Button
+                          key={attachment.id}
+                          component="a"
+                          href={`/api/admin/inbox/messages/${detail.uid}/attachments/${encodeURIComponent(attachment.id)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          startIcon={<AttachFileOutlined />}
+                          sx={{ justifyContent: "flex-start" }}
+                        >
+                          {attachment.filename} (
+                          {formatSize(attachment.sizeBytes)})
+                        </Button>
+                      ))}
+                    </Stack>
+                  </>
+                )}
+              </Box>
             </>
           )}
         </Stack>
       )}
-    </Paper>
+    </AdminCard>
   );
 
   const orderPanel = (
-    <Paper variant="outlined" sx={{ p: 1, minWidth: 0 }}>
+    <AdminCard variant="outlined" sx={{ minWidth: 0 }}>
       <Stack spacing={1.5}>
-        <Typography component="h2" variant="h6">
-          Auftrag
-        </Typography>
-        {analysis && (
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+          <Typography component="h2" variant="h6">
+            {createdOrderNumber === undefined
+              ? "Auftrag"
+              : `Auftrag | ${createdOrderNumber}`}
+          </Typography>
+          {(analysis || createdOrderNumber !== undefined) && (
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+              <Tooltip title="Speichern">
+                <span>
+                  <IconButton
+                    color="inherit"
+                    type="submit"
+                    form="order-create-form"
+                    disabled={orderBusy}
+                    aria-label="Auftrag speichern"
+                  >
+                    <Badge color="error" variant="dot" invisible={!orderDirty}>
+                      <SaveOutlined />
+                    </Badge>
+                  </IconButton>
+                </span>
+              </Tooltip>
+              {createdOrderNumber !== undefined && (
+                <Tooltip title="Angebotskopie anlegen">
+                  <span>
+                    <IconButton
+                      color="inherit"
+                      disabled={orderDirty || orderBusy}
+                      onClick={() => void copyOrder()}
+                      aria-label="Angebotskopie anlegen"
+                    >
+                      <ContentCopyOutlined />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              )}
+              {createdOrderNumber !== undefined && (
+                <Tooltip title="Als PDF speichern">
+                  <span>
+                    <IconButton
+                      color="inherit"
+                      type="submit"
+                      form="order-create-form"
+                      name="action"
+                      value="pdf"
+                      disabled={orderDirty || orderBusy}
+                      aria-label="PDF erzeugen"
+                    >
+                      <FileDownloadOutlined />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              )}
+              <Tooltip title="Angebot versenden">
+                <span>
+                  <IconButton
+                    color="inherit"
+                    disabled={createdOrderNumber === undefined || orderDirty || orderBusy || !orderEmailActions || linkedOrderNumber !== createdOrderNumber}
+                    onClick={() => {
+                      if (createdOrderNumber !== undefined) {
+                        orderEmailActions?.openForOrder(createdOrderNumber, "offer", true, true);
+                      }
+                    }}
+                    aria-label="Angebot versenden"
+                  >
+                    <EmailOutlined />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Stack>
+          )}
+        </Stack>
+        {(analysis || createdOrderNumber !== undefined) && (
           <>
-            {analysis.skippedAttachments.map((item) => (
+            {analysis?.skippedAttachments.map((item) => (
               <Alert severity="error" key={`${item.filename}-${item.reason}`}>
                 Anhang nicht analysiert: {item.filename}: {item.reason}
               </Alert>
             ))}
             <OrderCreatePage
-              key={analysisRun}
-              navigate={navigate}
+              key={createdOrderNumber === undefined ? `draft-${analysisRun}` : `saved-${createdOrderNumber}`}
+              {...(createdOrderNumber !== undefined ? { orderNumber: createdOrderNumber } : {})}
+              navigate={navigateOrder}
               onDirtyChange={setOrderDirty}
               onBusyChange={setOrderBusy}
               dirty={orderDirty}
-              initialValue={draftToFormValue(analysis.draft)}
-              onCreated={linkOrder}
+              {...(analysis ? { initialValue: draftToFormValue(analysis.draft) } : {})}
+              {...(analysis && createdOrderNumber === undefined ? { onCreated: linkOrder } : {})}
             />
           </>
         )}
       </Stack>
-    </Paper>
+    </AdminCard>
   );
 
   return (
-    <Box
-      sx={{
-        display: "grid",
-        gridTemplateColumns: { xs: "1fr", md: "1fr 2fr" },
-        gap: 2,
-        alignItems: "start",
-      }}
-    >
-      {inOrderMode ? (
-        <>
-          {previewPanel}
-          {orderPanel}
-        </>
-      ) : (
-        <>
-          {listPanel}
-          {previewPanel}
-        </>
+    <>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", md: "1fr 2fr" },
+          gap: 2,
+          alignItems: "start",
+        }}
+      >
+        {inOrderMode ? (
+          <>
+            {previewPanel}
+            {orderPanel}
+          </>
+        ) : (
+          <>
+            {listPanel}
+            {previewPanel}
+          </>
+        )}
+      </Box>
+      {replyOpen && selected !== undefined && (
+        <InboxReplyDialog
+          key={selected}
+          uid={selected}
+          onClose={() => setReplyOpen(false)}
+          onSent={() => setReplyOpen(false)}
+        />
       )}
-    </Box>
+    </>
   );
 }

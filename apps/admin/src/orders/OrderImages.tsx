@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Box, Button, CardMedia, Grid, Paper, Stack, Typography } from "@mui/material";
+import { Box, Button, CardMedia, Grid, Stack, Typography } from "@mui/material";
 import { AdminAlert as Alert } from "../components/AdminNotifications.js";
+import { AdminCard } from "../components/AdminCard.js";
 import { OrderImageGallery, type OrderGalleryImage } from "./OrderImageGallery.js";
 
 export function OrderImages({ orderNumber }: { orderNumber: number }) {
@@ -24,7 +25,7 @@ export function OrderImages({ orderNumber }: { orderNumber: number }) {
       .catch((reason: unknown) => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Die Bilder konnten nicht geladen werden."); });
     return () => controller.abort();
   }, [orderNumber, refresh]);
-  return <Paper variant="outlined" sx={{ p: 1 }}><Stack spacing={2}>
+  return <AdminCard variant="outlined"><Stack spacing={2}>
     <Stack direction="row" sx={{ justifyContent: "space-between" }}><Typography variant="h6">Kundenbilder</Typography><Button onClick={() => setRefresh((value) => value + 1)}>Bildlinks erneuern</Button></Stack>
     {error && <Alert severity="error">{error}</Alert>}
     {!images.length && !error && <Typography color="text.secondary">Keine verfügbaren Bilder.</Typography>}
@@ -48,5 +49,5 @@ export function OrderImages({ orderNumber }: { orderNumber: number }) {
         onClose={() => setGalleryIndex(undefined)}
       />
     )}
-  </Stack></Paper>;
+  </Stack></AdminCard>;
 }

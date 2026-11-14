@@ -12,7 +12,6 @@ import {
   Grid,
   IconButton,
   InputAdornment,
-  Paper,
   Stack,
   Switch,
   Tabs,
@@ -21,6 +20,7 @@ import {
   Typography,
 } from "@mui/material";
 import { AdminAlert as Alert } from "../components/AdminNotifications.js";
+import { AdminCard } from "../components/AdminCard.js";
 import type {
   CatalogFurnitureDto,
   CustomerFormConfig,
@@ -196,7 +196,7 @@ export function FurnitureTab({
           size={{ xs: 12, sm: 6, lg: 4 }}
           sx={{ display: "flex", alignItems: "stretch" }}
         >
-          <Paper variant="outlined" sx={{ p: 1, flex: 1 }}>
+          <AdminCard variant="outlined" sx={{ flex: 1 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Auszug
@@ -260,13 +260,14 @@ export function FurnitureTab({
                 }
               />
             </Stack>
-          </Paper>
+          </AdminCard>
         </Grid>
+        {value.to && (
         <Grid
           size={{ xs: 12, sm: 6, lg: 4 }}
           sx={{ display: "flex", alignItems: "stretch" }}
         >
-          <Paper variant="outlined" sx={{ p: 1, flex: 1 }}>
+          <AdminCard variant="outlined" sx={{ flex: 1 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Einzug
@@ -277,7 +278,7 @@ export function FurnitureTab({
                     checked={value.to.packservice ?? false}
                     onChange={(event) =>
                       update({
-                        to: { ...value.to, packservice: event.target.checked },
+                        to: { ...value.to!, packservice: event.target.checked },
                       })
                     }
                   />
@@ -290,7 +291,7 @@ export function FurnitureTab({
                     checked={value.to.montage ?? false}
                     onChange={(event) =>
                       update({
-                        to: { ...value.to, montage: event.target.checked },
+                        to: { ...value.to!, montage: event.target.checked },
                       })
                     }
                   />
@@ -298,13 +299,14 @@ export function FurnitureTab({
                 label="Aufbau erwünscht?"
               />
             </Stack>
-          </Paper>
+          </AdminCard>
         </Grid>
+        )}
         <Grid
           size={{ xs: 12, sm: 12, lg: 4 }}
           sx={{ display: "flex", alignItems: "stretch" }}
         >
-          <Paper variant="outlined" sx={{ p: 1, flex: 1 }}>
+          <AdminCard variant="outlined" sx={{ flex: 1 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Kartons
@@ -322,13 +324,13 @@ export function FurnitureTab({
                 onChange={(wardrobeBoxes) => updateFurniture({ wardrobeBoxes })}
               />
             </Stack>
-          </Paper>
+          </AdminCard>
         </Grid>
       </Grid>
 
       <Grid container spacing={2} sx={{ alignItems: "start" }}>
         <Grid size={{ xs: 12, lg: 4 }}>
-          <Paper variant="outlined" sx={{ p: 1, minWidth: 0 }}>
+          <AdminCard variant="outlined" sx={{ minWidth: 0 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Besondere Gegenstände
@@ -404,11 +406,11 @@ export function FurnitureTab({
                 />
               )}
             </Stack>
-          </Paper>
+          </AdminCard>
         </Grid>
 
         <Grid size={{ xs: 12, lg: 8 }}>
-          <Paper variant="outlined" sx={{ p: 1, minWidth: 0 }}>
+          <AdminCard variant="outlined" sx={{ minWidth: 0 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Möbelliste
@@ -576,7 +578,7 @@ export function FurnitureTab({
                 />
               )}
             </Stack>
-          </Paper>
+          </AdminCard>
         </Grid>
       </Grid>
     </Stack>

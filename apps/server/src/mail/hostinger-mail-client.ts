@@ -9,6 +9,7 @@ export interface MailAttachment {
 
 export interface OutgoingMail {
   to: string[];
+  cc?: string[];
   subject: string;
   html: string;
   text: string;
@@ -81,6 +82,7 @@ export class HostingerMailClient {
       }
       const body = JSON.stringify({
         to: message.to,
+        ...(message.cc?.length ? { cc: message.cc } : {}),
         subject: message.subject,
         html: message.html,
         text: message.text,

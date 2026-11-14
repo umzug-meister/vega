@@ -125,12 +125,12 @@ export function InvoicesPage({ archived = false, navigate }: { archived?: boolea
         </Stack>
       </Box>
       {!archived && (isSmallScreen ? (
-        <IconButton color="primary" aria-label="Rechnung anlegen" title="Rechnung anlegen" disabled={locked} onClick={() => navigate("/invoices/new")}>
+        <IconButton color="primary" aria-label="Rechnung erstellen" title="Rechnung erstellen" disabled={locked} onClick={() => navigate("/invoices/new")}>
           <AddOutlined />
         </IconButton>
       ) : (
         <Button variant="contained" disabled={locked} startIcon={<AddOutlined />} onClick={() => navigate("/invoices/new")}>
-          Rechnung anlegen
+          Rechnung erstellen
         </Button>
       ))}
     </Stack>

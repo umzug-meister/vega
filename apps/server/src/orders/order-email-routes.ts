@@ -183,6 +183,14 @@ export function registerOrderEmailRoutes(
       const mailService = createConfiguredMailService(config);
       if (!mailService) return mailNotConfigured(res);
       const { kind, order, partner } = context.value;
+      const simpleSignature = body.simpleSignature === true;
+      if (simpleSignature && (kind !== "offer" || !order.sourceMailUid)) {
+        return fail(res, {
+          status: 400,
+          code: "INVALID_SIGNATURE_MODE",
+          message: "Die einfache Signatur ist nur für Angebotsantworten aus dem Postfach verfügbar.",
+        });
+      }
       let replyToMailUid: number | undefined;
       if (body.replyToSourceMail === true) {
         const orderRow = await prisma.order.findUnique({
@@ -215,7 +223,9 @@ export function registerOrderEmailRoutes(
             orderId: order.id,
             ...(partner ? { optionOrderId: partner.id } : {}),
             kind:
-              kind === "decline"
+              simpleSignature
+                ? "INBOX_OFFER"
+                : kind === "decline"
                 ? "INQUIRY_DECLINED"
                 : kind === "message"
                   ? "ORDER_MESSAGE"

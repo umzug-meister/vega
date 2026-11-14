@@ -225,6 +225,10 @@ Farbe wird mit jeder E-Mail in der Outbox gespeichert, damit ein späterer Retry
 dieselbe Signaturdarstellung verwendet. Die Vorschau im Profil reagiert direkt
 auf Änderungen an Name und Farbauswahl.
 
+Die gemeinsame E-Mail-Signatur und Inbox-Antworten zeigen Mobil- und Festnetz
+im internationalen `+49`-Format als klickbare `tel:`-Links; die Website ist
+ebenfalls verlinkt.
+
 ### Migration
 
 Die Migration `20261018100000_user_signature_color` ergänzt den Benutzer und

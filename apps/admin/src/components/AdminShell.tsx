@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Box, Container, Paper, Typography } from "@mui/material";
+import { Box, Container, Typography } from "@mui/material";
 import { authClient } from "../auth-client.js";
 import { useAdminNotification } from "./AdminNotifications.js";
 import {
@@ -15,6 +15,7 @@ import {
   AdminSidebar,
 } from "./AdminSidebar.js";
 import { AdminToolbar } from "./AdminToolbar.js";
+import { AdminCard } from "./AdminCard.js";
 import { formatAdminRouteTitle, type AdminRoute } from "../routes.js";
 import type { StaffUser } from "../types.js";
 import type { OrderEmailKind } from "@vega/domain";
@@ -173,6 +174,21 @@ export function AdminShell({
       });
   }
 
+    function openEmailForOrder(
+      orderNumber: number,
+      kind: OrderEmailKind,
+      simpleSignature = false,
+      replyToSourceMail = false,
+    ) {
+      setEmailTarget({
+        type: "order",
+        orderNumber,
+        kind,
+        ...(simpleSignature ? { simpleSignature: true } : {}),
+        ...(replyToSourceMail ? { replyToSourceMail: true } : {}),
+      });
+    }
+
   function openInvoiceEmail() {
     if (editedInvoiceId)
       setEmailTarget({ type: "invoice", id: editedInvoiceId });
@@ -201,8 +217,6 @@ export function AdminShell({
       sx={{
         minHeight: "100vh",
         bgcolor: "background.default",
-        backgroundImage:
-          "radial-gradient(ellipse at 82% -12%, rgba(36, 88, 211, 0.07), transparent 34%)",
       }}
     >
       <AdminToolbar
@@ -260,22 +274,27 @@ export function AdminShell({
         }}
       >
         <OrderEmailActionsContext.Provider
-          value={{ open: openOrderEmail, disabled: orderActionsDisabled }}
+          value={{
+            open: openOrderEmail,
+            openForOrder: openEmailForOrder,
+            disabled: orderActionsDisabled,
+          }}
         >
           <Container
             maxWidth="xl"
+            disableGutters
             sx={{
               maxWidth: "1800px !important",
-              py: { xs: 2.5, md: 3.5 },
-              px: { xs: 2, sm: 3, lg: 4 },
+              py: 2,
+              px: 2,
             }}
           >
             {route.adminOnly && !isAdmin ? (
-              <Paper variant="outlined" sx={{ p: 1 }}>
+              <AdminCard variant="outlined">
                 <Typography color="error">
                   Diese Route ist nur für Admins freigeschaltet.
                 </Typography>
-              </Paper>
+              </AdminCard>
             ) : (
               children
             )}

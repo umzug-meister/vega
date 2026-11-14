@@ -125,6 +125,41 @@ function AddressesHarness({ initial }: { initial: OrderFormValue }) {
   );
 }
 
+function LateAddressHarness() {
+  const [value, setValue] = React.useState(() => ({
+    ...createEmptyOrder(),
+    to: undefined,
+  }));
+  return React.createElement(
+    React.Fragment,
+    null,
+    React.createElement(
+      "button",
+      {
+        type: "button",
+        onClick: () =>
+          setValue((previous) => ({
+            ...previous,
+            from: {
+              ...previous.from,
+              street: "Senderstraße 1",
+              postalCode: "80331",
+              city: "München",
+            },
+          })),
+      },
+      "Adresse laden",
+    ),
+    React.createElement(AddressesTab, {
+      value,
+      update: (patch: Partial<OrderFormValue>) =>
+        setValue((previous) => ({ ...previous, ...patch })),
+      onDetailsChange: (details: OrderDetailsInput) =>
+        setValue((previous) => ({ ...previous, details })),
+    }),
+  );
+}
+
 function labeledInput(
   container: Element,
   label: string,
@@ -169,6 +204,93 @@ test("automatic route calculation runs once for a complete order without a store
     assert.equal(
       app.container.querySelector('[data-testid="source"]')?.textContent,
       "route",
+    );
+  } finally {
+    await app.cleanup();
+  }
+});
+
+test("a single-address order routes from the depot to its loading address and back", async (context) => {
+  const calls = installRoutes(context, {
+    distance: () => json(routePayload(24, 2)),
+  });
+  const initial = completeOrder();
+  initial.to = undefined;
+  const app = await mount(React.createElement(AddressesHarness, { initial }));
+  try {
+    await app.flush();
+    assert.equal(calls.length, 1);
+    assert.deepEqual(calls[0]!.addresses, ["Senderstraße 1, 80331 München"]);
+    const snapshot = JSON.parse(
+      app.container.querySelector('[data-testid="route-snapshot"]')?.textContent ?? "null",
+    ) as { addresses: string[]; legs: unknown[] };
+    assert.deepEqual(snapshot.addresses, ["Senderstraße 1, 80331 München"]);
+    assert.equal(snapshot.legs.length, 2);
+  } finally {
+    await app.cleanup();
+  }
+});
+
+test("an empty destination does not block the route for an existing loading address", async (context) => {
+  const calls = installRoutes(context, {
+    distance: () => json(routePayload(24, 2)),
+  });
+  const initial = completeOrder();
+  initial.to = {
+    ...initial.to!,
+    street: "",
+    postalCode: "",
+    city: "",
+  };
+  const app = await mount(React.createElement(AddressesHarness, { initial }));
+  try {
+    await app.flush();
+    assert.equal(calls.length, 1);
+    assert.deepEqual(calls[0]!.addresses, ["Senderstraße 1, 80331 München"]);
+    assert.match(app.container.textContent ?? "", /Gesamt: 24 km/u);
+  } finally {
+    await app.cleanup();
+  }
+});
+
+test("the destination address can be removed and added without a separate order field", async (context) => {
+  installRoutes(context, {
+    config: { origin: "Depot Straße 1, 80331 München", available: false },
+    distance: () => json(routePayload(12)),
+  });
+  const app = await mount(
+    React.createElement(AddressesHarness, { initial: completeOrder() }),
+  );
+  try {
+    await app.flush();
+    const remove = app.container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Entladestelle entfernen"]',
+    );
+    assert.ok(remove);
+    await app.click(remove);
+    await app.flush();
+    assert.ok(
+      [...app.container.querySelectorAll("button")].some(
+        (button) => button.textContent?.includes("Entladestelle hinzufügen"),
+      ),
+    );
+    assert.equal(
+      [...app.container.querySelectorAll("h2")].some(
+        (heading) => heading.textContent === "Entladestelle",
+      ),
+      false,
+    );
+
+    const add = [...app.container.querySelectorAll("button")].find(
+      (button) => button.textContent?.includes("Entladestelle hinzufügen"),
+    );
+    assert.ok(add);
+    await app.click(add);
+    await app.flush();
+    assert.ok(
+      [...app.container.querySelectorAll("h2")].some(
+        (heading) => heading.textContent === "Entladestelle",
+      ),
     );
   } finally {
     await app.cleanup();
@@ -273,6 +395,30 @@ test("a legacy manual distance without a saved itinerary is replaced by the calc
       app.container.querySelector('[data-testid="source"]')?.textContent,
       "route",
     );
+  } finally {
+    await app.cleanup();
+  }
+});
+
+test("the initial route calculation starts when one address becomes available", async (context) => {
+  const calls = installRoutes(context, {
+    distance: () => json(routePayload(12, 2)),
+  });
+  const app = await mount(React.createElement(LateAddressHarness));
+  try {
+    await app.flush();
+    assert.equal(calls.length, 0);
+
+    const loadAddress = [...app.container.querySelectorAll("button")].find(
+      (button) => button.textContent === "Adresse laden",
+    );
+    assert.ok(loadAddress);
+    await app.click(loadAddress);
+    await app.flush();
+
+    assert.equal(calls.length, 1);
+    assert.deepEqual(calls[0]!.addresses, ["Senderstraße 1, 80331 München"]);
+    assert.match(app.container.textContent ?? "", /Gesamt: 12 km/u);
   } finally {
     await app.cleanup();
   }

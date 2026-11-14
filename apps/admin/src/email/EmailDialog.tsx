@@ -37,6 +37,7 @@ export type EmailTarget =
       orderNumber: number;
       kind: OrderEmailKind;
       replyToSourceMail?: boolean;
+      simpleSignature?: boolean;
     }
   | { type: "invoice"; id: string }
   | { type: "credit"; id: string }
@@ -102,8 +103,11 @@ export function EmailDialog({
       ? `?kind=${target.kind}${isPair ? `&partner=${partner ?? ""}` : ""}${target.replyToSourceMail ? "&reply=1" : ""}`
       : "";
   const attempt = useMemo(
-    () => new EmailSendAttempt(`vega:mail:${basePath}`, mailAttemptStorage()),
-    [basePath],
+    () => new EmailSendAttempt(
+      `vega:mail:${basePath}${target.type === "order" && target.simpleSignature ? ":simple-signature" : ""}`,
+      mailAttemptStorage(),
+    ),
+    [basePath, target],
   );
   const frozen = sending || attempt.frozen;
   const completed =
@@ -183,6 +187,7 @@ export function EmailDialog({
           ...(target.type === "order"
             ? {
                 kind: target.kind,
+                ...(target.simpleSignature ? { simpleSignature: true } : {}),
                 ...(target.replyToSourceMail
                   ? { replyToSourceMail: true }
                   : {}),

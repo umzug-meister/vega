@@ -37,6 +37,17 @@ function htmlSource(text: string, html: string): string {
   return source.slice(0, MAIL_TEXT_MAX_CHARS);
 }
 
+function isGermanPhoneNumber(value: string): boolean {
+  const trimmed = value.trim();
+  const digits = trimmed.replace(/\D/gu, "");
+  let nationalNumber = digits;
+  if (/^(?:\+49|0049)/u.test(trimmed)) {
+    nationalNumber = digits.startsWith("0049") ? digits.slice(4) : digits.slice(2);
+    if (!nationalNumber.startsWith("0")) nationalNumber = `0${nationalNumber}`;
+  }
+  return /^(?:01[5-7]\d{7,9}|0[2-9]\d{5,11})$/u.test(nationalNumber);
+}
+
 /** Safe HTML for the inbox view; active content and remote images are excluded. */
 export function mailHtml(text: string, html: string): string {
   const source = htmlSource(text, html);
@@ -99,8 +110,8 @@ export function redactContactData(input: string): RedactedText {
   const withoutEmails = input.replace(EMAIL_PATTERN, "[E-Mail entfernt]");
   const text = withoutEmails.replace(PHONE_CANDIDATE, (match) => {
     const trimmed = match.trim();
-    const digits = trimmed.replace(/\D/gu, "");
-    if (digits.length < 8 || digits.length > 15 || DATE_LIKE.test(trimmed))
+    const dateCandidate = trimmed.replace(/[()]/gu, "").trim();
+    if (DATE_LIKE.test(dateCandidate) || !isGermanPhoneNumber(trimmed))
       return match;
     phones.push(trimmed);
     return "[Telefon entfernt]";
@@ -152,5 +163,5 @@ export function quoteForReply(options: {
     "<br>",
   );
   const header = escapeHtml(`Am ${options.date} schrieb ${options.from}:`);
-  return `<p>${header}</p><blockquote>${body}</blockquote>`;
+  return `<blockquote style="margin-left:24px;padding-left:12px;border-left:2px solid #cccccc"><p>${header}</p>${body}</blockquote>`;
 }

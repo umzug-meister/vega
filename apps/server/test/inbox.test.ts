@@ -5,6 +5,7 @@ import type {
   HostingerMessage,
   InboxReader,
 } from "../src/inbox/inbox-client.js";
+import { HostingerInboxClient } from "../src/inbox/inbox-client.js";
 import {
   ANALYSIS_SYSTEM_INSTRUCTION,
   AnalysisError,
@@ -32,6 +33,7 @@ import {
   redactContactData,
   splitSenderName,
 } from "../src/inbox/mail-content.js";
+import { loadReplyAllContext, parseReplyToAddresses } from "../src/inbox/reply-context.js";
 import { replySubject } from "../src/inbox/reply-context.js";
 
 const catalog: CatalogEntry[] = [
@@ -58,12 +60,12 @@ test("mail HTML is rendered safely and HTML-in-text is converted for analysis", 
 
 test("redactContactData removes e-mails and phones but keeps dates", () => {
   const result = redactContactData(
-    "Mail max@example.com, Tel +49 171 1234567, Umzug am 12.05.2026",
+    "Mail max@example.com, Tel +49 171 1234567, Festnetz 089 30642972, Angebotsgültigkeit (06.11.2026)",
   );
   assert.ok(!result.text.includes("example.com"));
   assert.ok(!result.text.includes("1234567"));
-  assert.ok(result.text.includes("12.05.2026"));
-  assert.equal(result.phones.length, 1);
+  assert.ok(result.text.includes("(06.11.2026)"));
+  assert.deepEqual(result.phones, ["+49 171 1234567", "089 30642972"]);
 });
 
 test("splitSenderName handles formats", () => {
@@ -89,11 +91,92 @@ test("quoteForReply escapes html", () => {
   });
   assert.ok(!html.includes("<script>"));
   assert.ok(html.includes("<br>"));
+  assert.ok(html.indexOf("<blockquote") < html.indexOf("Am 1.1. schrieb A &lt;a@b.de&gt;:"));
 });
 
 test("replySubject prefixes once", () => {
   assert.equal(replySubject("AW: Re: Umzug"), "Re: Umzug");
   assert.equal(replySubject(null), "Re: Ihre Anfrage");
+});
+
+test("Reply-To headers are unfolded and parsed into validated unique addresses", () => {
+  assert.deepEqual(
+    parseReplyToAddresses(
+      "From: Sender <sender@example.test>\r\nReply-To: Team One <one@example.test>,\r\n team-two@example.test\r\nSubject: Hi",
+    ),
+    ["one@example.test", "team-two@example.test"],
+  );
+  assert.deepEqual(parseReplyToAddresses("From: sender@example.test"), []);
+});
+
+test("Hostinger inbox reads only source headers and resolves its own mailbox address", async () => {
+  const requests: string[] = [];
+  const inbox = new HostingerInboxClient(
+    {
+      apiToken: "synthetic-token",
+      mailboxResourceId: "synthetic-mailbox",
+      apiBaseUrl: new URL("https://mail.example.test"),
+    },
+    async (input) => {
+      const url = new URL(input instanceof Request ? input.url : input.toString());
+      requests.push(url.pathname);
+      if (url.pathname.endsWith("/source")) {
+        return new Response(
+          "From: Sender <sender@example.test>\r\nReply-To: Reply <reply@example.test>\r\n\r\nsecret body must not be read",
+          { headers: { "Content-Type": "message/rfc822" } },
+        );
+      }
+      return Response.json({
+        data: {
+          mailboxes: [
+            { resourceId: "synthetic-mailbox", address: "inbox@example.test" },
+          ],
+        },
+      });
+    },
+  );
+
+  assert.equal(
+    await inbox.getSourceHeaders(5),
+    "From: Sender <sender@example.test>\r\nReply-To: Reply <reply@example.test>",
+  );
+  assert.equal(await inbox.getMailboxAddress(), "inbox@example.test");
+  assert.deepEqual(requests, [
+    "/api/v1/mailboxes/synthetic-mailbox/folders/INBOX/messages/5/source",
+    "/api/v1/me",
+  ]);
+});
+
+test("Reply All uses Reply-To, includes original To/Cc, and excludes this mailbox", async () => {
+  const inbox = {
+    ...fakeInbox({
+      from: { name: "Sender", address: "sender@example.test" },
+      to: [
+        { name: "Mailbox", address: "inbox@example.test" },
+        { name: "Colleague", address: "colleague@example.test" },
+      ],
+      cc: [
+        { name: "Other", address: "other@example.test" },
+        { name: "Colleague", address: "COLLEAGUE@example.test" },
+      ],
+    }),
+    getSourceHeaders: async () =>
+      "Reply-To: replies@example.test\r\nSubject: Umzug\r\n",
+    getMailboxAddress: async () => "inbox@example.test",
+  };
+  const result = await loadReplyAllContext(inbox, 5);
+  assert.deepEqual(result.to.map(({ address }) => address), ["replies@example.test"]);
+  assert.deepEqual(result.cc.map(({ address }) => address), [
+    "colleague@example.test",
+    "other@example.test",
+  ]);
+  assert.equal(result.subject, "Re: Umzug");
+  assert.match(result.quoteText, /Am .* schrieb Sender <sender@example\.test>:/u);
+  assert.match(result.quoteText, /> Ich habe ein Sofa\./u);
+  assert.match(
+    result.quoteHtml,
+    /<blockquote[^>]*><p>Am .* schrieb Sender &lt;sender@example\.test&gt;:<\/p>Ich habe ein Sofa\./u,
+  );
 });
 
 test("classifyAttachment separates supported, legacy and unknown files", () => {
@@ -414,6 +497,7 @@ function fakeInbox(
     subject: "Umzug",
     from: { name: "Max Mustermann", address: "max@example.com" },
     to: [],
+    cc: [],
     messageId: "<id@example.com>",
     attachments: [],
     ...message,

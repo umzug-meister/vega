@@ -74,7 +74,7 @@ function hasAssembly(data: CreateOrderInput): boolean {
   const details = data.details;
   return Boolean(
     data.from.demontage ||
-    data.to.montage ||
+    data.to?.montage ||
     (details?.showSecondaryFrom && details.secondaryFrom?.demontage) ||
     (details?.showSecondaryTo && details.secondaryTo?.montage),
   );
@@ -96,7 +96,7 @@ function optionHtml({ data }: OfferOption): string {
         data.from.city
           ? `Start: ${[data.from.postalCode, data.from.city].filter(Boolean).join(" ")}`
           : "",
-        data.to.city
+        data.to?.city
           ? `Ende: ${[data.to.postalCode, data.to.city].filter(Boolean).join(" ")}`
           : "",
       ]

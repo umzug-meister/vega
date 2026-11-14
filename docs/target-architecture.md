@@ -259,6 +259,11 @@ Alle Rechte werden im Backend geprüft. `Admin` hat alle Rechte; `Kundenberater`
   Bruttosumme informativ mit fest 19 % in Netto und MwSt. aufteilen
   (`Netto = Brutto / 1,19`); diese Anzeige ändert weder Orders noch
   Rechnungssteuersätze.
+- Staff-Aufträge dürfen ohne Entladestelle gespeichert werden; es gibt dafür
+  kein separates Auftragsmerkmal. Die automatische Route verwendet die
+  vorhandene Beladestelle bzw. Beladestellen als Stopps zwischen dem
+  konfigurierten Standort und der Rückfahrt dorthin. Öffentliche Kundenaufträge
+  benötigen weiterhin eine Entladestelle.
 - Bei gesetzten Stunden ist `CatalogOffer.sum` der Basispreis; `hourPrice`
   beschreibt Folgestunden, erzeugt aber keine zusätzliche Arbeitsstunde.
   Ohne Stunden ist `basis.basePrice` der Festpreis und kein `CatalogOffer`

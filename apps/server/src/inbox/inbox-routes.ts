@@ -1,8 +1,11 @@
 import { Router, type Response } from "express";
-import type { InboxMessageDetail, InboxMessageListItem } from "@vega/domain";
+import type { InboxMessageDetail, InboxMessageListItem, InboxReplyDraft } from "@vega/domain";
 import type { AppConfig } from "../config.js";
 import { prisma } from "../prisma.js";
 import { getAppSettings } from "../settings/settings-service.js";
+import { createConfiguredMailService } from "../mail/configured-mail-service.js";
+import { invalidEmail, mailNotConfigured, respondWithSendResult, respondWithStaffEmailStatus, sendStaffEmail } from "../mail/staff-email-service.js";
+import { loadSignature } from "../staff/signature-name.js";
 import {
   AnalysisError,
   analyzeMessage,
@@ -19,8 +22,11 @@ import {
   InboxError,
   type HostingerMessage,
   type InboxReader,
+  type InboxReplyReader,
 } from "./inbox-client.js";
-import { mailHtml, mailPlainText } from "./mail-content.js";
+import { loadReplyAllContext } from "./reply-context.js";
+import { escapeHtml, mailHtml, mailPlainText } from "./mail-content.js";
+import type { MailService } from "../mail/mail-service.js";
 
 const ANALYSES_PER_HOUR = 10;
 const INLINE_IMAGE_TYPES = new Set([
@@ -34,6 +40,7 @@ const MAX_ATTACHMENT_DOWNLOAD = 25 * 1024 * 1024;
 export interface InboxRouterDeps {
   inbox: InboxReader | null;
   gemini: GeminiClient | null;
+  mailService?: MailService | null;
   loadCatalog?: () => Promise<CatalogEntry[]>;
   loadServiceCatalog?: () => Promise<ServiceCatalogEntry[]>;
   loadBoxVolumes?: () => Promise<{
@@ -101,6 +108,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   INBOX_ATTACHMENT_TOO_LARGE: "Der Anhang ist zu groß.",
   SOURCE_MAIL_NOT_FOUND:
     "Die Ursprungs-E-Mail wurde im Posteingang nicht gefunden.",
+  INBOX_MESSAGE_NO_SENDER: "Für diese Nachricht wurde keine Antwortadresse gefunden.",
+  INBOX_BAD_SOURCE: "Der Nachrichtenkopf konnte nicht gelesen werden.",
   GEMINI_AUTH_FAILED:
     "Die Anmeldung bei Google (Vertex AI) ist fehlgeschlagen. Bitte Service-Account und Rolle prüfen.",
   GEMINI_REQUEST_REJECTED:
@@ -132,6 +141,43 @@ function handleError(
 function parseUid(value: unknown): number | null {
   const uid = Number(value);
   return Number.isSafeInteger(uid) && uid > 0 ? uid : null;
+}
+
+interface InboxReplyInput {
+  subject: string;
+  text: string;
+  idempotencyKey: string;
+}
+
+function validateInboxReplyInput(
+  value: unknown,
+): { ok: true; value: InboxReplyInput } | { ok: false; issues: Array<{ field: string; message: string }> } {
+  const body = typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  const issues: Array<{ field: string; message: string }> = [];
+  const subject = typeof body.subject === "string" ? body.subject.trim() : "";
+  const text = typeof body.text === "string" ? body.text : "";
+  const idempotencyKey = typeof body.idempotencyKey === "string" ? body.idempotencyKey : "";
+  if (!subject || subject.length > 200 || /[\r\n]/u.test(subject)) {
+    issues.push({ field: "subject", message: "Der Betreff ist erforderlich (max. 200 Zeichen, einzeilig)." });
+  }
+  if (!text.trim() || text.length > 100_000) {
+    issues.push({ field: "text", message: "Bitte geben Sie eine Nachricht ein (max. 100.000 Zeichen)." });
+  }
+  if (!/^[A-Za-z0-9-]{16,100}$/u.test(idempotencyKey)) {
+    issues.push({ field: "idempotencyKey", message: "Ungültige Versandkennung." });
+  }
+  return issues.length ? { ok: false, issues } : { ok: true, value: { subject, text, idempotencyKey } };
+}
+
+function asReplyInbox(inbox: InboxReader | null): InboxReplyReader | null {
+  if (!inbox) return null;
+  const candidate = inbox as Partial<InboxReplyReader>;
+  return typeof candidate.getSourceHeaders === "function" &&
+    typeof candidate.getMailboxAddress === "function"
+    ? inbox as InboxReplyReader
+    : null;
 }
 
 /** Admin-only Postfach: live INBOX reads and Gemini analysis. Nothing from the mail is stored. */
@@ -216,6 +262,77 @@ export function createInboxRouter(deps: InboxRouterDeps): Router {
         })),
       };
       res.json({ data: detail });
+    } catch (error) {
+      handleError(res, error, next);
+    }
+  });
+
+  router.get("/messages/:uid/reply-draft", async (req, res, next) => {
+    try {
+      const uid = parseUid(req.params.uid);
+      if (!uid) return fail(res, 400, "INVALID_UID", "Ungültige Nachricht.");
+      const inbox = asReplyInbox(deps.inbox);
+      if (!inbox) return fail(res, 503, "INBOX_REPLY_UNAVAILABLE", "Antworten ist für dieses Postfach nicht verfügbar.");
+      const reply = await loadReplyAllContext(inbox, uid);
+      const draft: InboxReplyDraft = {
+        to: reply.to,
+        cc: reply.cc,
+        subject: reply.subject,
+        quoteText: reply.quoteText,
+      };
+      res.setHeader("Cache-Control", "no-store");
+      res.json({ data: draft });
+    } catch (error) {
+      handleError(res, error, next);
+    }
+  });
+
+  router.post("/messages/:uid/reply/status", async (req, res, next) => {
+    try {
+      const uid = parseUid(req.params.uid);
+      if (!uid) return fail(res, 400, "INVALID_UID", "Ungültige Nachricht.");
+      await respondWithStaffEmailStatus(req, res, `inbox:${uid}`);
+    } catch (error) {
+      handleError(res, error, next);
+    }
+  });
+
+  router.post("/messages/:uid/reply", async (req, res, next) => {
+    try {
+      const uid = parseUid(req.params.uid);
+      if (!uid) return fail(res, 400, "INVALID_UID", "Ungültige Nachricht.");
+      const mailService = deps.mailService;
+      if (!mailService) return mailNotConfigured(res);
+      const input = validateInboxReplyInput(req.body);
+      if (!input.ok) return invalidEmail(res, input.issues);
+      const inbox = asReplyInbox(deps.inbox);
+      if (!inbox) return fail(res, 503, "INBOX_REPLY_UNAVAILABLE", "Antworten ist für dieses Postfach nicht verfügbar.");
+
+      const staffUser = res.locals.staffUser as { id: string; name: string };
+      const actorName = String(staffUser.name);
+      const { outboxId, result } = await sendStaffEmail(
+        mailService,
+        `inbox:${uid}`,
+        input.value.idempotencyKey,
+        async () => {
+          const [reply, signature] = await Promise.all([
+            loadReplyAllContext(inbox, uid),
+            loadSignature(String(staffUser.id)),
+          ]);
+          return {
+            kind: "INBOX_REPLY",
+            to: reply.to.map((recipient) => recipient.address),
+            ...(reply.cc.length ? { cc: reply.cc.map((recipient) => recipient.address) } : {}),
+            subject: input.value.subject,
+            contentHtml: `<p>${escapeHtml(input.value.text).replace(/\r\n?/gu, "\n").replace(/\n/gu, "<br>")}</p><p></p>${reply.quoteHtml}`,
+            replyToMailUid: reply.uid,
+            actorName,
+            signatureName: signature.signatureName?.trim() || null,
+            signatureColor: signature.signatureColor,
+          };
+        },
+      );
+      respondWithSendResult(req, res, outboxId, result);
     } catch (error) {
       handleError(res, error, next);
     }
@@ -364,5 +481,6 @@ export function createConfiguredInboxRouter(
   return createInboxRouter({
     inbox: config.mail ? new HostingerInboxClient(config.mail) : null,
     gemini: config.gemini ? new VertexGeminiClient(config.gemini) : null,
+    mailService: createConfiguredMailService(config),
   });
 }
