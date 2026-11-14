@@ -50,7 +50,7 @@ Domains oder Secrets in Vite-Builds.
 | `HOSTINGER_MAIL_API_TOKEN`, `HOSTINGER_MAILBOX_RESOURCE_ID`            | Mailversand; ohne sie antwortet Versand mit `503 MAIL_NOT_CONFIGURED` |
 | `HOSTINGER_MAIL_API_BASE_URL`                                          | Optional, Standard `https://api.mail.hostinger.com`                   |
 | `GOOGLE_MAPS_API_KEY`                                                  | Places-Proxy und Admin-Route; ohne Key bleibt manuelle Eingabe        |
-| `GCS_BUCKET`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_APPLICATION_CREDENTIALS` | Bild-Uploads (siehe `gcs-bucket-setup.md`)                            |
+| `GCS_BUCKET`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_APPLICATION_CREDENTIALS` | Bild-Uploads und Vertex-AI-Analyse; `GOOGLE_CLOUD_PROJECT` ist bei `GEMINI_ENABLED=true` Pflicht (siehe `gcs-bucket-setup.md`, `gemini-setup.md`) |
 | `GEMINI_ENABLED`, `GEMINI_LOCATION`, `GEMINI_MODEL`                    | Postfach-Analyse mit Vertex AI, Region `global` (siehe `gemini-setup.md`)   |
 
 `localhost` und `127.0.0.1` sind unterschiedliche Origins. Der Kundenformular-Origin
@@ -302,9 +302,9 @@ Root-Scopes sind in [Installierbare Admin-App](./pwa-specification.md)
 beschrieben. Nach Deployment die PWA- und WordPress-Abnahme auf den tatsächlich
 unterstützten Geräten durchführen.
 
-### Maintenance und Smoke-Test
+### Wartung und Smoke-Test
 
-Admins finden im eigenständigen Hauptmenüpunkt **Maintenance** (`/maintenance`) die
+Admins finden unter **Verwaltung → Wartung** (`/maintenance`) die
 Loader-URL und einen kopierbaren `<script>`-Einbettungscode für einen
 WordPress-Block „Individuelles HTML“. Die URL wird serverseitig aus
 `APP_BASE_URL` erzeugt, nicht aus der aktuellen Browseradresse.
@@ -351,4 +351,3 @@ werden. Der Test ersetzt diese Freigabe-Gates nicht.
 - `hostinger-mail-cron.md` – zentraler Hostinger-Cron für Archiv-Purges und Mail-Retries (`node scripts/cron.js`)
 - `gcs-bucket-setup.md` – GCS-Bucket, Lifecycle, CORS, Service Account
 - `gemini-setup.md` – Postfach-Analyse: Vertex AI, Variablen, Datenschutz, Nebeneffekte (`\Seen`/`\Answered`), Zitat-Aufbewahrung
-- `plan-mail-intake-gemini.md` – Plan und Entscheidungen Postfach → Auftrag

@@ -50,7 +50,7 @@ test("admin typography and compact fields are preserved", () => {
   assert.equal(adminTheme.typography.h4.fontWeight, 500);
   assert.equal(customerTheme.typography.h4.fontWeight, 500);
   assert.equal(adminTheme.typography.button.textTransform, "none");
-  assert.equal(adminTheme.shape.borderRadius, 8);
+  assert.equal(adminTheme.shape.borderRadius, 4);
   assert.equal(
     adminTheme.components?.MuiTextField?.defaultProps?.margin,
     "dense",

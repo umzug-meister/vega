@@ -180,7 +180,7 @@ function asReplyInbox(inbox: InboxReader | null): InboxReplyReader | null {
     : null;
 }
 
-/** Admin-only Postfach: live INBOX reads and Gemini analysis. Nothing from the mail is stored. */
+/** Staff Postfach (Admins and Kundenberater): live INBOX reads and Gemini analysis. Nothing from the mail is stored. */
 export function createInboxRouter(deps: InboxRouterDeps): Router {
   const router = Router();
   const loadCatalog = deps.loadCatalog ?? loadCatalogFromDb;
@@ -194,7 +194,7 @@ export function createInboxRouter(deps: InboxRouterDeps): Router {
     });
   const now = deps.now ?? Date.now;
   const analysisLog = new Map<string, number[]>();
-  let analysisRunning = false;
+  const runningAnalyses = new Set<string>();
 
   router.use((_req, res, next) => {
     if (!deps.inbox) {
@@ -408,10 +408,10 @@ export function createInboxRouter(deps: InboxRouterDeps): Router {
         "Zu viele Analysen. Bitte später erneut versuchen.",
       );
     }
-    if (analysisRunning) {
+    if (runningAnalyses.has(userId)) {
       return fail(res, 429, "ANALYSIS_BUSY", "Es läuft bereits eine Analyse.");
     }
-    analysisRunning = true;
+    runningAnalyses.add(userId);
     analysisLog.set(userId, [...recent, current]);
     const controller = new AbortController();
     res.on("close", () => {
@@ -433,7 +433,7 @@ export function createInboxRouter(deps: InboxRouterDeps): Router {
     } catch (error) {
       handleError(res, error, next);
     } finally {
-      analysisRunning = false;
+      runningAnalyses.delete(userId);
     }
   });
 
@@ -455,17 +455,31 @@ export function createInboxRouter(deps: InboxRouterDeps): Router {
       }
       const order = await prisma.order.findUnique({
         where: { orderNumber },
-        select: { orderNumber: true },
+        select: { orderNumber: true, archivedAt: true },
       });
       if (!order)
         return fail(res, 404, "ORDER_NOT_FOUND", "Auftrag nicht gefunden.");
-      await prisma.order.update({
-        where: { orderNumber },
+      if (order.archivedAt)
+        return fail(
+          res,
+          409,
+          "ORDER_ARCHIVED",
+          "Archivierte Aufträge können nicht verknüpft werden.",
+        );
+      const linked = await prisma.order.updateMany({
+        where: { orderNumber, archivedAt: null },
         data: {
           sourceMailUid: uid,
           sourceMessageId: message.messageId.slice(0, 998),
         },
       });
+      if (linked.count === 0)
+        return fail(
+          res,
+          409,
+          "ORDER_ARCHIVED",
+          "Archivierte Aufträge können nicht verknüpft werden.",
+        );
       res.json({ data: { linked: true } });
     } catch (error) {
       handleError(res, error, next);

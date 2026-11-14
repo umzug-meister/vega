@@ -44,7 +44,8 @@
 - Mitarbeitende pflegen im Profil einen optionalen Signaturnamen
   (`User.signatureName`). Er wird beim Einreihen in `EmailOutbox.signatureName`
   übernommen und im Grußblock der Mailhülle über „Ihr Umzug Ruck Zuck Team“
-  gesetzt. Ohne Signaturnamen bleibt der Standardgruß.
+  gesetzt. Ohne Signaturnamen bleibt der Standardgruß. Allen ausgehenden Mails
+  geht dem Grußblock eine Trennzeile „--“ voraus.
 - Mitarbeitende wählen zusätzlich Schwarz (`#000000`, Standard), Vega-Blau
   (`#28527A`) oder Orange (`#CB722F`) als Signaturfarbe. Der erlaubte Farbwert wird in
   `User.signatureColor` gespeichert und beim Einreihen in
@@ -62,10 +63,11 @@
   Namen und Farbe aus dem Profil sowie klickbare internationale Firmendaten;
   ohne Signaturname erscheint kein Loginname, sondern nur das Team. To/Cc,
   Inhalt und Signatursnapshot durchlaufen die idempotente Outbox.
-- Ein im Postfach generierter Auftrag wird über den normalen Order-POST/PUT
-  gespeichert und danach mit der Quellmail verknüpft. „Auftrag versenden“ nutzt
-  den bestehenden Angebotsentwurf und PDF-Anhang, aber die einfache Reply-
-  Signatur. Dieser Versandmodus ist serverseitig auf Orders mit
+- Ein im Postfach erzeugter, per Auftragsnummer geladener oder kopierter
+  Auftrag wird mit der Quellmail verknüpft (eine Kopie übernimmt die
+  Verknüpfung). „Angebot versenden“ nutzt den bestehenden Angebotsentwurf und
+  PDF-Anhang, aber die einfache Reply-Signatur. Dieser Versandmodus ist
+  serverseitig auf Orders mit
   `sourceMailUid` begrenzt.
 - Im editierbaren Mailtext kann zusätzlich die Textfarbe aus einer festen
   Palette (Schwarz, Grau, Rot, Orange, Grün, Blau) gesetzt oder auf die

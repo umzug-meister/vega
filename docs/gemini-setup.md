@@ -18,13 +18,6 @@ Die Funktion ist standardmäßig aus (`GEMINI_ENABLED` nicht gesetzt).
      --role roles/aiplatform.user
    ```
 
-gcloud projects add-iam-policy-binding housemoving-1527875558789 \
---member serviceAccount:vega-server-gcs-dev@housemoving-1527875558789.iam.gserviceaccount.com \
---role roles/aiplatform.user
-
-housemoving-1527875558789
-vega-server-gcs-dev@housemoving-1527875558789.iam.gserviceaccount.com
-
 4. Schlüssel nur serverseitig ablegen (wie in `gcs-bucket-setup.md`); niemals ins
    Repository, in Builds oder Logs.
 
@@ -55,10 +48,12 @@ Server neu starten.
   **Nicht** gesendet: Absendername/-adresse (Header), E-Mail-Adressen und
   Telefonnummern im Text werden vor dem Versand geschwärzt. Der Name/die Adresse
   des Absenders wird lokal in den Entwurf übernommen.
-- **Restrisiko:** Namen im Fließtext, in Signaturen, Anhängen und Fotos werden nicht
-  erkannt und erreichen Google. Der AVV mit Google ist vom Betreiber
-  **freigegeben**; Aufbewahrungs-/No-Training-Einstellungen des Projekts bleiben
-  im Google-Cloud-Projekt zu prüfen.
+- **Restrisiko:** Namen im Fließtext und in Signaturen werden nicht erkannt.
+  PDF- und Foto-Anhänge gehen unverändert an Gemini; darin enthaltene Namen,
+  E-Mail-Adressen und Telefonnummern werden nicht geschwärzt. Geschwärzt werden
+  nur Betreff, Mailtext und der aus `.docx`/`.xlsx`/`.csv` extrahierte Text.
+  Der AVV mit Google ist vom Betreiber **freigegeben**; Aufbewahrungs-/No-Training-
+  Einstellungen des Projekts bleiben im Google-Cloud-Projekt zu prüfen.
 - Prompts und Antworten werden nicht geloggt; Mailinhalte werden nicht gespeichert.
 - Das Lesen des Mailtexts setzt bei Hostinger `\Seen`; der Reply setzt `\Answered`.
 - Gelesen werden PDF, Bilder, `.docx`, `.xlsx`, `.csv`. `.doc`/`.xls` werden
@@ -69,15 +64,27 @@ Server neu starten.
   einschließlich gespeicherter Formelergebnisse, ohne Formeln auszuführen.
   Sie begrenzt die Ausgabe auf 5 Blätter, 500 nichtleere Zeilen je Blatt,
   30 Spalten und insgesamt 60.000 Zeichen. Die ZIP-Prüfung läuft vor dem Parser.
-- Ein Rate-Limit begrenzt Analysen (10/Stunde je Nutzer, eine gleichzeitig).
+- Ein Rate-Limit begrenzt Analysen (10/Stunde und eine gleichzeitig je Nutzer).
+- Weitergeleitete Anfragen werden als Datenquelle gelesen; eindeutige spätere
+  Korrekturen gehen vor, unauflösbare Widersprüche landen in der Notiz. Kunde
+  und Antwortadresse stammen immer vom Absender der empfangenen Mail.
+- Mail-HTML wird serverseitig mit einer engen Allowlist bereinigt; Skripte,
+  aktive Inhalte und Remote-Bilder werden nicht angezeigt. Anhänge laufen über
+  den Backend-Proxy mit Content-Type-Prüfung und `nosniff`.
+- Mehrfachverarbeitung derselben Mail wird nicht verhindert.
 - Zugriff für alle angemeldeten Mitarbeiter (Admins und Kundenberater, nach
-  abgeschlossener Einrichtung/TOTP). Entscheidung: Berater dürfen das gesamte
-  Postfach der konfigurierten Mailbox sehen; ggf. später ein dediziertes
-  Eingangs-Postfach verwenden.
+  abgeschlossener Einrichtung/TOTP). Berater dürfen das gesamte Postfach der
+  konfigurierten Mailbox sehen. Mails können nur mit aktiven, nicht
+  archivierten Aufträgen verknüpft werden.
 
 ## 5. Antwort auf die Originalmail
 
-Auftrag mit verknüpfter Mail → Header-Menü „Als Antwort auf Mail senden". Die
-Originalmail wird per Message-ID gefunden, Empfänger ist der Absender (die
-Hostinger-API liefert kein Reply-To), das Zitat wird escaped angehängt. Das Zitat
-liegt wie jede Staff-Mail in `EmailOutbox.contentHtml`.
+- „Antwort“ im Postfach sendet ein Reply-All: `Reply-To` (sonst `From`) ist
+  Empfänger, ursprüngliche `To`/`Cc` werden `Cc`. Details in ADR 0007.
+- Ein mit der Mail verknüpfter Auftrag kann als Angebot auf die Originalmail
+  geantwortet werden. Die Originalmail wird per Message-ID gesucht; Empfänger
+  ist ihr Absender.
+- Die Signatur setzt der Server beim Versand zwischen Antworttext und Zitat.
+  Das Zitat liegt wie jede Staff-Mail in `EmailOutbox.contentHtml` und wird mit
+  dem Auftrag aufbewahrt; „keine Mailinhalte gespeichert“ gilt nur für den
+  Postfach-Abruf.

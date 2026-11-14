@@ -26,8 +26,8 @@ und Rechnungserstellung. Optionen (`/options`), Katalogbereiche (`/offers`,
 (`/users`) sind direkte Pfade ohne vorgeschaltetes `/settings`-Segment;
 archivierte Orders/Rechnungen und Profil haben eigene Routen.
 
-Maintenance (`/maintenance`) ist ein eigenständiger Hauptmenüpunkt auf derselben
-Ebene wie Optionen und ausschließlich für Admins sichtbar und zugänglich.
+Wartung (`/maintenance`) liegt im Admin-Bereich „Verwaltung“ und ist
+ausschließlich für Admins sichtbar und zugänglich.
 Die Seite stellt den serverseitig aus `APP_BASE_URL` erzeugten WordPress-Loadercode
 und eine explizit freigegebene Liste von Runtime-Variablennamen mit Setzstatus
 bereit, niemals geheime Werte. Ein manuell gestarteter, begrenzter Smoke-Test
@@ -43,11 +43,7 @@ Scope-Grenzen, Updates und Offline-Hinweise beschreibt `pwa-specification.md`.
 Die Admin-Oberfläche unterstützt unter „Mein Profil“ → „Darstellung“ die Auswahl
 „Hell“, „Dunkel“ und „System“, auch auf Mobilgeräten. „System“ ist der Standard
 und folgt Änderungen der Betriebssystemeinstellung automatisch. Eine Auswahl
-bleibt lokal im Browser gespeichert. Glasflächen in Navigation und Kopfzeile
-passen sich dem Modus an, Inhaltsflächen bleiben undurchsichtig.
-Die fixierte Reiternavigation im Auftragseditor hat einen undurchsichtigen,
-modusabhängigen Hintergrund und schließt beim Scrollen unterhalb der
-responsiven Kopfzeile an, damit Formularinhalte nicht durchscheinen.
+bleibt lokal im Browser gespeichert.
 
 Nach erfolgreicher Neuanlage öffnet die Admin-App direkt den gespeicherten
 Auftrag unter `/edit/<Auftragsnummer>`. Es gibt keine separate Erfolgsansicht.
@@ -60,17 +56,15 @@ PDF, Kopie, Archivieren und Rechnungserstellung werden erst nach erfolgreichem
 Speichern freigegeben und speichern nicht implizit. Während Lade-/Speichervorgängen
 oder bei Ladefehlern sind alle Dokumentaktionen gesperrt. E-Mail folgt
 denselben Sperrregeln: Beim Auftrag öffnet ein Menü „Angebot versenden",
-„Absage versenden" und – nur bei Angebotskopien – „2 Angebote versenden"; bei
+„Absage versenden", bei Aufträgen mit Ursprungsmail zusätzlich „Als Antwort
+auf Mail senden" und – nur bei Angebotskopien – „2 Angebote versenden"; bei
 Rechnungen (Admin-only) „Rechnung versenden". Der Versanddialog lädt einen
 serverseitigen Entwurf, lässt Empfänger, Betreff und Text bearbeiten und sendet
 über die Outbox. Der Auftragseditor zeigt Links zwischen Ursprungsauftrag und
-seinen Kopien. Auf kleinen Bildschirmen fasst ein Drei-Punkte-Menü alle
-verfügbaren Dokumentaktionen einschließlich der einzelnen E-Mail-Aktionen
-zusammen; dieselben Sperr- und Rollenregeln gelten.
-In den Auftrags- und Rechnungslisten stehen Suche und Anlegen-Aktion auch auf
-kleinen Bildschirmen nebeneinander; die Anlegen-Aktion wird dort als Icon
-angezeigt. Breite Tabellen bleiben horizontal scrollbar. In aktiven und
-archivierten Auftragslisten steht eine angegebene Firma vor dem Kundennamen.
+seinen Kopien. Auf kleinen Bildschirmen sind alle verfügbaren
+Dokumentaktionen einschließlich der einzelnen E-Mail-Aktionen erreichbar;
+dieselben Sperr- und Rollenregeln gelten. In aktiven und archivierten
+Auftragslisten steht eine angegebene Firma vor dem Kundennamen.
 
 Archivierte Aufträge und Rechnungen sind nicht bearbeitbar. Die Archivlisten
 bieten PDF-Download zum Drucken sowie Wiederherstellung und zeigen das
@@ -85,41 +79,30 @@ aus dem letzten `UPDATED`-/`COPIED`-Journalereignis ermittelt. Ohne solche
 Bearbeitungsereignisse gilt das Anlagedatum. Rechnungs-PDFs verwenden das im Admin-Formular gesetzte
 Rechnungsdatum (`invoiceDate`).
 
-Die Auftragsbearbeitung ordnet passende Cards auf größeren Bildschirmen
-nebeneinander an; auf kleinen Bildschirmen stehen sie untereinander.
 Der alternative Zeitraum (`dateFrom`, `dateTo`) stammt aus dem Kundenformular
 und ist in der Admin-Bearbeitung schreibgeschützt. Die Admin-API weist
 Änderungen dieses Zeitraums zurück; Umzugsdatum und Uhrzeit bleiben editierbar.
-Erstellen-Aktionen stehen rechts und verwenden „Objekt anlegen“;
-Formularpositionen verwenden „Objekt hinzufügen“, ebenfalls rechtsbündig.
-Katalogtabellen bündeln Bearbeiten und Löschen in Drei-Punkte-Menüs.
-Die Verpackungsverwaltung zeigt statt einer Tabelle dieselben Artikelkarten
-wie das Kundenformular, mit Drei-Punkte-Menü je Artikel. Öffentlich sichtbare
-Artikel stehen in Formularreihenfolge; ausgeblendete Artikel bleiben in einem
-gesondert gekennzeichneten Bereich bearbeitbar. Die Vorschau im
-Bearbeitungsdialog aktualisiert sich während der Eingabe.
-Verpackungskarten sind zentriert und maximal 900 px breit. Bild und
-Beschreibung stehen bei ausreichend breiten Karten gleich breit nebeneinander,
-sonst untereinander; das Bildseitenverhältnis bleibt erhalten. Der Server
+Die Verpackungsverwaltung zeigt dieselben Artikel wie das Kundenformular.
+Öffentlich sichtbare Artikel stehen in Formularreihenfolge; ausgeblendete
+Artikel bleiben in einem gesondert gekennzeichneten Bereich bearbeitbar. Die
+Vorschau im Bearbeitungsdialog aktualisiert sich während der Eingabe. Der Server
 normalisiert Beschreibungen mit derselben HTML-Allowlist wie im E-Mail-Editor;
 der Formularclient rendert nur diese Ausgabe. Optionale HTTP(S)-Medienlinks
 werden im Kundenformular und in der Admin-Vorschau ohne Referrer geladen.
 
 Der Möbelkatalog enthält neben ID und Kategoriezuordnungen nur Name, Volumen,
 Schrittgröße in Vielfachen von 0,5 (Minimum 0,5, Standard 1) und Sortierung
-(Standard 0). Im Bearbeitungsdialog
-folgen unter diesen Feldern die Kategorien als vertikale Checkbox-Liste,
-geordnet nach Kategorie-Sortierung und bei Gleichstand nach ID.
+(Standard 0) sowie die Kategoriezuordnungen in Kategorie-Sortierung, bei
+Gleichstand nach ID.
 Gewicht, Montage-/Aufpreise und die bisherigen Möbel-Flags entfallen aus
 DTOs, Eingaben und Datenbank. Die Migration setzt bisher leere Schrittgrößen
 auf 1; vorhandene Kategoriezuordnungen bleiben erhalten.
 
-Die Profilseite zeigt Profil, Passwort und OTP-Einstellungen als drei getrennte,
-dauerhaft sichtbare Cards im gleichen Layout wie die Auftragsbearbeitung.
-Es gibt dort keine Tab-Navigation; die drei Änderungsformulare bleiben getrennt.
+Die Profilseite bietet Profil, Passwort und OTP-Einstellungen als drei getrennte
+Änderungsformulare.
 
 Die Nutzerverwaltung zeigt alle Mitarbeiterkonten ohne Suchfeld und ohne
-Seitennavigation. Kontoaktionen sind je Zeile in einem Drei-Punkte-Menü gebündelt.
+Seitennavigation.
 Die Oberfläche lädt bei Bedarf alle Seiten der weiterhin
 begrenzten Admin-API automatisch nach.
 
@@ -141,7 +124,7 @@ WordPress bleibt CMS und Einbettungsfläche. Es ist nicht länger Order-Backend,
 ### Express-Server
 
 - Statische Admin- und Kundenformular-Builds ausliefern.
-- Admin-SPA am Origin-Root: `/`, `/edit/:id`, `/options`, `/offers`, `/prices`, `/packings`, `/services`, `/categories`, `/furniture`, `/users`, `/maintenance`; zusätzlich `/invoices`, `/invoices/new`, `/invoices/archived`, `/orders/archived`, `/profile`. Unbekannte Admin-Pfade zeigen 404.
+- Admin-SPA am Origin-Root: `/`, `/edit/:id`, `/options`, `/offers`, `/prices`, `/packings`, `/services`, `/categories`, `/furniture`, `/users`, `/maintenance`; zusätzlich `/invoices`, `/invoices/new`, `/invoices/archived`, `/orders/archived`, `/inbox`, `/profile`. Unbekannte Admin-Pfade zeigen 404.
 - Better Auth-Routen und Session-Cookies auf Vega hosten.
 - Öffentliche und geschützte API-Router getrennt registrieren.
 - Request-ID, strukturierte Logs, Rate-Limits, CSP und Security-Headers zentral konfigurieren.
@@ -160,6 +143,10 @@ WordPress bleibt CMS und Einbettungsfläche. Es ist nicht länger Order-Backend,
 - Mail Service: Hostinger API Adapter, Outbox, Retry/Failure Handling,
   Actor/Event Logs und Versanddialoge für Angebote, Absagen, Rechnungen,
   Gutschriften und Mahnungen.
+- Inbox Service: liest die `INBOX` der konfigurierten Mailbox live über die
+  Hostinger API, ohne Mailinhalte zu speichern; Antworten (Reply-All) und
+  Angebotsantworten laufen über die Outbox. Gemini erzeugt nur einen
+  Auftragsentwurf; Einrichtung, Datenschutz und Limits in `gemini-setup.md`.
 - Upload Service: GCS URL-Signierung, Upload-Verifikation und Zuordnung von Bildreferenzen.
 - Settings Service: versionierter Singleton für die sechs aktiven
   Legacy-Optionen (`boxCbm`, `kleiderboxCbm`, `origin`, `dataPrivacyUrl`,
@@ -181,6 +168,7 @@ WordPress bleibt CMS und Einbettungsfläche. Es ist nicht länger Order-Backend,
 | Kundenanfragen lesen/bearbeiten                       |    ja |            ja |             nein |
 | Angebotskopie erstellen/kopieren/anpassen/archivieren |    ja |            ja |             nein |
 | Preis einer einzelnen Angebotskopie anpassen          |    ja |            ja |             nein |
+| E-Mail-Postfach lesen, beantworten, analysieren       |    ja |            ja |             nein |
 | Globale Preise, Services, Möbel, Kategorien ändern    |    ja |          nein |             nein |
 | Mitarbeiter/Accounts verwalten                        |    ja |          nein |             nein |
 | Rechnungen, Gutschriften, Mahnungen                   |    ja |          nein |             nein |
@@ -348,9 +336,9 @@ Alle Rechte werden im Backend geprüft. `Admin` hat alle Rechte; `Kundenberater`
   `street`/`postalCode`/`city`, Rate-Limit, `Cache-Control: no-store`, manueller Fallback).
   Kein generischer Google-Proxy, kein Place-Speicher, kein öffentlicher Order-Read.
 - `admin` Router verlangen gültige Better-Auth-Session plus Rollen-/Capability-Check.
-- Die Streckenberechnung unter `/api/admin/routes` (Depot → 2–4 Umzugsadressen → Depot,
+- Die Streckenberechnung unter `/api/admin/routes` (Depot → 1–4 Umzugsadressen → Depot,
   Kilometer gerundet in den ungespeicherten Entwurf; automatische Erst- und
-  Adressänderungsberechnung über dieselbe Staff-API, Button als manueller Retry) ist
+  Adressänderungsberechnung über dieselbe Staff-API) ist
   ausschließlich authentifizierte Admin-API für Admin/Kundenberater. Direkt
   aufeinanderfolgende identische Adressen erzeugen einen Abschnitt mit 0 km/0 Min.;
   andere Abschnitte bleiben Teil der Google-Routenberechnung.

@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
+import type { AddressInfo } from "node:net";
 import test from "node:test";
+import express from "express";
 import { strToU8, zipSync } from "fflate";
+import { prisma } from "../src/prisma.js";
+import { createInboxRouter } from "../src/inbox/inbox-routes.js";
 import type {
   HostingerMessage,
   InboxReader,
@@ -516,6 +520,50 @@ function fakeInbox(
     downloadAttachment: async (_uid, id) => files[id] ?? Buffer.alloc(0),
   };
 }
+
+test("link-order links active orders and rejects archived orders without writing", async (context) => {
+  const orders: Record<number, { orderNumber: number; archivedAt: Date | null }> = {
+    1001: { orderNumber: 1001, archivedAt: null },
+    1002: { orderNumber: 1002, archivedAt: new Date("2026-11-01T00:00:00Z") },
+  };
+  const updates: unknown[] = [];
+  const originalFind = prisma.order.findUnique;
+  const originalUpdate = prisma.order.updateMany;
+  Reflect.set(prisma.order, "findUnique", async ({ where }: { where: { orderNumber: number } }) =>
+    orders[where.orderNumber] ?? null);
+  Reflect.set(prisma.order, "updateMany", async (args: { where: { orderNumber: number } }) => {
+    updates.push(args);
+    return { count: orders[args.where.orderNumber]?.archivedAt ? 0 : 1 };
+  });
+  const app = express();
+  app.use(express.json());
+  app.use(createInboxRouter({ inbox: fakeInbox(), gemini: null }));
+  const server = app.listen(0);
+  context.after(() => {
+    server.close();
+    Reflect.set(prisma.order, "findUnique", originalFind);
+    Reflect.set(prisma.order, "updateMany", originalUpdate);
+  });
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const link = (orderNumber: number) =>
+    fetch(`${base}/messages/5/link-order`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderNumber }),
+    });
+
+  const archived = await link(1002);
+  assert.equal(archived.status, 409);
+  assert.equal(((await archived.json()) as { error: { code: string } }).error.code, "ORDER_ARCHIVED");
+  assert.equal(updates.length, 0);
+
+  const active = await link(1001);
+  assert.equal(active.status, 200);
+  assert.deepEqual(updates, [{
+    where: { orderNumber: 1001, archivedAt: null },
+    data: { sourceMailUid: 5, sourceMessageId: "<id@example.com>" },
+  }]);
+});
 
 test("analyzeMessage redacts contact data before Gemini and reports skipped attachments", async () => {
   let seen: GeminiRequest | undefined;

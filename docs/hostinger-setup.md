@@ -192,7 +192,8 @@ und getestet ist:
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `HOSTINGER_MAIL_API_BASE_URL`    | Nur für einen dokumentierten API-Endpoint-Override; standardmäßig `https://api.mail.hostinger.com`                                                      |
 | `GOOGLE_MAPS_API_KEY`            | Places API (New) und Routes API; serverseitig beschränken, Quoten/Kosten überwachen                                                                     |
-| `GOOGLE_CLOUD_PROJECT`           | Google-Cloud-Projekt für GCS                                                                                                                            |
+| `GOOGLE_CLOUD_PROJECT`           | Google-Cloud-Projekt für GCS und Vertex AI (Pflicht bei `GEMINI_ENABLED=true`)                                                                          |
+| `GEMINI_ENABLED`, `GEMINI_LOCATION`, `GEMINI_MODEL` | Nur für die Postfach-Analyse; siehe [Gemini-Einrichtung](./gemini-setup.md)                                                          |
 | `GCS_BUCKET`                     | GCS-Bucket für Bild-Uploads; Bucket- und Berechtigungssetup siehe [GCS-Anleitung](./gcs-bucket-setup.md)                                                |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Nur wenn Hostinger eine sicher bereitgestellte externe ADC-Credentials-Datei unterstützt; Datei außerhalb des Repositories und nicht öffentlich ablegen |
 | `MAIL_MAINTENANCE_LIMIT`         | Optionaler Cron-Batch, 1–200; Standard 25                                                                                                               |
@@ -320,7 +321,7 @@ Nach dem Neustart:
    `{"status":"ok","service":"vega"}`.
 2. `https://<VEGA_HOST>/` öffnen, mit dem Bootstrap-Admin anmelden, Passwort
    ändern und TOTP vollständig einrichten.
-3. In der Admin-App **Maintenance** öffnen. Die Variablenübersicht zeigt nur
+3. In der Admin-App **Verwaltung → Wartung** öffnen. Die Variablenübersicht zeigt nur
    Namen/Setzstatus, keine Werte. Smoke-Test durchführen und Ergebnisse für
    Datenbank, Frontend-Build und konfigurierte Provider kontrollieren.
 4. Den WordPress-Loader gemäß [Betriebsanleitung](./operations.md#wordpress-einbettung)
@@ -328,7 +329,7 @@ Nach dem Neustart:
    Formularübermittlung und vollständigen Upload separat testen.
 5. Test-Mail nur an einen freigegebenen Testempfänger senden und Antwort,
    Fehlerfälle, Anhänge sowie Hostinger-Mail-API im realen Tarif verifizieren.
-   Maintenance-Smoke-Test allein sendet keine Mail und beweist keine Zustellung.
+   Smoke-Test der Wartungsseite allein sendet keine Mail und beweist keine Zustellung.
 
 ## 8. Hostinger-Cron für Archiv-Purges und Mail-Retries einrichten
 
