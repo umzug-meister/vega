@@ -11,7 +11,6 @@ import {
   Button,
   Grid,
   IconButton,
-  Paper,
   Stack,
   Table,
   TableBody,
@@ -20,6 +19,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { AdminCard } from "../components/AdminCard.js";
 import {
   addInvoiceAmounts,
   roundAmountToCents,
@@ -82,7 +82,7 @@ export function getPricingInputSource(
       : {}),
     addresses: [
       value.from,
-      value.to,
+      ...(value.to ? [value.to] : []),
       ...(value.details.showSecondaryFrom && value.details.secondaryFrom
         ? [value.details.secondaryFrom]
         : []),
@@ -247,7 +247,7 @@ export function ConditionsTab({
         alignItems: "start",
       }}
     >
-      <Paper variant="outlined" sx={{ p: 2.5, minWidth: 0 }}>
+      <AdminCard variant="outlined" sx={{ minWidth: 0 }}>
         <Stack spacing={1.5}>
           <Typography component="h2" variant="h6">
             Angebotsbasis
@@ -325,11 +325,11 @@ export function ConditionsTab({
             </TableBody>
           </Table>
           <Button variant="contained" onClick={onCalculate}>
-            Positionen berechnen
+            Berechnen
           </Button>
         </Stack>
-      </Paper>
-      <Paper variant="outlined" sx={{ p: 2.5, minWidth: 0 }}>
+      </AdminCard>
+      <AdminCard variant="outlined" sx={{ minWidth: 0 }}>
         <Stack spacing={1.5}>
           <Typography component="h2" variant="h6">
             Positionen aus dem Auftrag
@@ -423,7 +423,7 @@ export function ConditionsTab({
             </Typography>
           </Stack>
         </Stack>
-      </Paper>
+      </AdminCard>
     </Box>
   );
 }

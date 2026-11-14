@@ -178,11 +178,13 @@ export function AddressFields({
               </MenuItem>
             ))}
           </TextField>
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            useFlexGap
-            sx={{ flexWrap: "wrap" }}
-          >
+        </>
+      )}
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        useFlexGap
+        sx={{ flexWrap: "wrap" }}
+      >
             <FormControlLabel
               control={
                 <Switch
@@ -219,9 +221,7 @@ export function AddressFields({
               }
               label="Garage"
             />
-          </Stack>
-        </>
-      )}
+      </Stack>
       {showApartmentDetails && (
         <>
           <Typography color="text.secondary" variant="overline" align="center">

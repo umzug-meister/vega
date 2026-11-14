@@ -101,6 +101,32 @@ function fixture(context: TestContext) {
 const success = () => new MailService({ send: async () => {} });
 const uncertain = () => new MailService({ send: async () => { throw new MailDeliveryError("MAIL_TIMEOUT", false, undefined, "UNKNOWN"); } });
 
+test("outbox retains separate Reply-All To and Cc recipients for delivery", async (context) => {
+  const f = fixture(context);
+  const id = await queueMail({
+    kind: "INBOX_REPLY",
+    to: ["sender@example.test"],
+    cc: ["colleague@example.test"],
+    subject: "Re: Umzug",
+    contentHtml: "<p>Antwort</p>",
+    replyToMailUid: 42,
+    signatureName: "Alexander Berent",
+    actorName: "Alexander Berent",
+    idempotencyKey: "staff:inbox:42:reply-all-key",
+  });
+  assert.deepEqual(f.rows()[0]?.recipients, {
+    to: ["sender@example.test"],
+    cc: ["colleague@example.test"],
+  });
+
+  let delivered: { to: string[]; cc?: string[]; replyToMailUid?: number } | undefined;
+  const service = new MailService({ send: async (mail) => { delivered = mail; } });
+  assert.equal(await deliverOutboxMail(id, service), "sent");
+  assert.deepEqual(delivered?.to, ["sender@example.test"]);
+  assert.deepEqual(delivered?.cc, ["colleague@example.test"]);
+  assert.equal(delivered?.replyToMailUid, 42);
+});
+
 test("stale crash claims become UNKNOWN, fresh claims and UNKNOWN are never resent", async (context) => {
   const f = fixture(context);
   f.add({ status: "SENDING", lockedAt: new Date(Date.now() - MAIL_SENDING_STALE_MS - 1) });

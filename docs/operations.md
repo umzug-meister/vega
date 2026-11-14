@@ -50,7 +50,8 @@ Domains oder Secrets in Vite-Builds.
 | `HOSTINGER_MAIL_API_TOKEN`, `HOSTINGER_MAILBOX_RESOURCE_ID`            | Mailversand; ohne sie antwortet Versand mit `503 MAIL_NOT_CONFIGURED` |
 | `HOSTINGER_MAIL_API_BASE_URL`                                          | Optional, Standard `https://api.mail.hostinger.com`                   |
 | `GOOGLE_MAPS_API_KEY`                                                  | Places-Proxy und Admin-Route; ohne Key bleibt manuelle Eingabe        |
-| `GCS_BUCKET`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_APPLICATION_CREDENTIALS` | Bild-Uploads (siehe `gcs-bucket-setup.md`)                            |
+| `GCS_BUCKET`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_APPLICATION_CREDENTIALS` | Bild-Uploads und Vertex-AI-Analyse; `GOOGLE_CLOUD_PROJECT` ist bei `GEMINI_ENABLED=true` Pflicht (siehe `gcs-bucket-setup.md`, `gemini-setup.md`) |
+| `GEMINI_ENABLED`, `GEMINI_LOCATION`, `GEMINI_MODEL`                    | Postfach-Analyse mit Vertex AI, Region `global` (siehe `gemini-setup.md`)   |
 
 `localhost` und `127.0.0.1` sind unterschiedliche Origins. Der Kundenformular-Origin
 gehört nur in `CORS_ALLOWED_ORIGINS`. Nach Änderungen an `.env` den Server neu starten.
@@ -224,6 +225,10 @@ Farbe wird mit jeder E-Mail in der Outbox gespeichert, damit ein späterer Retry
 dieselbe Signaturdarstellung verwendet. Die Vorschau im Profil reagiert direkt
 auf Änderungen an Name und Farbauswahl.
 
+Die gemeinsame E-Mail-Signatur und Inbox-Antworten zeigen Mobil- und Festnetz
+im internationalen `+49`-Format als klickbare `tel:`-Links; die Website ist
+ebenfalls verlinkt.
+
 ### Migration
 
 Die Migration `20261018100000_user_signature_color` ergänzt den Benutzer und
@@ -297,9 +302,9 @@ Root-Scopes sind in [Installierbare Admin-App](./pwa-specification.md)
 beschrieben. Nach Deployment die PWA- und WordPress-Abnahme auf den tatsächlich
 unterstützten Geräten durchführen.
 
-### Maintenance und Smoke-Test
+### Wartung und Smoke-Test
 
-Admins finden im eigenständigen Hauptmenüpunkt **Maintenance** (`/maintenance`) die
+Admins finden unter **Verwaltung → Wartung** (`/maintenance`) die
 Loader-URL und einen kopierbaren `<script>`-Einbettungscode für einen
 WordPress-Block „Individuelles HTML“. Die URL wird serverseitig aus
 `APP_BASE_URL` erzeugt, nicht aus der aktuellen Browseradresse.
@@ -317,7 +322,8 @@ App weiterhin nicht; diese Fehler müssen im Deployment behoben werden.
 `POST /api/admin/maintenance/smoke-test` auf (höchstens zweimal pro Minute
 und Mitarbeiter, Origin-Prüfung, `Cache-Control: no-store`). Die Statusübersicht
 `GET /api/admin/maintenance` löst selbst keine Provider-Anfragen aus.
-Der Test prüft parallel mit einem Zeitlimit von zehn Sekunden:
+Der Test prüft parallel mit einer Obergrenze von 90 Sekunden (Gemini); Mail-,
+Maps- und Storage-Aufrufe haben zusätzlich eigene kürzere Zeitlimits:
 
 - Datenbank: `SELECT 1`, keine Änderungen an Fachdaten; kein Migrations-/Schema-Proof.
 - Formular-Build: Vite-Manifest sowie referenzierte JS-/CSS-Dateien.
@@ -326,6 +332,9 @@ Der Test prüft parallel mit einem Zeitlimit von zehn Sekunden:
 - Google Places (New) und Routes: synthetische Testadresse bzw. Testkoordinaten,
   keine Kunden-/Betriebsdaten. Die echten API-Aufrufe können Quota und Kosten
   verursachen.
+- Vertex AI Gemini: nur wenn `GEMINI_ENABLED=true`; sendet einen kurzen
+  synthetischen Prompt und erwartet eine strukturierte JSON-Antwort. Es werden
+  keine Mailinhalte gesendet; Modell-Quota und Kosten können anfallen.
 - GCS: Bucket-Metadaten und bestehende EU-/Privat-/180-Tage-Löschregeln.
   Keine Datei wird geschrieben; Schreibrechte und Signierung sind nicht geprüft.
 
@@ -341,3 +350,4 @@ werden. Der Test ersetzt diese Freigabe-Gates nicht.
 - `hostinger-setup.md` – Schritt-für-Schritt-Deployment, Runtime-Variablen, SSH, Migrationen und Go-live-Checkliste
 - `hostinger-mail-cron.md` – zentraler Hostinger-Cron für Archiv-Purges und Mail-Retries (`node scripts/cron.js`)
 - `gcs-bucket-setup.md` – GCS-Bucket, Lifecycle, CORS, Service Account
+- `gemini-setup.md` – Postfach-Analyse: Vertex AI, Variablen, Datenschutz, Nebeneffekte (`\Seen`/`\Answered`), Zitat-Aufbewahrung

@@ -12,7 +12,7 @@ p { margin-block-start: 0.6rem; margin-block-end: 0.6rem; } table { width: 100%;
 .image-container { text-align: center; padding: 10px; } .image { max-width: 100%; height: auto; } .container { max-width: 700px; margin: 0 auto; background: #ececed3b; } .content, .footer { padding: 0.8rem; }
 .footer { color: #a8a8a8; background-color: #363636; font-size: 0.8rem; } .footer a { color: #a8a8a8; } .footer a:hover { color: #ffffff; } .rating { color: #ea5b27; } .centered { text-align: center; }
 .ql-align-right { text-align: right; } .ql-align-center { text-align: center; }
-</style></head><body><div class="container"><div class="image-container"><img class="image" style="width: 360px" alt="Umzug Ruck Zuck" src="https://umzugruckzuck.de/wp-content/uploads/2026/06/Logo-147.svg" /></div><div class="content">{{content}}<br /><p>Freundliche Grüße, <br />{{signature}}Ihr Umzug Ruck Zuck Team.</p></div><div class="footer"><p class="centered">Mobil: 0176 101 719 90</p><p class="centered">Telefon: 089 306 429 72</p><p class="centered"><a href="https://umzugruckzuck.de">umzugruckzuck.de</a></p><p class="centered">© Umzug Ruck Zuck. Alle Rechte vorbehalten.</p></div></div></body></html>`;
+</style></head><body><div class="container"><div class="image-container"><img class="image" style="width: 360px" alt="Umzug Ruck Zuck" src="https://umzugruckzuck.de/wp-content/uploads/2026/06/Logo-147.svg" /></div><div class="content">{{content}}<br /><p>Freundliche Grüße, <br />{{signature}}Ihr Umzug Ruck Zuck Team.</p></div><div class="footer"><p class="centered">Mobil: <a href="tel:+4917610171990">+49 176 101 719 90</a></p><p class="centered">Telefon: <a href="tel:+498930642972">+49 89 306 429 72</a></p><p class="centered"><a href="https://umzugruckzuck.de/">umzugruckzuck.de</a></p><p class="centered">© Umzug Ruck Zuck. Alle Rechte vorbehalten.</p></div></div></body></html>`;
 
 export function escapeHtml(value: string): string {
   return value.replace(
@@ -35,8 +35,23 @@ export function renderEmailLayout(
   // Function replacers: `$` sequences in user content must not be interpreted as patterns.
   return EMAIL_LAYOUT.replace(
     "Freundliche Grüße, <br />{{signature}}Ihr Umzug Ruck Zuck Team.",
-    () => signature,
+    () => `--<br />${signature}`,
   ).replace("{{content}}", () => sanitizeEmailHtml(contentHtml));
+}
+
+export function renderReplyEmail(
+  contentHtml: string,
+  signatureName?: string | null,
+  signatureColor: "#000000" | "#28527A" | "#CB722F" = "#000000",
+): string {
+  const name = signatureName?.trim();
+  const signature = `<p>--</p><p style="color:${signatureColor}">Freundliche Grüße,<br>${name ? `${escapeHtml(name)}<br>` : ""}Ihr Umzug Ruck Zuck Team.</p><p>Mobil: <a href="tel:+4917610171990">+49 176 101 719 90</a></p><p>Telefon: <a href="tel:+498930642972">+49 89 306 429 72</a></p><p><a href="https://umzugruckzuck.de/">umzugruckzuck.de</a></p>`;
+  const sanitizedContent = sanitizeEmailHtml(contentHtml);
+  const quoteIndex = sanitizedContent.indexOf("<blockquote");
+  const contentWithSignature = quoteIndex < 0
+    ? `${sanitizedContent}${signature}`
+    : `${sanitizedContent.slice(0, quoteIndex)}${signature}${sanitizedContent.slice(quoteIndex)}`;
+  return `<!doctype html><html lang="de-DE"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head><body style="margin:0;font-family:Arial,sans-serif;color:#333;font-size:16px;line-height:1.5">${contentWithSignature}</body></html>`;
 }
 
 export function sanitizeEmailHtml(html: string): string {
@@ -83,8 +98,10 @@ export const emailDefaults = {
   inquiryNotification(
     customerName: string,
     orderNumber: number,
+    appBaseUrl: URL,
     customerEmail?: string | null,
   ) {
+    const orderUrl = new URL(`/edit/${orderNumber}`, appBaseUrl).href;
     const email = customerEmail?.trim();
     const replyLink = email
       ? `<p>Antworten an den Kunden: <a href="${escapeHtml(
@@ -93,7 +110,7 @@ export const emailDefaults = {
       : "";
     return {
       subject: `Neue Umzugsanfrage ${orderNumber}`,
-      contentHtml: `<p>Eine neue Umzugsanfrage von ${escapeHtml(customerName)} wurde gespeichert.</p><p>Auftragsnummer: ${orderNumber}. Bitte prüfen Sie die vollständigen Angaben in der Vega-Admin-Oberfläche.</p>${replyLink}`,
+      contentHtml: `<p>Eine neue Umzugsanfrage von ${escapeHtml(customerName)} wurde gespeichert.</p><p>Auftragsnummer: ${orderNumber}. Bitte prüfen Sie die vollständigen Angaben in der Vega-Admin-Oberfläche.</p><p><a href="${escapeHtml(orderUrl)}">Auftrag in Vega öffnen</a></p>${replyLink}`,
     };
   },
   inquiryReceived(customerName: string, orderNumber: number) {

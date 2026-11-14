@@ -33,20 +33,42 @@
   `V1.Send.Request`-Spezifikation der Hostinger-API kennt kein `Reply-To`
   (weder Header noch Feld); ein solcher Header kann über den genutzten
   API-Versand daher nicht gesetzt werden. Die Firmenmail enthält stattdessen
-  Name, Auftragsnummer und einen `mailto:`-Link auf die im Formular
+  Name, Auftragsnummer, einen Link zum Auftrag (`/edit/<Auftragsnummer>`,
+  Basis aus der serverseitigen `APP_BASE_URL`) und einen `mailto:`-Link auf die im Formular
   angegebene Kundenadresse mit vorbelegtem Betreff. Ein echtes `Reply-To`
   bräuchte einen SMTP-Versandweg mit eigenen Zugangsdaten und ist als offene
   Architekturentscheidung nicht umgesetzt.
+  Der Auftragslink steht ausschließlich in der Firmenbenachrichtigung, nicht
+  in der Kundenbestätigung; der Auftragszugriff erfordert weiterhin eine
+  berechtigte Mitarbeiteranmeldung.
 - Mitarbeitende pflegen im Profil einen optionalen Signaturnamen
   (`User.signatureName`). Er wird beim Einreihen in `EmailOutbox.signatureName`
   übernommen und im Grußblock der Mailhülle über „Ihr Umzug Ruck Zuck Team“
-  gesetzt. Ohne Signaturnamen bleibt der Standardgruß.
+  gesetzt. Ohne Signaturnamen bleibt der Standardgruß. Allen ausgehenden Mails
+  geht dem Grußblock eine Trennzeile „--“ voraus.
 - Mitarbeitende wählen zusätzlich Schwarz (`#000000`, Standard), Vega-Blau
   (`#28527A`) oder Orange (`#CB722F`) als Signaturfarbe. Der erlaubte Farbwert wird in
   `User.signatureColor` gespeichert und beim Einreihen in
   `EmailOutbox.signatureColor` eingefroren, damit Retry-Mails dieselbe Farbe
   behalten. Die Farbe wird auf den vollständigen Grußblock einschließlich
   Signaturname und Teamname angewendet.
+- Antworten aus dem Postfach sind ein eigener Reply-All-Flow ohne
+  Auftragsmail-Vorlage und mit Originalzitat. `Reply-To` wird aus dem RFC822-
+  Header gelesen und hat Vorrang vor `From`; ursprüngliche `To`-/`Cc`-Adressen
+  werden als `Cc` ergänzt. Eigene Mailbox, Dubletten und `Bcc` werden nicht
+  übernommen. Der Server bestimmt Empfänger und Threading-UID; Hostinger sendet
+  mit `inReplyTo`. Mitarbeitende editieren nur den Text; die Signatur erscheint
+  nicht in der Vorschau. Beim Versand setzt der Server sie automatisch nach dem
+  Antworttext und vor das Originalzitat. Reply und Inbox-Angebotsantwort nutzen
+  Namen und Farbe aus dem Profil sowie klickbare internationale Firmendaten;
+  ohne Signaturname erscheint kein Loginname, sondern nur das Team. To/Cc,
+  Inhalt und Signatursnapshot durchlaufen die idempotente Outbox.
+- Ein im Postfach erzeugter, per Auftragsnummer geladener oder kopierter
+  Auftrag wird mit der Quellmail verknüpft (eine Kopie übernimmt die
+  Verknüpfung). „Angebot versenden“ nutzt den bestehenden Angebotsentwurf und
+  PDF-Anhang, aber die einfache Reply-Signatur. Dieser Versandmodus ist
+  serverseitig auf Orders mit
+  `sourceMailUid` begrenzt.
 - Im editierbaren Mailtext kann zusätzlich die Textfarbe aus einer festen
   Palette (Schwarz, Grau, Rot, Orange, Grün, Blau) gesetzt oder auf die
   Standardfarbe zurückgesetzt werden. Der Editor schreibt sie als

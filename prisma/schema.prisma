@@ -110,30 +110,33 @@ model RateLimit {
 }
 
 model Order {
-  id            String               @id @default(cuid())
-  revision      Int                  @default(0)
-  orderNumber   Int                  @unique
-  customerName  String               @db.VarChar(300)
-  customerEmail String?              @db.VarChar(254)
-  customerPhone String               @db.VarChar(64)
-  source        String               @db.VarChar(32)
-  data          Json
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @default(now()) @updatedAt
-  edited        Boolean              @default(false)
-  archivedAt    DateTime?
-  purgeAt       DateTime?
-  originOrderId String?
-  originOrder   Order?               @relation("OrderCopies", fields: [originOrderId], references: [id], onDelete: SetNull)
-  copies        Order[]              @relation("OrderCopies")
-  emailOutbox   EmailOutbox[]        @relation("EmailOutboxOrder")
-  emailOptions  EmailOutbox[]        @relation("EmailOutboxOption")
-  emailEvents   EmailEvent[]
-  activities    OrderActivityEvent[]
-  invoice       Invoice?
-  images        OrderImage[]
-  addresses     OrderAddress[]
-  positions     OrderPosition[]
+  id              String               @id @default(cuid())
+  revision        Int                  @default(0)
+  orderNumber     Int                  @unique
+  customerName    String               @db.VarChar(300)
+  customerEmail   String?              @db.VarChar(254)
+  customerPhone   String               @db.VarChar(64)
+  source          String               @db.VarChar(32)
+  data            Json
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @default(now()) @updatedAt
+  edited          Boolean              @default(false)
+  archivedAt      DateTime?
+  purgeAt         DateTime?
+  /// INBOX UID and Message-ID of the mail this order was created from; no mail content is stored.
+  sourceMailUid   Int?
+  sourceMessageId String?              @db.VarChar(998)
+  originOrderId   String?
+  originOrder     Order?               @relation("OrderCopies", fields: [originOrderId], references: [id], onDelete: SetNull)
+  copies          Order[]              @relation("OrderCopies")
+  emailOutbox     EmailOutbox[]        @relation("EmailOutboxOrder")
+  emailOptions    EmailOutbox[]        @relation("EmailOutboxOption")
+  emailEvents     EmailEvent[]
+  activities      OrderActivityEvent[]
+  invoice         Invoice?
+  images          OrderImage[]
+  addresses       OrderAddress[]
+  positions       OrderPosition[]
 
   @@index([customerName])
   @@index([customerEmail])
@@ -346,6 +349,8 @@ model EmailOutbox {
   signatureName   String?        @db.VarChar(100)
   /// Snapshot of the sender's approved signature color at queue time.
   signatureColor  String?        @db.VarChar(7)
+  /// INBOX UID of the received mail this message answers (Hostinger `inReplyTo`).
+  replyToMailUid  Int?
   idempotencyKey  String         @unique @db.VarChar(191)
   status          String         @default("PENDING") @db.VarChar(16)
   attempts        Int            @default(0)

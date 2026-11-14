@@ -38,22 +38,19 @@ export const adminTheme = createTheme({
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif',
     h1: {
-      fontSize: "2rem",
+      fontSize: "1.75rem",
       lineHeight: 1.2,
-      fontWeight: 650,
-      letterSpacing: "-0.035em",
+      fontWeight: 600,
     },
     h2: {
       fontSize: "1.5rem",
       lineHeight: 1.3,
-      fontWeight: 650,
-      letterSpacing: "-0.025em",
+      fontWeight: 600,
     },
     h3: {
       fontSize: "1.25rem",
       lineHeight: 1.35,
       fontWeight: 600,
-      letterSpacing: "-0.015em",
     },
     h4: { fontSize: "1.125rem", lineHeight: 1.4, fontWeight: 500 },
     h5: { fontSize: "1rem", lineHeight: 1.45, fontWeight: 600 },
@@ -62,7 +59,7 @@ export const adminTheme = createTheme({
     body2: { fontSize: "0.875rem", lineHeight: 1.5 },
     button: { fontWeight: 600, textTransform: "none" },
   },
-  shape: { borderRadius: 8 },
+  shape: { borderRadius: 4 },
   components: {
     MuiAlert: {
       styleOverrides: {
@@ -133,10 +130,15 @@ export const adminTheme = createTheme({
     MuiTabs: {
       styleOverrides: { root: { backgroundColor: "transparent" } },
     },
+    MuiTab: {
+      styleOverrides: {
+        root: { minWidth: 64, paddingInline: 8, whiteSpace: "nowrap" },
+      },
+    },
     MuiButton: {
       defaultProps: { disableElevation: true },
       styleOverrides: {
-        root: { borderRadius: 7, minHeight: 38, paddingInline: 14 },
+        root: { minHeight: 38, paddingInline: 14 },
       },
     },
     MuiGrid: {
@@ -147,6 +149,7 @@ export const adminTheme = createTheme({
     MuiIconButton: {
       styleOverrides: {
         root: {
+          borderRadius: 4,
           width: 40,
           height: 40,
           minWidth: 40,
@@ -157,10 +160,9 @@ export const adminTheme = createTheme({
           flexShrink: 0,
           alignItems: "center",
           justifyContent: "center",
-          borderRadius: 7,
+          "& .MuiSvgIcon-root": { fontSize: 20 },
           "&:hover": {
             backgroundColor: "var(--mui-palette-action-hover)",
-            backdropFilter: "blur(12px)",
           },
         },
       },
@@ -173,11 +175,6 @@ export const adminTheme = createTheme({
           border: 0,
           borderBottom: "1px solid var(--mui-palette-divider)",
           boxShadow: "none",
-          "@supports (backdrop-filter: blur(1px))": {
-            backgroundColor:
-              "rgba(var(--mui-palette-background-paperChannel) / 0.78)",
-            backdropFilter: "blur(22px) saturate(165%)",
-          },
         },
       },
     },
@@ -186,18 +183,12 @@ export const adminTheme = createTheme({
         paper: {
           backgroundColor: "var(--mui-palette-background-paper)",
           borderColor: "var(--mui-palette-divider)",
-          "@supports (backdrop-filter: blur(1px))": {
-            backgroundColor:
-              "rgba(var(--mui-palette-background-paperChannel) / 0.84)",
-            backdropFilter: "blur(24px) saturate(170%)",
-          },
         },
       },
     },
     MuiListItemButton: {
       styleOverrides: {
         root: {
-          borderRadius: 7,
           minHeight: 40,
           marginInline: 8,
           width: "calc(100% - 16px)",
@@ -221,7 +212,13 @@ export const adminTheme = createTheme({
       },
     },
     MuiListItemIcon: {
-      styleOverrides: { root: { color: "inherit", minWidth: 36 } },
+      styleOverrides: {
+        root: {
+          color: "inherit",
+          minWidth: 32,
+          "& .MuiSvgIcon-root": { fontSize: 20 },
+        },
+      },
     },
     MuiTextField: {
       defaultProps: { margin: "dense", size: "small" },
@@ -232,7 +229,6 @@ export const adminTheme = createTheme({
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
-          borderRadius: 7,
           backgroundColor: "var(--mui-palette-background-paper)",
         },
       },
@@ -243,7 +239,9 @@ export const adminTheme = createTheme({
         root: {
           backgroundColor: "var(--mui-palette-background-paper)",
           backgroundImage: "none",
-          "&.MuiPaper-outlined": { borderColor: "var(--mui-palette-divider)" },
+          "&.MuiPaper-outlined": {
+            borderColor: "var(--mui-palette-divider)",
+          },
         },
       },
     },
@@ -252,7 +250,6 @@ export const adminTheme = createTheme({
         root: {
           backgroundColor: "var(--mui-palette-background-paper)",
           border: "1px solid var(--mui-palette-divider)",
-          borderRadius: 10,
           boxShadow: "none",
         },
       },

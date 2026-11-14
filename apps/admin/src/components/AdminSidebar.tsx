@@ -12,6 +12,7 @@ import {
   ExpandMore,
   FormatListNumberedOutlined,
   HandymanOutlined,
+  InboxOutlined,
   Inventory2Outlined,
   LocalOfferOutlined,
   LogoutOutlined,
@@ -96,7 +97,9 @@ const contentItems = [
 ] as const;
 
 const listItemButtonSx: ListItemButtonProps["sx"] = {
-  my: 0.5,
+  my: 0.25,
+  minHeight: 32,
+  py: 0.25,
 };
 export function AdminSidebar({
   route,
@@ -202,9 +205,9 @@ export function AdminSidebar({
                   variant="h6"
                   color="primary"
                   sx={{
-                    fontSize: "1.25rem",
-                    fontWeight: 750,
-                    letterSpacing: "-0.06em",
+                    fontSize: "1.125rem",
+                    fontWeight: 600,
+                    letterSpacing: 0,
                     lineHeight: 1.2,
                   }}
                 >
@@ -248,147 +251,20 @@ export function AdminSidebar({
               </ListItemIcon>
               {!sidebarCollapsed && <ListItemText primary="Aufträge" />}
             </ListItemButton>
-            {isAdmin && (
-              <ListItemButton
-                sx={listItemButtonSx}
-                title="Rechnungen"
-                aria-label="Rechnungen"
-                selected={pathname === "/invoices"}
-                onClick={() => navigate("/invoices")}
-              >
-                <ListItemIcon>
-                  <ReceiptLongOutlined />
-                </ListItemIcon>
-                {!sidebarCollapsed && <ListItemText primary="Rechnungen" />}
-              </ListItemButton>
-            )}
             <ListItemButton
               sx={listItemButtonSx}
-
-              title="Archiv"
-              aria-label="Archiv"
-              aria-expanded={!sidebarCollapsed && archiveOpen}
-              selected={false}
-              onClick={() => {
-                if (sidebarCollapsed) {
-                  onSidebarCollapsedChange(false);
-                  setArchiveOpen(true);
-                } else {
-                  setArchiveOpen((open) => !open);
-                }
-              }}
+              title="E-Mail Postfach"
+              aria-label="E-Mail Postfach"
+              selected={pathname === "/inbox"}
+              onClick={() => navigate("/inbox")}
             >
               <ListItemIcon>
-                <ArchiveOutlined />
+                <InboxOutlined />
               </ListItemIcon>
-              {!sidebarCollapsed && <ListItemText primary="Archiv" />}
-              {!sidebarCollapsed &&
-                (archiveOpen ? <ExpandLess /> : <ExpandMore />)}
+              {!sidebarCollapsed && <ListItemText primary="E-Mail Postfach" />}
             </ListItemButton>
-            <Collapse
-              in={archiveOpen && !sidebarCollapsed}
-              timeout="auto"
-              unmountOnExit
-            >
-              <List component="div" disablePadding>
-                <ListItemButton
-                  title="Aufträge"
-                  aria-label="Aufträge"
-                  sx={{ pl: 4, ...listItemButtonSx }}
-                  selected={pathname === "/orders/archived"}
-                  onClick={() => navigate("/orders/archived")}
-                >
-                  <ListItemIcon>
-                    <FormatListNumberedOutlined />
-                  </ListItemIcon>
-                  {!sidebarCollapsed && <ListItemText primary="Aufträge" />}
-                </ListItemButton>
-                {isAdmin && (
-                  <ListItemButton
-                    title="Rechnungen"
-                    aria-label="Rechnungen"
-                    sx={{ pl: 4, ...listItemButtonSx }}
-                    selected={pathname === "/invoices/archived"}
-                    onClick={() => navigate("/invoices/archived")}
-                  >
-                    <ListItemIcon>
-                      <ReceiptLongOutlined />
-                    </ListItemIcon>
-                    {!sidebarCollapsed && <ListItemText primary="Rechnungen" />}
-                  </ListItemButton>
-                )}
-              </List>
-            </Collapse>
             {isAdmin && (
               <>
-                <ListItemButton
-                  sx={listItemButtonSx}
-                  title="Optionen"
-                  aria-label="Optionen"
-                  selected={route.settingsArea === "options"}
-                  onClick={() => navigate("/options")}
-                >
-                  <ListItemIcon>
-                    <SettingsOutlined />
-                  </ListItemIcon>
-                  {!sidebarCollapsed && <ListItemText primary="Optionen" />}
-                </ListItemButton>
-                <ListItemButton
-                  sx={listItemButtonSx}
-                  title="Verwaltung"
-                  aria-label="Verwaltung"
-                  aria-expanded={!sidebarCollapsed && managementOpen}
-                  selected={false}
-                  onClick={() => {
-                    if (sidebarCollapsed) {
-                      onSidebarCollapsedChange(false);
-                      setManagementOpen(true);
-                    } else {
-                      setManagementOpen((open) => !open);
-                    }
-                  }}
-                >
-                  <ListItemIcon>
-                    <AdminPanelSettingsOutlined />
-                  </ListItemIcon>
-                  {!sidebarCollapsed && <ListItemText primary="Verwaltung" />}
-                  {!sidebarCollapsed &&
-                    (managementOpen ? <ExpandLess /> : <ExpandMore />)}
-                </ListItemButton>
-                <Collapse
-                  in={managementOpen && !sidebarCollapsed}
-                  timeout="auto"
-                  unmountOnExit
-                >
-                  <List component="div" disablePadding>
-                    <ListItemButton
-                      title="Nutzer"
-                      aria-label="Nutzer"
-                      sx={{ pl: 4, ...listItemButtonSx }}
-                      selected={route.settingsArea === "users"}
-                      onClick={() => navigate("/users")}
-                    >
-                      <ListItemIcon sx={{ minWidth: 36 }}>
-                        <PeopleAltOutlined />
-                      </ListItemIcon>
-                      {!sidebarCollapsed && <ListItemText primary="Nutzer" />}
-                    </ListItemButton>
-                    <ListItemButton
-                      title="Maintenance"
-                      aria-label="Maintenance"
-                      sx={{ pl: 4 }}
-                      selected={route.path === "/maintenance"}
-                      onClick={() => navigate("/maintenance")}
-                    >
-                      <ListItemIcon sx={{ minWidth: 36 }}>
-                        <BuildOutlined />
-                      </ListItemIcon>
-                      {!sidebarCollapsed && (
-                        <ListItemText primary="Maintenance" />
-                      )}
-                    </ListItemButton>
-                  </List>
-                </Collapse>
                 <ListItemButton
                   title="Content"
                   sx={{ ...listItemButtonSx }}
@@ -422,11 +298,11 @@ export function AdminSidebar({
                         key={item.path}
                         title={item.label}
                         aria-label={item.label}
-                        sx={{ pl: 4, ...listItemButtonSx }}
+                        sx={{ pl: 3, ...listItemButtonSx }}
                         selected={route.contentSection === item.section}
                         onClick={() => navigate(item.path)}
                       >
-                        <ListItemIcon sx={{ minWidth: 36 }}>
+                        <ListItemIcon sx={{ minWidth: 32 }}>
                           <item.icon />
                         </ListItemIcon>
                         {!sidebarCollapsed && (
@@ -436,10 +312,152 @@ export function AdminSidebar({
                     ))}
                   </List>
                 </Collapse>
+                <ListItemButton
+                  sx={listItemButtonSx}
+                  title="Optionen"
+                  aria-label="Optionen"
+                  selected={route.settingsArea === "options"}
+                  onClick={() => navigate("/options")}
+                >
+                  <ListItemIcon>
+                    <SettingsOutlined />
+                  </ListItemIcon>
+                  {!sidebarCollapsed && <ListItemText primary="Optionen" />}
+                </ListItemButton>
+                <ListItemButton
+                  sx={listItemButtonSx}
+                  title="Rechnungen"
+                  aria-label="Rechnungen"
+                  selected={pathname === "/invoices"}
+                  onClick={() => navigate("/invoices")}
+                >
+                  <ListItemIcon>
+                    <ReceiptLongOutlined />
+                  </ListItemIcon>
+                  {!sidebarCollapsed && <ListItemText primary="Rechnungen" />}
+                </ListItemButton>
+              </>
+            )}
+            <ListItemButton
+              sx={listItemButtonSx}
+
+              title="Archiv"
+              aria-label="Archiv"
+              aria-expanded={!sidebarCollapsed && archiveOpen}
+              selected={false}
+              onClick={() => {
+                if (sidebarCollapsed) {
+                  onSidebarCollapsedChange(false);
+                  setArchiveOpen(true);
+                } else {
+                  setArchiveOpen((open) => !open);
+                }
+              }}
+            >
+              <ListItemIcon>
+                <ArchiveOutlined />
+              </ListItemIcon>
+              {!sidebarCollapsed && <ListItemText primary="Archiv" />}
+              {!sidebarCollapsed &&
+                (archiveOpen ? <ExpandLess /> : <ExpandMore />)}
+            </ListItemButton>
+            <Collapse
+              in={archiveOpen && !sidebarCollapsed}
+              timeout="auto"
+              unmountOnExit
+            >
+              <List component="div" disablePadding>
+                <ListItemButton
+                  title="Aufträge"
+                  aria-label="Aufträge"
+                  sx={{ pl: 3, ...listItemButtonSx }}
+                  selected={pathname === "/orders/archived"}
+                  onClick={() => navigate("/orders/archived")}
+                >
+                  <ListItemIcon>
+                    <FormatListNumberedOutlined />
+                  </ListItemIcon>
+                  {!sidebarCollapsed && <ListItemText primary="Aufträge" />}
+                </ListItemButton>
+                {isAdmin && (
+                  <ListItemButton
+                    title="Rechnungen"
+                    aria-label="Rechnungen"
+                    sx={{ pl: 3, ...listItemButtonSx }}
+                    selected={pathname === "/invoices/archived"}
+                    onClick={() => navigate("/invoices/archived")}
+                  >
+                    <ListItemIcon>
+                      <ReceiptLongOutlined />
+                    </ListItemIcon>
+                    {!sidebarCollapsed && <ListItemText primary="Rechnungen" />}
+                  </ListItemButton>
+                )}
+              </List>
+            </Collapse>
+            {isAdmin && (
+              <>
+                <ListItemButton
+                  sx={listItemButtonSx}
+                  title="Verwaltung"
+                  aria-label="Verwaltung"
+                  aria-expanded={!sidebarCollapsed && managementOpen}
+                  selected={false}
+                  onClick={() => {
+                    if (sidebarCollapsed) {
+                      onSidebarCollapsedChange(false);
+                      setManagementOpen(true);
+                    } else {
+                      setManagementOpen((open) => !open);
+                    }
+                  }}
+                >
+                  <ListItemIcon>
+                    <AdminPanelSettingsOutlined />
+                  </ListItemIcon>
+                  {!sidebarCollapsed && <ListItemText primary="Verwaltung" />}
+                  {!sidebarCollapsed &&
+                    (managementOpen ? <ExpandLess /> : <ExpandMore />)}
+                </ListItemButton>
+                <Collapse
+                  in={managementOpen && !sidebarCollapsed}
+                  timeout="auto"
+                  unmountOnExit
+                >
+                  <List component="div" disablePadding>
+                    <ListItemButton
+                      title="Nutzer"
+                      aria-label="Nutzer"
+                      sx={{ pl: 3, ...listItemButtonSx }}
+                      selected={route.settingsArea === "users"}
+                      onClick={() => navigate("/users")}
+                    >
+                      <ListItemIcon sx={{ minWidth: 32 }}>
+                        <PeopleAltOutlined />
+                      </ListItemIcon>
+                      {!sidebarCollapsed && <ListItemText primary="Nutzer" />}
+                    </ListItemButton>
+                    <ListItemButton
+                      title="Wartung"
+                      aria-label="Wartung"
+                      sx={{ pl: 3, ...listItemButtonSx }}
+                      selected={route.path === "/maintenance"}
+                      onClick={() => navigate("/maintenance")}
+                    >
+                      <ListItemIcon sx={{ minWidth: 32 }}>
+                        <BuildOutlined />
+                      </ListItemIcon>
+                      {!sidebarCollapsed && (
+                        <ListItemText primary="Wartung" />
+                      )}
+                    </ListItemButton>
+                  </List>
+                </Collapse>
               </>
             )}
             {!sidebarCollapsed && <Divider sx={{ my: 1 }} />}
             <ListItemButton
+              sx={listItemButtonSx}
               title="Mein Profil"
               aria-label="Mein Profil"
               selected={pathname === "/profile"}
@@ -456,6 +474,7 @@ export function AdminSidebar({
           <Divider />
           <List>
             <ListItemButton
+              sx={listItemButtonSx}
               title="Abmelden"
               aria-label="Abmelden"
               onClick={onSignOut}

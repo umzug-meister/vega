@@ -1,6 +1,9 @@
 import type { CreateOrderInput, OrderAddressInput, OrderDetailsInput } from "@vega/domain";
 
-export type OrderFormValue = Omit<CreateOrderInput, "details"> & { details: OrderDetailsInput };
+export type OrderFormValue = Omit<CreateOrderInput, "details" | "to"> & {
+  to: OrderAddressInput | undefined;
+  details: OrderDetailsInput;
+};
 
 export function createEmptyAddress(): OrderAddressInput {
   return {

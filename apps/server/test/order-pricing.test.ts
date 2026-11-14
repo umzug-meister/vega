@@ -10,6 +10,7 @@ import {
 import { validateOrderCreateInput } from "../src/orders/order-input.js";
 import {
   PricePreviewStaleError,
+  orderPricingErrorIssue,
   previewOrderPricing,
   validatePricingSnapshot,
 } from "../src/orders/order-pricing-service.js";
@@ -363,9 +364,43 @@ test("pricing preview prices a saved unit price even when the catalog row is gon
   withoutPrice.to.parkingSlot = false;
   await assert.rejects(
     previewOrderPricing(withoutPrice, client),
-    (error: unknown) =>
-      error instanceof Error && error.message === "PRICE_NOT_CONFIGURED",
+    (error: unknown) => {
+      assert.ok(error instanceof OrderPricingError);
+      assert.deepEqual(error.missingRequirement, {
+        kind: "catalog-item",
+        itemKind: "service",
+        id: 9,
+      });
+      return true;
+    },
   );
+});
+
+test("pricing errors tell staff which configured price is missing", () => {
+  const rateIssue = orderPricingErrorIssue(
+    new OrderPricingError("PRICE_NOT_CONFIGURED", {
+      kind: "rate",
+      key: "kmPrice",
+    }),
+  );
+  assert.equal(rateIssue?.field, "details.distanceKm");
+  assert.match(rateIssue?.message ?? "", /Kilometerpreis für die Fahrtkosten/u);
+
+  const offerIssue = orderPricingErrorIssue(
+    new OrderPricingError("PRICE_NOT_CONFIGURED", { kind: "offer", id: 1042 }),
+  );
+  assert.equal(offerIssue?.field, "details.basis.offerId");
+  assert.match(offerIssue?.message ?? "", /Tarif \(ID 1042\)/u);
+
+  const itemIssue = orderPricingErrorIssue(
+    new OrderPricingError("PRICE_NOT_CONFIGURED", {
+      kind: "catalog-item",
+      itemKind: "packaging",
+      id: 31,
+    }),
+  );
+  assert.equal(itemIssue?.field, "details.extras.services");
+  assert.match(itemIssue?.message ?? "", /Packmaterial-Position \(ID 31\)/u);
 });
 
 test("uses exact cent rounding for discounts and nearest-five rounding for kilometers", () => {
@@ -463,7 +498,9 @@ test("requires the central travel rate for the selected truck count", () => {
       ),
     (error: unknown) =>
       error instanceof OrderPricingError &&
-      error.message === "PRICE_NOT_CONFIGURED",
+      error.message === "PRICE_NOT_CONFIGURED" &&
+      error.missingRequirement?.kind === "rate" &&
+      error.missingRequirement.key === "ridingCostsTruck2",
   );
 });
 

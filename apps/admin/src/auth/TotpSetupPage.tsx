@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
-import { Alert, Box, Button, CircularProgress, Paper, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Stack, TextField, Typography } from "@mui/material";
 import DownloadIcon from "@mui/icons-material/Download";
 import { AdminAlert } from "../components/AdminNotifications.js";
+import { AdminCard } from "../components/AdminCard.js";
 import { QRCodeSVG } from "qrcode.react";
 import { authClient } from "../auth-client.js";
 import { AuthCard } from "./AuthCard.js";
@@ -70,13 +71,13 @@ export function TotpSetupPage({ initialPassword, optional = false, onCancel, onC
         <Typography variant="overline" color="primary">{optional ? "Vega · Profil" : "Vega · Ersteinrichtung"}</Typography>
         <Typography component="h1" variant="h4">Wiederherstellungscodes sichern</Typography>
         <Alert severity="warning">Diese Codes werden nur einmal angezeigt. Bewahren Sie sie sicher und getrennt vom Gerät auf.</Alert>
-        <Paper variant="outlined" sx={{ p: 2 }}>
+        <AdminCard variant="outlined">
           <Stack spacing={1}>
             {backupCodes.map((backupCode) => (
               <Typography key={backupCode} component="code" align="center">{backupCode}</Typography>
             ))}
           </Stack>
-        </Paper>
+        </AdminCard>
         <Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => downloadBackupCodesFile(backupCodes)}>
           Als Textdatei herunterladen
         </Button>
@@ -115,9 +116,9 @@ export function TotpSetupPage({ initialPassword, optional = false, onCancel, onC
             <Typography color="text.secondary" align="center">
               Scannen Sie den QR-Code mit Ihrer Authenticator-App. Er wird lokal im Browser erzeugt.
             </Typography>
-            <Paper variant="outlined" sx={{ p: 2 }}>
+            <AdminCard variant="outlined">
               <QRCodeSVG value={totpURI} size={192} aria-label="TOTP-Einrichtungs-QR-Code" />
-            </Paper>
+            </AdminCard>
             <TextField
               fullWidth
               autoFocus

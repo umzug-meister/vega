@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Box,
   Button,
+  CardContent,
   Chip,
   CircularProgress,
   Divider,
@@ -13,6 +14,7 @@ import {
   Typography,
 } from "@mui/material";
 import { AdminAlert as Alert } from "../components/AdminNotifications.js";
+import { AdminCard } from "../components/AdminCard.js";
 import DeleteOutlined from "@mui/icons-material/DeleteOutlined";
 import {
   addInvoiceAmounts,
@@ -472,7 +474,7 @@ export function InvoiceEditorPage({
   function renderCustomerFields() {
     return (
       <Stack spacing={1.5}>
-        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
+        <AdminCard variant="outlined">
           <Stack spacing={1.5}>
             <Typography component="h2" variant="h6">
               Rechnungsdaten
@@ -522,7 +524,7 @@ export function InvoiceEditorPage({
               onChange={(percent) => change("taxPercent", percent)}
             />
           </Stack>
-        </Paper>
+        </AdminCard>
       </Stack>
     );
   }
@@ -618,7 +620,7 @@ export function InvoiceEditorPage({
           sx={{ alignSelf: "flex-end", alignItems: "flex-end" }}
           aria-label="Rechnungssumme"
         >
-          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
             Gesamtbetrag (Brutto): {invoiceCurrency.format(totals.total)}
           </Typography>
           <Typography variant="body2">
@@ -674,23 +676,24 @@ export function InvoiceEditorPage({
         width:
           orderNumber === undefined ? { xs: "100%", lg: "66.6667%" } : "100%",
         mx: orderNumber === undefined ? "auto" : 0,
-        p: { xs: 2, sm: 3 },
       }}
     >
-      <Stack spacing={2}>
-        {error && <Alert severity="error">{error}</Alert>}
-        {success && <Alert severity="success">{success}</Alert>}
-        {loading || numberLoading ? (
-          <CircularProgress />
-        ) : (
-          <fieldset
-            disabled={busy || accountingBusy || loadFailed}
-            style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
-          >
-            <Stack spacing={2}>{renderFormFields()}</Stack>
-          </fieldset>
-        )}
-      </Stack>
+      <CardContent>
+        <Stack spacing={2}>
+          {error && <Alert severity="error">{error}</Alert>}
+          {success && <Alert severity="success">{success}</Alert>}
+          {loading || numberLoading ? (
+            <CircularProgress />
+          ) : (
+            <fieldset
+              disabled={busy || accountingBusy || loadFailed}
+              style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
+            >
+              <Stack spacing={2}>{renderFormFields()}</Stack>
+            </fieldset>
+          )}
+        </Stack>
+      </CardContent>
     </Paper>
   );
   if (!id && orderNumber !== undefined) {
@@ -714,11 +717,11 @@ export function InvoiceEditorPage({
         }}
       >
         {form}
-        <Paper
+        <AdminCard
           component="aside"
           variant="outlined"
           aria-label={`Übersicht Auftrag ${orderNumber}`}
-          sx={{ p: { xs: 2, sm: 3 }, minWidth: 0 }}
+          sx={{ minWidth: 0 }}
         >
           <Stack spacing={1.5}>
             <Typography component="h2" variant="h6">
@@ -780,7 +783,7 @@ export function InvoiceEditorPage({
               </Typography>
             )}
           </Stack>
-        </Paper>
+        </AdminCard>
       </Box>
     );
   }

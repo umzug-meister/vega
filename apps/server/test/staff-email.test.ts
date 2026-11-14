@@ -266,6 +266,10 @@ test("signature name is escaped and the complete sign-off uses the chosen color"
       '<span style="color:#000000">Freundliche Grüße, <br />Max Meier<br />Ihr Umzug Ruck Zuck Team.</span>',
     ),
   );
+  assert.match(
+    renderEmailLayout("<p>x</p>", "Max Meier"),
+    /<p>--<br \/><span style="color:#000000">Freundliche Grüße,/u,
+  );
   const html = renderEmailLayout(
     "<p>Preis $& $'</p>",
     "Max <b>Meier</b>",

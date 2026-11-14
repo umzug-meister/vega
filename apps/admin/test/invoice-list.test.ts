@@ -109,10 +109,10 @@ test("invoice lists keep search and creation on one row on mobile and retain arc
   const dom = await mount(React.createElement(InvoicesPage, { navigate: (path) => destinations.push(path) }));
   try {
     await dom.flush();
-    const create = button(dom.container, "Rechnung anlegen");
+    const create = button(dom.container, "Rechnung erstellen");
     const search = button(dom.container, "Rechnungen suchen");
     assert.equal(create.textContent, "");
-    assert.equal(create.title, "Rechnung anlegen");
+    assert.equal(create.title, "Rechnung erstellen");
     const row = search.parentElement?.parentElement?.parentElement;
     assert.ok(row?.contains(create));
     assert.equal(dom.window.getComputedStyle(row).flexDirection, "row");
@@ -135,7 +135,7 @@ test("invoice lists keep search and creation on one row on mobile and retain arc
   const archived = await mount(React.createElement(InvoicesPage, { archived: true, navigate: () => assert.fail("Archived invoices are read-only") }));
   try {
     await archived.flush();
-    assert.equal(archived.container.querySelector('[aria-label="Rechnung anlegen"]'), null);
+    assert.equal(archived.container.querySelector('[aria-label="Rechnung erstellen"]'), null);
     assert.equal(dom.window.getComputedStyle(archived.container.querySelector("table")!).minWidth, "1100px");
     assert.ok(archived.container.querySelector('[aria-label="Rechnungs-PDF herunterladen"]'));
     assert.ok(button(archived.container, "Rechnung wiederherstellen"));

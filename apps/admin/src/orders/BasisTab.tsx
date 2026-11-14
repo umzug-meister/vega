@@ -3,7 +3,6 @@ import {
   Button,
   Grid,
   InputAdornment,
-  Paper,
   Stack,
   Table,
   TableBody,
@@ -15,6 +14,7 @@ import {
   Typography,
 } from "@mui/material";
 import { AdminAlert as Alert } from "../components/AdminNotifications.js";
+import { AdminCard } from "../components/AdminCard.js";
 import type { CatalogOfferDto, OrderDetailsInput } from "@vega/domain";
 import { AppointmentFields } from "./AppointmentFields.js";
 import { suggestDiscountPercent } from "./discount-recommendation.js";
@@ -22,6 +22,7 @@ import { apiRequest } from "../api/api-request.js";
 import type { OrderFormValue } from "./order-form-types.js";
 
 interface BasisTabProps {
+  editableRange?: boolean;
   value: OrderFormValue;
   update: (patch: Partial<OrderFormValue>) => void;
   onBasisChange: (basis: OrderDetailsInput["basis"]) => void;
@@ -39,7 +40,12 @@ export function filterOffersByBasis(
   );
 }
 
-export function BasisTab({ value, update, onBasisChange }: BasisTabProps) {
+export function BasisTab({
+  value,
+  update,
+  onBasisChange,
+  editableRange,
+}: BasisTabProps) {
   const basis = value.details.basis;
   const discountRecommendation = suggestDiscountPercent(value.movingDate);
   const [offers, setOffers] = useState<CatalogOfferDto[]>([]);
@@ -94,8 +100,9 @@ export function BasisTab({ value, update, onBasisChange }: BasisTabProps) {
           size={{ xs: 12, md: 12, lg: 4 }}
           sx={{ display: "flex", alignItems: "stretch" }}
         >
-          <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
+          <AdminCard variant="outlined" sx={{ flex: 1 }}>
             <AppointmentFields
+              {...(editableRange !== undefined ? { editableRange } : {})}
               value={{
                 movingDate: value.movingDate,
                 movingTime: value.movingTime ?? "",
@@ -105,13 +112,13 @@ export function BasisTab({ value, update, onBasisChange }: BasisTabProps) {
               }}
               onChange={update}
             />
-          </Paper>
+          </AdminCard>
         </Grid>
         <Grid
           size={{ xs: 12, md: 6, lg: 4 }}
           sx={{ display: "flex", alignItems: "stretch" }}
         >
-          <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
+          <AdminCard variant="outlined" sx={{ flex: 1 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Träger und LKW
@@ -152,13 +159,13 @@ export function BasisTab({ value, update, onBasisChange }: BasisTabProps) {
                 </Button>
               )}
             </Stack>
-          </Paper>
+          </AdminCard>
         </Grid>
         <Grid
           size={{ xs: 12, md: 6, lg: 4 }}
           sx={{ display: "flex", alignItems: "stretch" }}
         >
-          <Paper variant="outlined" sx={{ p: 2.5, flex: 1 }}>
+          <AdminCard variant="outlined" sx={{ flex: 1 }}>
             <Stack spacing={1.5}>
               <Typography component="h2" variant="h6">
                 Preis
@@ -189,7 +196,9 @@ export function BasisTab({ value, update, onBasisChange }: BasisTabProps) {
                 slotProps={{
                   htmlInput: { min: 0, step: "0.01" },
                   input: {
-                    endAdornment: <InputAdornment position="end">€</InputAdornment>,
+                    endAdornment: (
+                      <InputAdornment position="end">€</InputAdornment>
+                    ),
                   },
                 }}
               />
@@ -224,10 +233,10 @@ export function BasisTab({ value, update, onBasisChange }: BasisTabProps) {
                 )}
               </Stack>
             </Stack>
-          </Paper>
+          </AdminCard>
         </Grid>
       </Grid>
-      <Paper variant="outlined" sx={{ p: 2.5 }}>
+      <AdminCard variant="outlined">
         <Stack spacing={1.5}>
           <Typography component="h2" variant="h6">
             Aktuelle Angebote
@@ -294,7 +303,7 @@ export function BasisTab({ value, update, onBasisChange }: BasisTabProps) {
             </TableContainer>
           )}
         </Stack>
-      </Paper>
+      </AdminCard>
     </Stack>
   );
 }

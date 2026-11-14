@@ -209,7 +209,10 @@ test("places address projection returns only street, postalCode and city", () =>
   ]);
 });
 
-test("route input accepts two to four trimmed stops and the distance rounds to whole km", () => {
+test("route input accepts one to four trimmed stops and the distance rounds to whole km", () => {
+  assert.deepEqual(routeAddresses({ addresses: [" Beladestelle "] }), [
+    "Beladestelle",
+  ]);
   assert.deepEqual(routeAddresses({ addresses: [" Straße 1 ", "Straße 2"] }), [
     "Straße 1",
     "Straße 2",
@@ -222,7 +225,6 @@ test("route input accepts two to four trimmed stops and the distance rounds to w
     null,
     {},
     { addresses: [] },
-    { addresses: ["one"] },
     { addresses: ["one", ""] },
     { addresses: ["one", 2] },
     { addresses: ["a", "b", "c", "d", "e"] },
@@ -848,6 +850,19 @@ test("admin route calculation rejects bad stops, missing setup and unusable prov
       ],
     });
   mockFetch(context, async () => {
+    if (mode.current === "one-stop")
+      return Response.json({
+        routes: [
+          {
+            distanceMeters: 2000,
+            duration: "240s",
+            legs: [
+              { distanceMeters: 1000, duration: "120s" },
+              { distanceMeters: 1000, duration: "120s" },
+            ],
+          },
+        ],
+      });
     if (mode.current === "provider-error")
       return new Response("{}", { status: 500 });
     if (mode.current === "empty") return Response.json({ routes: [] });
@@ -888,11 +903,17 @@ test("admin route calculation rejects bad stops, missing setup and unusable prov
       body: JSON.stringify(body),
     });
 
-  assert.equal((await post({ addresses: ["only-one"] })).status, 400);
-  assert.equal(
-    (await (await post({ addresses: ["only-one"] })).json()).error.code,
-    "INVALID_ROUTE",
-  );
+  mode.current = "one-stop";
+  const roundTrip = await post({ addresses: ["Beladestelle"] });
+  assert.equal(roundTrip.status, 200);
+  assert.deepEqual((await roundTrip.json()).data, {
+    distanceKm: 2,
+    durationMinutes: 4,
+    legs: [
+      { distanceKm: 1, durationMinutes: 2 },
+      { distanceKm: 1, durationMinutes: 2 },
+    ],
+  });
 
   mode.current = "provider-error";
   const provider = await post({ addresses: ["A", "B"] });

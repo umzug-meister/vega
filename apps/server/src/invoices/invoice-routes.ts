@@ -261,7 +261,7 @@ export function createInvoiceRouter(
       }
       const data = orderDataWithRelations(order);
       const customer = data.customer;
-      const destination = data.to;
+      const destination = data.to ?? data.from;
       const input: InvoiceInput = {
         invoiceDate: new Date().toISOString().slice(0, 10),
         company: stringValue(customer?.company),

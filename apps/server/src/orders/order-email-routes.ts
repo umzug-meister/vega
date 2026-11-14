@@ -1,4 +1,4 @@
-import type { Request, Response, Router } from "express";
+import type { NextFunction, Request, Response, Router } from "express";
 import type {
   AdminOrderFamilyMember,
   CreateOrderInput,
@@ -26,6 +26,8 @@ import { orderPdfFilename } from "../pdf/order-pdf.js";
 import { orderDataWithRelations, orderRelations } from "./order-relations.js";
 import { renderOrderPdf } from "./order-pdf-service.js";
 import { loadSignature } from "../staff/signature-name.js";
+import { InboxError } from "../inbox/inbox-client.js";
+import { createReplyInbox, loadReplyContext } from "../inbox/reply-context.js";
 
 type OrderWithRelations = Prisma.OrderGetPayload<{
   include: typeof orderRelations;
@@ -117,6 +119,25 @@ export function registerOrderEmailRoutes(
         contentHtml: draft.contentHtml,
         attachmentNames,
       };
+      if (req.query.reply === "1") {
+        const orderRow = await prisma.order.findUnique({
+          where: { id: order.id },
+          select: { sourceMessageId: true },
+        });
+        const inbox = createReplyInbox(config);
+        if (!orderRow?.sourceMessageId)
+          return fail(res, {
+            status: 409,
+            code: "NO_SOURCE_MAIL",
+            message: "Zu diesem Auftrag gibt es keine Ursprungs-E-Mail.",
+          });
+        if (!inbox) return mailNotConfigured(res);
+        const reply = await loadReplyContext(inbox, orderRow.sourceMessageId);
+        body.to = reply.to;
+        body.subject = reply.subject;
+        body.contentHtml = `${draft.contentHtml}<p></p>${reply.quoteHtml}`;
+        body.replyToSourceMail = true;
+      }
       res.setHeader("Cache-Control", "no-store");
       res.json({ data: body });
     } catch (error) {
@@ -162,6 +183,29 @@ export function registerOrderEmailRoutes(
       const mailService = createConfiguredMailService(config);
       if (!mailService) return mailNotConfigured(res);
       const { kind, order, partner } = context.value;
+      const simpleSignature = body.simpleSignature === true;
+      if (simpleSignature && (kind !== "offer" || !order.sourceMailUid)) {
+        return fail(res, {
+          status: 400,
+          code: "INVALID_SIGNATURE_MODE",
+          message: "Die einfache Signatur ist nur für Angebotsantworten aus dem Postfach verfügbar.",
+        });
+      }
+      let replyToMailUid: number | undefined;
+      if (body.replyToSourceMail === true) {
+        const orderRow = await prisma.order.findUnique({
+          where: { id: order.id },
+          select: { sourceMessageId: true },
+        });
+        const inbox = createReplyInbox(config);
+        if (!orderRow?.sourceMessageId || !inbox)
+          return fail(res, {
+            status: 409,
+            code: "NO_SOURCE_MAIL",
+            message: "Zu diesem Auftrag gibt es keine Ursprungs-E-Mail.",
+          });
+        replyToMailUid = (await loadReplyContext(inbox, orderRow.sourceMessageId)).uid;
+      }
       const actorName = String(res.locals.staffUser.name);
       const signature = await loadSignature(String(res.locals.staffUser.id));
       const { outboxId, result } = await sendStaffEmail(
@@ -179,7 +223,9 @@ export function registerOrderEmailRoutes(
             orderId: order.id,
             ...(partner ? { optionOrderId: partner.id } : {}),
             kind:
-              kind === "decline"
+              simpleSignature
+                ? "INBOX_OFFER"
+                : kind === "decline"
                 ? "INQUIRY_DECLINED"
                 : kind === "message"
                   ? "ORDER_MESSAGE"
@@ -197,6 +243,7 @@ export function registerOrderEmailRoutes(
                 }
               : {}),
             actorName,
+            ...(replyToMailUid ? { replyToMailUid } : {}),
             ...signature,
           };
         },
@@ -206,6 +253,19 @@ export function registerOrderEmailRoutes(
       next(error);
     }
   });
+
+  router.use(
+    (error: unknown, _req: Request, res: Response, next: NextFunction) => {
+      if (error instanceof InboxError) {
+        return fail(res, {
+          status: error.status,
+          code: error.code,
+          message: "Die Ursprungs-E-Mail konnte nicht geladen werden.",
+        });
+      }
+      next(error);
+    },
+  );
 }
 
 async function resolveContext(

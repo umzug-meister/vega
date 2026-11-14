@@ -6,7 +6,6 @@ import {
   CircularProgress,
   FormControlLabel,
   IconButton,
-  Paper,
   Radio,
   RadioGroup,
   Stack,
@@ -16,6 +15,7 @@ import {
   useColorScheme,
 } from "@mui/material";
 import { AdminAlert as Alert } from "../components/AdminNotifications.js";
+import { AdminCard } from "../components/AdminCard.js";
 import FileDownloadOutlined from "@mui/icons-material/FileDownloadOutlined";
 import { isTotpRequired } from "@vega/domain";
 import { authClient } from "../auth-client.js";
@@ -123,11 +123,10 @@ function isSignatureColor(value: unknown): value is SignatureColor {
 export function AppearanceSection() {
   const { mode, setMode } = useColorScheme();
   return (
-    <Paper
+    <AdminCard
       component="section"
       aria-labelledby="appearance-heading"
       variant="outlined"
-      sx={{ p: { xs: 2, sm: 3 } }}
     >
       <Stack spacing={1.5}>
         <Typography component="h2" variant="h6" id="appearance-heading">
@@ -157,7 +156,7 @@ export function AppearanceSection() {
           Auswahl wird nur in diesem Browser gespeichert.
         </Typography>
       </Stack>
-    </Paper>
+    </AdminCard>
   );
 }
 
@@ -243,11 +242,10 @@ export function SignatureSection() {
   }
 
   return (
-    <Paper
+    <AdminCard
       component="section"
       aria-labelledby="signature-heading"
       variant="outlined"
-      sx={{ p: { xs: 2, sm: 3 } }}
     >
       <Stack spacing={1.5}>
         <Typography component="h2" variant="h6" id="signature-heading">
@@ -303,10 +301,10 @@ export function SignatureSection() {
                   />
                 ))}
               </RadioGroup>
-              <Paper
+              <AdminCard
                 variant="outlined"
                 aria-label="Live-Vorschau der Signatur"
-                sx={{ mt: 1, p: 1.5, bgcolor: "background.default" }}
+                sx={{ mt: 1, bgcolor: "background.default" }}
               >
                 <Typography
                   variant="caption"
@@ -324,7 +322,7 @@ export function SignatureSection() {
                 <Typography variant="body2" sx={{ color: signatureColor }}>
                   Ihr Umzug Ruck Zuck Team.
                 </Typography>
-              </Paper>
+              </AdminCard>
             </Box>
             <ProfileSubmitButton
               label="Signatur speichern"
@@ -334,7 +332,7 @@ export function SignatureSection() {
           </Stack>
         </Box>
       </Stack>
-    </Paper>
+    </AdminCard>
   );
 }
 
@@ -526,11 +524,10 @@ export function ProfilePage({
 
   return (
     <Stack spacing={2} sx={{ width: "100%", maxWidth: 760, mx: "auto" }}>
-      <Paper
+      <AdminCard
         component="section"
         aria-labelledby="profile-heading"
         variant="outlined"
-        sx={{ p: { xs: 2, sm: 3 } }}
       >
         <Stack spacing={1.5}>
           <Typography component="h2" variant="h6" id="profile-heading">
@@ -585,14 +582,13 @@ export function ProfilePage({
             Sitzungen laufen spätestens 30 Tage nach der Anmeldung ab.
           </Typography>
         </Stack>
-      </Paper>
+      </AdminCard>
       <AppearanceSection />
       <SignatureSection />
-      <Paper
+      <AdminCard
         component="section"
         aria-labelledby="password-heading"
         variant="outlined"
-        sx={{ p: { xs: 2, sm: 3 } }}
       >
         <Stack spacing={1.5}>
           <Typography component="h2" variant="h6" id="password-heading">
@@ -640,12 +636,11 @@ export function ProfilePage({
             </Stack>
           </Box>
         </Stack>
-      </Paper>
-      <Paper
+      </AdminCard>
+      <AdminCard
         component="section"
         aria-labelledby="otp-heading"
         variant="outlined"
-        sx={{ p: { xs: 2, sm: 3 } }}
       >
         <Stack spacing={1.5}>
           <Typography component="h2" variant="h6" id="otp-heading">
@@ -734,7 +729,7 @@ export function ProfilePage({
             </Box>
           )}
         </Stack>
-      </Paper>
+      </AdminCard>
     </Stack>
   );
 }

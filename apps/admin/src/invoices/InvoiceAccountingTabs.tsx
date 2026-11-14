@@ -12,7 +12,6 @@ import {
   Button,
   Chip,
   IconButton,
-  Paper,
   Stack,
   Tab,
   Tabs,
@@ -20,6 +19,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { AdminCard } from "../components/AdminCard.js";
 import DeleteOutlined from "@mui/icons-material/DeleteOutlined";
 import {
   formatGermanDate,
@@ -808,8 +808,8 @@ function ArchivedRow({
 
 function Panel({ children }: { children: ReactNode }) {
   return (
-    <Paper component="section" variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
+    <AdminCard component="section" variant="outlined">
       <Stack spacing={2}>{children}</Stack>
-    </Paper>
+    </AdminCard>
   );
 }

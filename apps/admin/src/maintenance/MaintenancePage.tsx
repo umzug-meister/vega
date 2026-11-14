@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Box, Button, Chip, CircularProgress, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from "@mui/material";
+import { Box, Button, Chip, CircularProgress, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from "@mui/material";
 import { ContentCopyOutlined, PlayArrowOutlined } from "@mui/icons-material";
 import type { SetupInfoDto, SetupSmokeTestDto } from "@vega/domain";
 import { apiRequest } from "../api/api-request.js";
+import { AdminCard } from "../components/AdminCard.js";
 import { AdminAlert, useAdminNotification } from "../components/AdminNotifications.js";
 
 export function MaintenancePage() {
@@ -21,7 +22,7 @@ export function MaintenancePage() {
       const data = await apiRequest<SetupInfoDto>("/api/admin/maintenance", "GET", undefined, { signal });
       if (!signal.aborted) setInfo(data);
     } catch (reason) {
-      if (!signal.aborted) setError(reason instanceof Error ? reason.message : "Maintenance konnte nicht geladen werden.");
+      if (!signal.aborted) setError(reason instanceof Error ? reason.message : "Wartung konnte nicht geladen werden.");
     } finally {
       if (!signal.aborted) setLoading(false);
     }
@@ -63,10 +64,10 @@ export function MaintenancePage() {
   return (
     <Stack spacing={3}>
       {error && <AdminAlert severity="error">{error}</AdminAlert>}
-      {loading && <Box role="status" aria-label="Maintenance wird geladen"><CircularProgress size={24} /></Box>}
+      {loading && <Box role="status" aria-label="Wartung wird geladen"><CircularProgress size={24} /></Box>}
       {!loading && !info && <Button onClick={() => { const controller = new AbortController(); void load(controller.signal); }}>Erneut laden</Button>}
       {info && <>
-        <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+        <AdminCard>
           <Stack spacing={2}>
             <Typography variant="h3" component="h2">Kundenformular einbinden</Typography>
             <Typography color="text.secondary" sx={{ maxWidth: "75ch" }}>
@@ -83,13 +84,13 @@ export function MaintenancePage() {
               Den WordPress-Origin in CORS_ALLOWED_ORIGINS freigeben und die Content Security Policy der Website prüfen.
             </Typography>
           </Stack>
-        </Paper>
-        <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+        </AdminCard>
+        <AdminCard>
           <Stack spacing={2}>
             <Typography variant="h3" component="h2">Smoke-Test</Typography>
             <Typography color="text.secondary" sx={{ maxWidth: "75ch" }}>
               Prüft Datenbank, Formular-Build und konfigurierte Provider mit echten Anfragen.
-              Keine Testmail und keine Änderungen an Fachdaten. Google-Tests verwenden synthetische Adressen und können Quota bzw. Kosten verursachen.
+              Keine Testmail und keine Änderungen an Fachdaten. Google-Tests verwenden synthetische Eingaben; der Gemini-Test sendet einen kurzen Testprompt und kann bis zu 90 Sekunden dauern. Quota und Kosten können anfallen.
               Maximal zwei Tests pro Minute.
             </Typography>
             <Button variant="outlined" startIcon={running ? <CircularProgress size={18} /> : <PlayArrowOutlined />}
@@ -110,8 +111,8 @@ export function MaintenancePage() {
               </Stack>}
             </Box>
           </Stack>
-        </Paper>
-        <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+        </AdminCard>
+        <AdminCard>
           <Typography variant="h3" component="h2" sx={{ mb: 1 }}>Runtime-Konfiguration</Typography>
           <Typography color="text.secondary" sx={{ mb: 2, maxWidth: "75ch" }}>
             Nur der Status wird angezeigt, niemals geheime Werte. „Gesetzt“ bestätigt noch keinen funktionierenden Zugang.
@@ -131,7 +132,7 @@ export function MaintenancePage() {
               </TableRow>)}</TableBody>
             </Table>
           </TableContainer>
-        </Paper>
+        </AdminCard>
       </>}
     </Stack>
   );

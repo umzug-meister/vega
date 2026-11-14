@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Grid, Paper, Stack, TextField, Typography } from "@mui/material";
+import { Grid, Stack, TextField, Typography } from "@mui/material";
 import { AdminAlert as Alert } from "../components/AdminNotifications.js";
+import { AdminCard } from "../components/AdminCard.js";
 import type { CatalogServiceRateDto, ServiceRateKey } from "@vega/domain";
 import { apiRequest } from "../api/api-request.js";
 
@@ -76,7 +77,7 @@ export function ServiceRatesEditor() {
       {error && <Alert severity="error">{error}</Alert>}
       {message && <Alert severity="success">{message}</Alert>}
       {rateGroups.map((group) => (
-        <Paper key={group.title} variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
+        <AdminCard key={group.title} variant="outlined">
           <Stack spacing={1.5}>
             <Typography component="h3" variant="h6">{group.title}</Typography>
             <Grid container spacing={1.5}>
@@ -96,7 +97,7 @@ export function ServiceRatesEditor() {
               ))}
             </Grid>
           </Stack>
-        </Paper>
+        </AdminCard>
       ))}
     </Stack>
   );

@@ -106,17 +106,30 @@ export function OrdersPage({ archived = false, navigate }: { archived?: boolean;
               input: {
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton aria-label="Suche leeren" onClick={onClear} disabled={loading || !search}>
+                    <IconButton
+                      aria-label="Suche leeren"
+                      title="Suche leeren"
+                      onClick={onClear}
+                      disabled={loading || !search}
+                      size="small"
+                    >
                       <CloseIcon />
+                    </IconButton>
+                    <IconButton
+                      aria-label="Aufträge suchen"
+                      title="Aufträge suchen"
+                      onClick={() => void onSearch()}
+                      disabled={loading}
+                      size="small"
+                      edge="end"
+                    >
+                      <SearchIcon />
                     </IconButton>
                   </InputAdornment>
                 ),
               },
             }}
           />
-          <IconButton aria-label="Aufträge suchen" onClick={() => void onSearch()} disabled={loading}>
-            <SearchIcon />
-          </IconButton>
         </Stack>
       </Box>
       {!archived &&
@@ -125,6 +138,7 @@ export function OrdersPage({ archived = false, navigate }: { archived?: boolean;
             color="primary"
             aria-label="Auftrag anlegen"
             title="Auftrag anlegen"
+            sx={{ mb: 1 }}
             onClick={() => navigate("/edit/-1")}
           >
             <AddOutlined />
@@ -133,6 +147,7 @@ export function OrdersPage({ archived = false, navigate }: { archived?: boolean;
           <Button
             variant="contained"
             startIcon={<AddOutlined />}
+            sx={{ mb: 1 }}
             onClick={() => navigate("/edit/-1")}
           >
             Auftrag anlegen
