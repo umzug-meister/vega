@@ -6,6 +6,12 @@ export type { OrderEmailKind };
 export interface OrderEmailActions {
   /** Opens the shared send dialog for the saved order. */
   open: (kind: OrderEmailKind) => void;
+  openForOrder: (
+    orderNumber: number,
+    kind: OrderEmailKind,
+    simpleSignature?: boolean,
+    replyToSourceMail?: boolean,
+  ) => void;
   /** True while the order editor has unsaved changes or a request is running. */
   disabled: boolean;
 }

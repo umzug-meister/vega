@@ -8,6 +8,7 @@ import {
 import type { OrderFormValue } from "./order-form-types.js";
 
 interface AppointmentFieldsProps {
+  editableRange?: boolean;
   value: {
     movingDate: string;
     movingTime: string;
@@ -18,7 +19,11 @@ interface AppointmentFieldsProps {
   onChange: (value: Partial<OrderFormValue>) => void;
 }
 
-export function AppointmentFields({ value, onChange }: AppointmentFieldsProps) {
+export function AppointmentFields({
+  value,
+  onChange,
+  editableRange = false,
+}: AppointmentFieldsProps) {
   return (
     <Stack spacing={1.5}>
       <Typography component="h2" variant="h6">
@@ -50,9 +55,10 @@ export function AppointmentFields({ value, onChange }: AppointmentFieldsProps) {
               type="date"
               label="Von"
               value={value.dateFrom}
+              onChange={(event) => onChange({ dateFrom: event.target.value })}
               slotProps={{
                 inputLabel: { shrink: true },
-                htmlInput: { readOnly: true },
+                htmlInput: { readOnly: !editableRange },
               }}
             />
           )}
@@ -61,9 +67,10 @@ export function AppointmentFields({ value, onChange }: AppointmentFieldsProps) {
               type="date"
               label="Bis"
               value={value.dateTo}
+              onChange={(event) => onChange({ dateTo: event.target.value })}
               slotProps={{
                 inputLabel: { shrink: true },
-                htmlInput: { readOnly: true },
+                htmlInput: { readOnly: !editableRange },
               }}
             />
           )}

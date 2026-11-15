@@ -22,10 +22,8 @@ export function orderRelationCreates(input: CreateOrderInput) {
   const addresses: Array<{
     role: OrderAddressRole;
     address: OrderAddressInput;
-  }> = [
-    { role: "FROM", address: input.from },
-    { role: "TO", address: input.to },
-  ];
+  }> = [{ role: "FROM", address: input.from }];
+  if (input.to) addresses.push({ role: "TO", address: input.to });
   if (input.details?.secondaryFrom)
     addresses.push({
       role: "SECONDARY_FROM",
@@ -99,7 +97,7 @@ export function orderDataWithRelations(order: {
   };
   const from = address("FROM");
   const to = address("TO");
-  if (!from || !to) throw new Error("MISSING_ORDER_ADDRESSES");
+  if (!from) throw new Error("MISSING_ORDER_ADDRESSES");
   const items: OrderFurnitureInput[] = [];
   const services: OrderServiceInput[] = [];
   for (const row of [...order.positions].sort(
@@ -142,7 +140,7 @@ export function orderDataWithRelations(order: {
   const result: CreateOrderInput = {
     ...input,
     from,
-    to,
+    ...(to ? { to } : {}),
     ...(details ? { details } : {}),
   };
   const checked = validateOrderCreateInput(result, {

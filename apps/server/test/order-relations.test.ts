@@ -86,7 +86,20 @@ test("relational positions omit staff unit prices while order JSON keeps priced 
   assert.equal(input.details!.extras.services[1]!.unitPrice, 85);
 });
 
-test("incomplete staff drafts still create the two required address rows and no positions", () => {
+test("single-address staff orders persist no destination relation", () => {
+  const input = orderFixture();
+  delete input.to;
+  input.details!.showSecondaryFrom = false;
+  delete input.details!.secondaryFrom;
+  input.details!.showSecondaryTo = false;
+  delete input.details!.secondaryTo;
+
+  const rows = orderRelationCreates(input);
+
+  assert.deepEqual(rows.addresses.create.map((row) => row.role), ["FROM"]);
+});
+
+test("incomplete staff drafts persist rows for supplied addresses and no positions", () => {
   const rows = orderRelationCreates({
     customer: { firstName: "", lastName: "", phone: "" },
     from: { street: "", postalCode: "", city: "" },

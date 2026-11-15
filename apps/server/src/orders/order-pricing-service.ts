@@ -32,7 +32,8 @@ export async function previewOrderPricing(
   client: PricingClient,
 ): Promise<OrderPricingPreview> {
   const details = input.details;
-  if (!details) throw new OrderPricingError("PRICE_NOT_CONFIGURED");
+  if (!details)
+    throw new OrderPricingError("PRICE_NOT_CONFIGURED", { kind: "details" });
   if (
     details.extras.services.some(
       (service) =>
@@ -66,8 +67,12 @@ export async function previewOrderPricing(
     details.basis.hours > 0 &&
     details.basis.offerId !== undefined &&
     !offerRow
-  )
-    throw new Error("PRICE_NOT_CONFIGURED");
+  ) {
+    throw new OrderPricingError("PRICE_NOT_CONFIGURED", {
+      kind: "offer",
+      id: details.basis.offerId,
+    });
+  }
   if (
     offerRow &&
     (offerRow.workers !== details.basis.workers ||
@@ -90,7 +95,11 @@ export async function previewOrderPricing(
     // unit price; the catalog price is only the fallback when a row is available.
     if (!catalogItem) {
       if (service.unitPrice === undefined)
-        throw new Error("PRICE_NOT_CONFIGURED");
+        throw new OrderPricingError("PRICE_NOT_CONFIGURED", {
+          kind: "catalog-item",
+          itemKind: service.kind,
+          id: service.catalogId,
+        });
       return { ...service, price: service.unitPrice };
     }
     return {
@@ -136,7 +145,7 @@ export async function previewOrderPricing(
   return calculateOrderPricing({
     addresses: [
       input.from,
-      input.to,
+      ...(input.to ? [input.to] : []),
       ...(details.showSecondaryFrom && details.secondaryFrom
         ? [details.secondaryFrom]
         : []),
@@ -205,11 +214,46 @@ export function orderPricingErrorIssue(error: unknown): OrderInputIssue | null {
         "Der ausgewählte Tarif passt nicht mehr zu Trägern, LKW und Stunden.",
     };
   }
-  if (error instanceof Error && error.message === "PRICE_NOT_CONFIGURED") {
+  if (
+    error instanceof OrderPricingError &&
+    error.code === "PRICE_NOT_CONFIGURED"
+  ) {
+    const requirement = error.missingRequirement;
+    if (requirement?.kind === "offer") {
+      return {
+        field: "details.basis.offerId",
+        message: `Der ausgewählte Tarif (ID ${requirement.id}) wurde nicht gefunden. Wählen Sie einen verfügbaren Tarif oder erfassen Sie das Angebot manuell.`,
+      };
+    }
+    if (requirement?.kind === "catalog-item") {
+      const itemName = requirement.itemKind === "service" ? "Leistung" : "Packmaterial";
+      return {
+        field: "details.extras.services",
+        message: `Die ausgewählte ${itemName}-Position (ID ${requirement.id}) ist nicht mehr im Katalog. Wählen Sie eine vorhandene Position oder tragen Sie einen Einzelpreis ein.`,
+      };
+    }
+    if (requirement?.kind === "rate") {
+      const rateNames: Partial<Record<ServiceRateKey, string>> = {
+        kmPrice: "Kilometerpreis für die Fahrtkosten",
+        hvzPrice: "Preis für die Halteverbotszone",
+        ridingCostsTruck1: "An-/Abfahrtskosten für 1 LKW",
+        ridingCostsTruck2: "An-/Abfahrtskosten für 2 LKW",
+        ridingCostsTruck3: "An-/Abfahrtskosten für 3 LKW",
+        ridingCostsTruck4: "An-/Abfahrtskosten für 4 LKW",
+      };
+      return {
+        field: requirement.key === "kmPrice"
+          ? "details.distanceKm"
+          : requirement.key === "hvzPrice"
+            ? "from.parkingSlot"
+            : "details.basis.trucks",
+        message: `Der ${rateNames[requirement.key] ?? requirement.key} ist unter Optionen > Preise nicht hinterlegt. Bitte ergänzen Sie diesen Preis oder erstellen Sie ein manuelles Angebot.`,
+      };
+    }
     return {
       field: "details",
       message:
-        "Ein benötigter Tarif oder Leistungspreis ist nicht mehr verfügbar. Bitte prüfen Sie die Katalogauswahl oder erstellen Sie ein manuelles Angebot.",
+        "Die Auftragsdetails für die Preisberechnung fehlen. Prüfen Sie die Tarif- und Preisangaben oder erstellen Sie ein manuelles Angebot.",
     };
   }
   if (error instanceof Error && error.message === "PRICE_CATALOG_TOO_LARGE") {
@@ -253,7 +297,7 @@ function samePricingValues(
   if (!details) return true;
   const addresses = [
     input.from,
-    input.to,
+    ...(input.to ? [input.to] : []),
     ...(details.showSecondaryFrom && details.secondaryFrom
       ? [details.secondaryFrom]
       : []),

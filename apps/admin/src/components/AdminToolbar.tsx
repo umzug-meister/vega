@@ -37,6 +37,7 @@ interface AdminToolbarProps {
   orderActionsDisabled: boolean;
   orderHasChanges: boolean;
   orderIsCopy: boolean;
+  orderHasSourceMail: boolean;
   isAdmin: boolean;
   isInvoiceEditor: boolean;
   editedInvoiceId?: string | undefined;
@@ -47,7 +48,10 @@ interface AdminToolbarProps {
   onOpenDrawer: () => void;
   onCopyOrder: () => void;
   onArchiveOrder: () => void;
-  onOrderEmail: (kind: "offer" | "offer-pair" | "decline") => void;
+  onOrderEmail: (
+    kind: "offer" | "offer-pair" | "decline",
+    replyToSourceMail?: boolean,
+  ) => void;
   onInvoiceEmail: () => void;
   onArchiveInvoice: () => void;
 }
@@ -63,6 +67,7 @@ export function AdminToolbar({
   orderActionsDisabled,
   orderHasChanges,
   orderIsCopy,
+  orderHasSourceMail,
   isAdmin,
   isInvoiceEditor,
   editedInvoiceId,
@@ -95,10 +100,13 @@ export function AdminToolbar({
     setActionsMenuAnchor(null);
   }
 
-  function selectOrderEmail(kind: "offer" | "offer-pair" | "decline") {
+  function selectOrderEmail(
+    kind: "offer" | "offer-pair" | "decline",
+    replyToSourceMail = false,
+  ) {
     setActionsMenuAnchor(null);
     setEmailMenuAnchor(null);
-    onOrderEmail(kind);
+    onOrderEmail(kind, replyToSourceMail);
   }
 
   return (
@@ -202,6 +210,13 @@ export function AdminToolbar({
                       <MenuItem onClick={() => selectOrderEmail("offer")}>
                         Angebot versenden
                       </MenuItem>
+                      {orderHasSourceMail && (
+                        <MenuItem
+                          onClick={() => selectOrderEmail("offer", true)}
+                        >
+                          Als Antwort auf Mail senden
+                        </MenuItem>
+                      )}
                       {orderIsCopy && (
                         <MenuItem
                           onClick={() => selectOrderEmail("offer-pair")}
@@ -333,6 +348,14 @@ export function AdminToolbar({
                         </ListItemIcon>
                         Angebot versenden
                       </MenuItem>
+                      {orderHasSourceMail && (
+                        <MenuItem
+                          disabled={orderActionsDisabled}
+                          onClick={() => selectOrderEmail("offer", true)}
+                        >
+                          Als Antwort auf Mail senden
+                        </MenuItem>
+                      )}
                       {orderIsCopy && (
                         <MenuItem
                           disabled={orderActionsDisabled}

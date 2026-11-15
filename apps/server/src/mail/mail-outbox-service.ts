@@ -17,9 +17,12 @@ export interface QueueMailInput {
   reminderEventId?: string;
   kind: Exclude<EmailKind, "PASSWORD_RESET">;
   to: string[];
+  cc?: string[];
   subject: string;
   contentHtml: string;
   attachments?: MailAttachment[];
+  /** INBOX uid of the mail this one replies to (threading + \Answered). */
+  replyToMailUid?: number;
   actorName?: string;
   signatureName?: string | null;
   signatureColor?: SignatureColor;
@@ -36,9 +39,12 @@ export async function queueMail(input: QueueMailInput): Promise<string> {
       ? { reminderEventId: input.reminderEventId }
       : {}),
     kind: input.kind,
-    recipients: input.to as Prisma.InputJsonValue,
+    recipients: (input.cc?.length
+      ? { to: input.to, cc: input.cc }
+      : input.to) as Prisma.InputJsonValue,
     subject: input.subject,
     contentHtml: input.contentHtml,
+    ...(input.replyToMailUid ? { replyToMailUid: input.replyToMailUid } : {}),
     ...(input.attachments
       ? { attachments: input.attachments as unknown as Prisma.InputJsonValue }
       : {}),
@@ -123,9 +129,11 @@ export async function deliverOutboxMail(
         : row.signatureColor === "#CB722F"
           ? "#CB722F"
           : "#000000";
+    const recipients = parseRecipients(row.recipients);
     const mailInput = {
       kind: row.kind as EmailKind,
-      to: parseRecipients(row.recipients),
+      to: recipients.to,
+      ...(recipients.cc.length ? { cc: recipients.cc } : {}),
       subject: row.subject,
       contentHtml: row.contentHtml,
       signatureName: row.signatureName,
@@ -138,6 +146,7 @@ export async function deliverOutboxMail(
     await mailService.send({
       ...mailInput,
       signatureColor,
+      ...(row.replyToMailUid ? { replyToMailUid: row.replyToMailUid } : {}),
       ...(attachments ? { attachments } : {}),
     });
     try {
@@ -248,10 +257,22 @@ export async function deliverDueOutboxMail(
   return { sent, failed, unknown };
 }
 
-function parseRecipients(value: Prisma.JsonValue): string[] {
-  if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string"))
-    throw new MailDeliveryError("INVALID_OUTBOX_RECIPIENTS", false);
-  return value as unknown as string[];
+function parseRecipients(value: Prisma.JsonValue): { to: string[]; cc: string[] } {
+  if (Array.isArray(value) && value.every((entry) => typeof entry === "string")) {
+    return { to: value as string[], cc: [] };
+  }
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    const recipients = value as Prisma.JsonObject;
+    const to = recipients.to;
+    const cc = recipients.cc;
+    if (
+      Array.isArray(to) && to.every((entry) => typeof entry === "string") &&
+      (cc === undefined || (Array.isArray(cc) && cc.every((entry) => typeof entry === "string")))
+    ) {
+      return { to: to as string[], cc: (cc ?? []) as string[] };
+    }
+  }
+  throw new MailDeliveryError("INVALID_OUTBOX_RECIPIENTS", false);
 }
 
 function parseAttachments(
@@ -315,7 +336,7 @@ export async function recordMailSent(
   });
   if (
     row.orderId &&
-    (row.kind === "OFFER" || row.kind === "INQUIRY_DECLINED")
+    (row.kind === "OFFER" || row.kind === "INBOX_OFFER" || row.kind === "INQUIRY_DECLINED")
   ) {
     await tx.order.updateMany({
       where: { id: row.orderId },
