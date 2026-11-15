@@ -6,6 +6,7 @@
   "schedule": ["* 1-4 * * 3,6"],
   "timezone": "Europe/Berlin",
   "updateNotScheduled": false,
+  "platformAutomerge": false,
   "packageRules": [
     {
       "matchDatasources": ["docker"],
