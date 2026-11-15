@@ -5,6 +5,7 @@ import type {
   OrderPricingPreview,
   OrderServiceInput,
   OrderAddressInput,
+  ServiceRateKey,
 } from "./index.js";
 import {
   addInvoiceAmounts,
@@ -52,6 +53,12 @@ export interface CalculateOrderPricingInput {
   calculatedAt?: string;
 }
 
+export type MissingPriceRequirement =
+  | { kind: "details" }
+  | { kind: "offer"; id: number }
+  | { kind: "catalog-item"; itemKind: "service" | "packaging"; id: number }
+  | { kind: "rate"; key: ServiceRateKey };
+
 export class OrderPricingError extends Error {
   constructor(
     readonly code:
@@ -60,6 +67,7 @@ export class OrderPricingError extends Error {
       | "INVALID_TOTAL"
       | "OFFER_MISMATCH"
       | "PRICE_LIMIT_EXCEEDED",
+    readonly missingRequirement?: MissingPriceRequirement,
   ) {
     super(code);
   }
@@ -73,8 +81,12 @@ export function calculateOrderPricing(
     basis.hours > 0 &&
     basis.offerId !== undefined &&
     input.offer?.id !== basis.offerId
-  )
-    throw new OrderPricingError("PRICE_NOT_CONFIGURED");
+  ) {
+    throw new OrderPricingError("PRICE_NOT_CONFIGURED", {
+      kind: "offer",
+      id: basis.offerId,
+    });
+  }
   if (
     basis.hours > 0 &&
     input.offer &&
@@ -176,13 +188,19 @@ export function calculateOrderPricing(
       (rate) => rate.key === `ridingCostsTruck${basis.trucks}`,
     )?.price;
     if (truckRate === undefined)
-      throw new OrderPricingError("PRICE_NOT_CONFIGURED");
+      throw new OrderPricingError("PRICE_NOT_CONFIGURED", {
+        kind: "rate",
+        key: `ridingCostsTruck${basis.trucks}` as ServiceRateKey,
+      });
     const ridingCosts = truckRate;
     let travel = ridingCosts;
     if (!local) {
       const kmRate = input.rates.find((rate) => rate.key === "kmPrice")?.price;
       if (kmRate === undefined)
-        throw new OrderPricingError("PRICE_NOT_CONFIGURED");
+        throw new OrderPricingError("PRICE_NOT_CONFIGURED", {
+          kind: "rate",
+          key: "kmPrice",
+        });
       if (input.distanceSource === undefined && input.distanceKm === 0)
         throw new OrderPricingError("DISTANCE_REQUIRED");
       const distanceCosts = roundProductToNearestIncrement(
@@ -204,7 +222,10 @@ export function calculateOrderPricing(
   if (parkingCount > 0) {
     const hvzRate = input.rates.find((rate) => rate.key === "hvzPrice")?.price;
     if (hvzRate === undefined)
-      throw new OrderPricingError("PRICE_NOT_CONFIGURED");
+      throw new OrderPricingError("PRICE_NOT_CONFIGURED", {
+        kind: "rate",
+        key: "hvzPrice",
+      });
     conditions.push({
       description: `Organisation von ${parkingCount} Halteverbotszone(n)`,
       amount: calculateRoundedSubtotal([

@@ -643,6 +643,7 @@ const orderListSelect = {
 } satisfies Prisma.OrderSelect;
 const orderDetailSelect = {
   id: true,
+  sourceMessageId: true,
   revision: true,
   ...orderListSelect,
   data: true,
@@ -681,10 +682,16 @@ function toOrderListItem(
 function toOrderDetail(
   order: Prisma.OrderGetPayload<{ select: typeof orderDetailSelect }>,
 ) {
-  const { addresses: _addresses, positions: _positions, ...detail } = order;
+  const {
+    addresses: _addresses,
+    positions: _positions,
+    sourceMessageId,
+    ...detail
+  } = order;
   const data = orderDataWithRelations(order);
   return {
     ...detail,
+    hasSourceMail: sourceMessageId !== null,
     isCopy: order.originOrderId !== null,
     data,
     grossTotal: orderGrossTotal(data),

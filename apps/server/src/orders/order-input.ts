@@ -922,7 +922,7 @@ function validateDetails(
         origin.length <= 300;
       const validAddresses =
         Array.isArray(addresses) &&
-        addresses.length >= 2 &&
+        addresses.length >= 1 &&
         addresses.length <= 4 &&
         addresses.every(
           (address) =>
@@ -1266,7 +1266,10 @@ export function validateOrderCreateInput(
     });
 
   const from = validateAddress(body.from, "from", issues, allowIncomplete);
-  const to = validateAddress(body.to, "to", issues, allowIncomplete);
+  const to =
+    body.to === undefined && allowStaffPricing
+      ? undefined
+      : validateAddress(body.to, "to", issues, allowIncomplete);
   const movingDate = text(body, "movingDate", "movingDate", issues, {
     required: !allowIncomplete,
     max: 10,
@@ -1304,6 +1307,11 @@ export function validateOrderCreateInput(
     allowStaffPricing,
     allowIncomplete,
   );
+  if (!to && details?.showSecondaryTo)
+    issues.push({
+      field: "details.showSecondaryTo",
+      message: "Für eine zweite Entladestelle muss zuerst eine Entladestelle angelegt werden.",
+    });
   let pricingSnapshot: OrderPricingSnapshot | undefined;
   if (body.pricingSnapshot !== undefined) {
     if (!allowStaffPricing)
@@ -1390,7 +1398,7 @@ export function validateOrderCreateInput(
     normalizedLastName === undefined ||
     normalizedPhone === undefined ||
     from === undefined ||
-    to === undefined ||
+    (!allowStaffPricing && to === undefined) ||
     normalizedMovingDate === undefined
   ) {
     return { ok: false, issues };
@@ -1407,7 +1415,7 @@ export function validateOrderCreateInput(
         ...(salutation !== undefined ? { salutation } : {}),
       },
       from,
-      to,
+      ...(to !== undefined ? { to } : {}),
       movingDate: normalizedMovingDate,
       ...(privacyAccepted !== undefined ? { privacyAccepted } : {}),
       ...(visitWanted !== undefined ? { visitWanted } : {}),
@@ -1454,8 +1462,10 @@ export function validateCustomerFormInput(
       field: "details",
       message: "Die Angaben zu Umzugsgut und Leistungen fehlen.",
     });
-  for (const key of ["from", "to"] as const) {
-    const address = input[key];
+  const addresses = input.to
+    ? ([ ["from", input.from], ["to", input.to] ] as const)
+    : ([ ["from", input.from] ] as const);
+  for (const [key, address] of addresses) {
     if (!/.{1,50}\d.{0,5}/u.test(address.street))
       issues.push({
         field: `${key}.street`,

@@ -96,11 +96,11 @@ test("nested routes display their parent and subroute in the navbar title", () =
   );
   assert.equal(
     formatAdminRouteTitle(resolveAdminRoute("/maintenance")!),
-    "Verwaltung | Maintenance",
+    "Verwaltung | Wartung",
   );
   assert.equal(
     formatAdminRouteTitle(resolveAdminRoute("/options")!),
-    "Optionen",
+    "Verwaltung | Optionen",
   );
 });
 

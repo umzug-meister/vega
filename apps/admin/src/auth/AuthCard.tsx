@@ -1,14 +1,15 @@
 import type { ReactNode } from "react";
-import { Container, Paper, Stack } from "@mui/material";
+import { Container, Stack } from "@mui/material";
+import { AdminCard } from "../components/AdminCard.js";
 
-const cardSx = { p: { xs: 3, sm: 5 }, width: "100%" };
+const cardSx = { width: "100%" };
 
 export function AuthCard({ children }: { children: ReactNode }) {
   return (
     <Container maxWidth="sm" sx={{ py: { xs: 5, sm: 10 } }}>
-      <Paper variant="outlined" sx={cardSx}>
+      <AdminCard variant="outlined" sx={cardSx}>
         <Stack spacing={2.5}>{children}</Stack>
-      </Paper>
+      </AdminCard>
     </Container>
   );
 }

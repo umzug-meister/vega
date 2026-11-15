@@ -20,6 +20,7 @@ export async function createOrder(
   source: "public" | "admin",
   actorName = "-",
   settings?: AppSettingsDto,
+  appBaseUrl?: URL,
 ) {
   let normalizedInput = await normalizeOrderCatalogInput(
     input,
@@ -126,9 +127,11 @@ export async function createOrder(
       outboxIds.push(outbox.id);
     }
     if (source === "public" && settings?.companyEmail) {
+      if (!appBaseUrl) throw new Error("ORDER_NOTIFICATION_BASE_URL_REQUIRED");
       const draft = emailDefaults.inquiryNotification(
         customerName,
         orderNumber,
+        appBaseUrl,
         normalizedInput.customer.email,
       );
       const outbox = await transaction.emailOutbox.create({
