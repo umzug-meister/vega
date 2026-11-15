@@ -281,10 +281,9 @@ export function AdminShell({
           }}
         >
           <Container
-            maxWidth="xl"
+            maxWidth={false}
             disableGutters
             sx={{
-              maxWidth: "1800px !important",
               py: 2,
               px: 2,
             }}
