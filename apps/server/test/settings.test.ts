@@ -55,7 +55,8 @@ test("public config is an explicit allowlist and never exposes internal settings
 });
 test("route input only accepts the two to four business stops, never a client-selected depot", () => {
   assert.deepEqual(routeAddresses({ addresses: [" Straße 1 ", "Straße 2"] }), ["Straße 1", "Straße 2"]);
-  for (const body of [null, { addresses: [] }, { addresses: ["one"] }, { addresses: ["one", ""] }, { addresses: ["one", 2] }, { addresses: ["a", "b", "c", "d", "e"] }]) {
+  assert.deepEqual(routeAddresses({ addresses: ["one"] }), ["one"]);
+  for (const body of [null, { addresses: [] }, { addresses: ["one", ""] }, { addresses: ["one", 2] }, { addresses: ["a", "b", "c", "d", "e"] }]) {
     assert.equal(routeAddresses(body), null);
   }
 });

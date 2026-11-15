@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createElement } from "react";
 import { AdminShell } from "../src/components/AdminShell.js";
-import { OrderEmailActionsContext } from "../src/email/order-email-actions.js";
+import {
+  OrderEmailActionsContext,
+  useOrderEmailActions,
+} from "../src/email/order-email-actions.js";
 import { CustomerFields } from "../src/orders/CustomerFields.js";
 import { CustomerTab } from "../src/orders/CustomerTab.js";
 import { createEmptyOrder } from "../src/orders/order-form-types.js";
@@ -110,4 +113,75 @@ test("the mail icon is disabled with unsaved changes and without a shell", async
     )?.disabled,
     true,
   );
+});
+
+test("Inbox can open a saved-order offer outside the order editor", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const urls: string[] = [];
+  let sendBody: Record<string, unknown> | undefined;
+  globalThis.fetch = async (url, init) => {
+    urls.push(String(url));
+    if (init?.method === "POST") {
+      sendBody = JSON.parse(String(init.body)) as Record<string, unknown>;
+      return Response.json({ data: { status: "SENT" } });
+    }
+    return Response.json({
+      data: {
+        to: "kunde@example.test",
+        subject: "Angebot",
+        contentHtml: "<p>Angebot</p><p></p><blockquote>Originalmail</blockquote>",
+        attachmentNames: [],
+      },
+    });
+  };
+  const route = resolveAdminRoute("/inbox");
+  assert.ok(route);
+  function InboxOfferButton() {
+    const actions = useOrderEmailActions();
+    return createElement(
+      "button",
+      { onClick: () => actions?.openForOrder(1014, "offer", true, true) },
+      "Angebot öffnen",
+    );
+  }
+  const dom = await mount(
+    createElement(AdminShell, {
+      user: admin,
+      route,
+      pathname: route.path,
+      navigate: () => {},
+      orderDirty: true,
+      children: createElement(InboxOfferButton),
+    }),
+    "/inbox",
+  );
+  context.after(async () => {
+    await dom.cleanup();
+    globalThis.fetch = originalFetch;
+  });
+  await dom.flush();
+
+  const button = [...dom.window.document.querySelectorAll("button")].find(
+    (item) => item.textContent === "Angebot öffnen",
+  );
+  assert.ok(button);
+  await dom.click(button);
+  await dom.flush();
+
+  assert.ok(dom.window.document.body.textContent?.includes("Angebot versenden"));
+  assert.ok(dom.window.document.body.textContent?.includes("Originalmail"));
+  const send = [...dom.window.document.querySelectorAll("button")].find(
+    (item) => item.textContent?.includes("Senden"),
+  );
+  assert.ok(send);
+  await dom.click(send);
+  await dom.flush();
+
+  assert.deepEqual(urls, [
+    "/api/admin/orders/1014/email-draft?kind=offer&reply=1",
+    "/api/admin/orders/1014/emails",
+  ]);
+  assert.equal(sendBody?.replyToSourceMail, true);
+  assert.equal(sendBody?.simpleSignature, true);
+  assert.match(String(sendBody?.contentHtml), /<blockquote><p>Originalmail<\/p><\/blockquote>/u);
 });

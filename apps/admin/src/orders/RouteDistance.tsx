@@ -80,7 +80,7 @@ function Place({ address, label }: { address: string; label: string }) {
           variant="caption"
           color="primary.main"
           noWrap
-          sx={{ display: "block", fontWeight: 700, lineHeight: 1.4 }}
+          sx={{ display: "block", fontWeight: 600, lineHeight: 1.4 }}
         >
           {label}
         </Typography>
@@ -99,7 +99,7 @@ function Place({ address, label }: { address: string; label: string }) {
           variant="body2"
           title={street}
           sx={{
-            fontWeight: 650,
+            fontWeight: 600,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -165,15 +165,23 @@ export function RouteDistance({
     ...(value.details.showSecondaryFrom && value.details.secondaryFrom
       ? [value.details.secondaryFrom]
       : []),
-    value.to,
+    ...(value.to ? [value.to] : []),
     ...(value.details.showSecondaryTo && value.details.secondaryTo
       ? [value.details.secondaryTo]
       : []),
   ];
-  const routeReady = addresses.every(
-    (address) => address.street.trim() || address.city.trim(),
+  const routeAddresses = addresses.filter(
+    (address) =>
+      address.street.trim() ||
+      address.postalCode.trim() ||
+      address.city.trim(),
   );
-  const texts = addresses.map((address) =>
+  const routeReady =
+    routeAddresses.length > 0 &&
+    routeAddresses.every(
+      (address) => address.street.trim() || address.city.trim(),
+    );
+  const texts = routeAddresses.map((address) =>
     [
       address.street.trim(),
       [address.postalCode.trim(), address.city.trim()].filter(Boolean).join(" "),
@@ -295,17 +303,16 @@ export function RouteDistance({
   // Restore saved routes on open. If addresses or depot changed, calculate and replace the snapshot.
   useEffect(() => {
     if (!config || !ready || initialised.current) return;
-    initialised.current = true;
     const current = latest.current;
-    if (
-      !config.available ||
-      !config.origin ||
-      !current.routeReady ||
-      current.storedRouteMatches
-    )
+    if (!config.available || !config.origin) {
+      initialised.current = true;
       return;
+    }
+    if (!current.routeReady) return;
+    initialised.current = true;
+    if (current.storedRouteMatches) return;
     void calculate();
-  }, [config, ready, calculate]);
+  }, [config, ready, routeReady, storedRouteMatches, calculate]);
   // Recalculate after a route-relevant field loses focus when every active stop has a street or city.
   useEffect(() => {
     if (blurToken === 0) return;

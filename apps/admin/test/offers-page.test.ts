@@ -42,11 +42,11 @@ test("offers page renders the truck/workforce matrix and row-add actions", () =>
     }
     assert.doesNotMatch(html, /<th[^>]*>Aktion<\/th>/u);
     assert.match(html, /position:sticky/u);
-    assert.match(html, /font-weight:700/u);
+    assert.match(html, /font-weight:600/u);
     assert.equal([...html.matchAll(/>Anfahrtskosten<\/label>/gu)].length, 4);
     assert.doesNotMatch(html, /Anfahrtskosten ·/u);
     assert.doesNotMatch(html, /Anfahrt:/u);
-    assert.match(html, /Träger[\s\S]*?font-weight:700/u);
+    assert.match(html, /Träger[\s\S]*?font-weight:600/u);
     assert.ok(html.includes("Trägerzeile hinzufügen"));
   } finally {
     if (previous === undefined) Reflect.deleteProperty(globalThis, "React");

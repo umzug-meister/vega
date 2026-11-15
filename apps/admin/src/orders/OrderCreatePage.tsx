@@ -48,7 +48,7 @@ function toFormValue(data: CreateOrderInput): OrderFormValue {
     ...data,
     customer: { ...base.customer, ...data.customer },
     from: { ...base.from, ...data.from },
-    to: { ...base.to, ...data.to },
+    to: data.to ? { ...base.to, ...data.to } : undefined,
     details: data.details ?? base.details,
   };
 }
@@ -84,8 +84,13 @@ interface OrderCreatePageProps {
   onDirtyChange: (dirty: boolean) => void;
   onBusyChange: (busy: boolean) => void;
   onCopyChange?: (isCopy: boolean) => void;
+  onSourceMailChange?: (hasSourceMail: boolean) => void;
   dirty: boolean;
   orderNumber?: number;
+  /** Prefilled values for a new order (e.g. from the Postfach analysis). */
+  initialValue?: OrderFormValue;
+  /** Runs after a new order was created and before navigating to it. */
+  onCreated?: (orderNumber: number) => Promise<void>;
 }
 
 interface ApiErrorResponse {
@@ -177,10 +182,13 @@ export function OrderCreatePage({
   onDirtyChange,
   onBusyChange,
   onCopyChange,
+  onSourceMailChange,
   dirty,
   orderNumber,
+  initialValue,
+  onCreated,
 }: OrderCreatePageProps) {
-  const [value, setValue] = useState(createEmptyOrder);
+  const [value, setValue] = useState(() => initialValue ?? createEmptyOrder());
   const valueRef = useRef(value);
   const [activeTab, setActiveTab] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -234,6 +242,7 @@ export function OrderCreatePage({
         valueRef.current = loaded;
         setValue(loaded);
         onCopyChange?.(body.data.isCopy);
+        onSourceMailChange?.(body.data.hasSourceMail);
         onDirtyChange(false);
       })
       .catch(() => {
@@ -248,7 +257,7 @@ export function OrderCreatePage({
     return () => {
       cancelled = true;
     };
-  }, [navigate, onCopyChange, onDirtyChange, orderNumber]);
+  }, [navigate, onCopyChange, onSourceMailChange, onDirtyChange, orderNumber]);
 
   function update(patch: Partial<OrderFormValue>) {
     const next = { ...valueRef.current, ...patch };
@@ -404,6 +413,16 @@ export function OrderCreatePage({
       );
       return false;
     }
+    if (orderNumber === undefined && onCreated) {
+      try {
+        await onCreated(body.data.orderNumber);
+      } catch {
+        notify(
+          "warning",
+          "Auftrag angelegt, aber die Verknüpfung mit der E-Mail ist fehlgeschlagen.",
+        );
+      }
+    }
     if (orderNumber === undefined) {
       onDirtyChange(false);
       navigate(`/edit/${body.data.orderNumber}`);
@@ -434,7 +453,7 @@ export function OrderCreatePage({
               .map((field) => describePricingField(field, saveValue))
               .join("; "),
             action:
-              "Prüfe die Positionen und berechne sie bei Bedarf über 'Positionen berechnen' neu. Speichere den Auftrag anschließend erneut.",
+              "Prüfe die Positionen und berechne sie bei Bedarf über 'Berechnen' neu. Speichere den Auftrag anschließend erneut.",
           },
         );
       }
@@ -536,7 +555,7 @@ export function OrderCreatePage({
     try {
       if (exportPdf && orderNumber !== undefined) {
         if (
-          (value.from.parkingSlot || value.to.parkingSlot) &&
+          (value.from.parkingSlot || value.to?.parkingSlot) &&
           !value.details.conditions.some((condition) =>
             condition.description.toUpperCase().includes("HALTEVERBOT"),
           )
@@ -669,6 +688,7 @@ export function OrderCreatePage({
           <BasisTab
             value={value}
             update={update}
+            editableRange={initialValue !== undefined && orderNumber === undefined}
             onBasisChange={(basis) =>
               updateDetails({ ...value.details, basis })
             }

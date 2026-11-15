@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Card, CircularProgress, List, ListItem, ListItemText, Stack, Typography } from "@mui/material";
+import { Card, CardContent, CircularProgress, List, ListItem, ListItemText, Stack, Typography } from "@mui/material";
 import { AdminAlert as Alert } from "../components/AdminNotifications.js";
 import type { AdminOrderJournalEntry } from "@vega/domain";
 
@@ -38,25 +38,29 @@ export function JournalTab({ orderNumber }: { orderNumber?: number }) {
     return () => { cancelled = true; };
   }, [orderNumber]);
 
-  if (orderNumber === undefined) return <Card><List disablePadding><ListItem sx={{ px: 2, py: 1 }}><ListItemText primary={<Typography color="text.secondary">Das Journal steht nach dem ersten Speichern des Auftrags zur Verfügung.</Typography>} /></ListItem></List></Card>;
+  if (orderNumber === undefined) return <Card><CardContent><List disablePadding><ListItem sx={{ px: 0, py: 1 }}><ListItemText primary={<Typography color="text.secondary">Das Journal steht nach dem ersten Speichern des Auftrags zur Verfügung.</Typography>} /></ListItem></List></CardContent></Card>;
   if (loading) return <Stack sx={{ py: 4, alignItems: "center" }}><CircularProgress /></Stack>;
   if (error) return <Alert severity="error">{error}</Alert>;
   return <Stack spacing={2}>
     {items.length > 0 ? items.map((entry) => (
       <Card key={entry.id}>
-        <List disablePadding>
-          <ListItem sx={{ px: 2, py: 1 }}>
-            <ListItemText primary={labelFor(entry.action)} secondary={`${new Date(entry.occurredAt).toLocaleString("de-DE")} · ${entry.actorName}`} />
-          </ListItem>
-        </List>
+        <CardContent>
+          <List disablePadding>
+            <ListItem sx={{ px: 0, py: 1 }}>
+              <ListItemText primary={labelFor(entry.action)} secondary={`${new Date(entry.occurredAt).toLocaleString("de-DE")} · ${entry.actorName}`} />
+            </ListItem>
+          </List>
+        </CardContent>
       </Card>
     )) : (
       <Card>
-        <List disablePadding>
-          <ListItem sx={{ px: 2, py: 1 }}>
-            <ListItemText primary="Noch keine Ereignisse vorhanden." />
-          </ListItem>
-        </List>
+        <CardContent>
+          <List disablePadding>
+            <ListItem sx={{ px: 0, py: 1 }}>
+              <ListItemText primary="Noch keine Ereignisse vorhanden." />
+            </ListItem>
+          </List>
+        </CardContent>
       </Card>
     )}
   </Stack>;

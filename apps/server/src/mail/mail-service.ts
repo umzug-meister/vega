@@ -2,6 +2,7 @@ import {
   htmlToPlainText,
   passwordResetEmail,
   renderEmailLayout,
+  renderReplyEmail,
 } from "./email-template.js";
 import {
   MailDeliveryError,
@@ -13,6 +14,8 @@ import { isValidEmailAddress } from "@vega/domain";
 
 export type EmailKind =
   | "INQUIRY_RECEIVED"
+  | "INBOX_REPLY"
+  | "INBOX_OFFER"
   | "OFFER"
   | "ORDER_MESSAGE"
   | "INVOICE"
@@ -24,10 +27,12 @@ export type EmailKind =
 export interface SendMailInput {
   kind: EmailKind;
   to: string[];
+  cc?: string[];
   subject: string;
   contentHtml: string;
   text?: string;
   attachments?: MailAttachment[];
+  replyToMailUid?: number;
   displayName?: string;
   signatureName?: string | null;
   signatureColor?: "#000000" | "#28527A" | "#CB722F";
@@ -47,7 +52,16 @@ export class MailService {
     const recipients = [
       ...new Set(input.to.map((address) => address.trim().toLowerCase())),
     ];
-    if (!recipients.length || recipients.some((address) => !isEmail(address))) {
+    const toRecipients = recipients.filter(isEmail);
+    const toSet = new Set(toRecipients);
+    const ccRecipients = [
+      ...new Set((input.cc ?? []).map((address) => address.trim().toLowerCase())),
+    ].filter((address) => !toSet.has(address));
+    if (
+      toRecipients.length + ccRecipients.length === 0 ||
+      recipients.some((address) => !isEmail(address)) ||
+      ccRecipients.some((address) => !isEmail(address))
+    ) {
       throw new MailDeliveryError("INVALID_EMAIL_RECIPIENT", false);
     }
     if (
@@ -61,20 +75,25 @@ export class MailService {
       throw new MailDeliveryError("MAIL_SETTINGS_UNAVAILABLE", true);
     });
     const displayName = input.displayName ?? settings?.emailFromName;
+    const html = input.kind === "INBOX_REPLY" || input.kind === "INBOX_OFFER"
+      ? renderReplyEmail(input.contentHtml, input.signatureName, input.signatureColor ?? "#000000")
+      : renderEmailLayout(input.contentHtml, input.signatureName, input.signatureColor);
     const message: OutgoingMail = {
-      to: recipients,
+      to: toRecipients,
+      ...(ccRecipients.length ? { cc: ccRecipients } : {}),
       subject: input.subject.trim(),
-      html: renderEmailLayout(
-        input.contentHtml,
-        input.signatureName,
-        input.signatureColor,
+      html,
+      text: input.text ?? htmlToPlainText(
+        input.kind === "INBOX_REPLY" || input.kind === "INBOX_OFFER"
+          ? html
+          : input.contentHtml,
       ),
-      text: input.text ?? htmlToPlainText(input.contentHtml),
       ...(displayName ? { displayName } : {}),
       ...(settings?.emailFromAddress
         ? { expectedFromAddress: settings.emailFromAddress }
         : {}),
       ...(input.attachments ? { attachments: input.attachments } : {}),
+      ...(input.replyToMailUid ? { replyToMailUid: input.replyToMailUid } : {}),
     };
     await this.transport.send(message);
   }

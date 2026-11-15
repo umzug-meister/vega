@@ -23,7 +23,7 @@ Die öffentliche Website bleibt WordPress. Das aktuelle Formular wird als Script
   (`GET /config`, `POST /distance`; Depot-Rundreise ab Betriebsstandort). Die
   Erstberechnung startet automatisch nach dem Laden der Konfiguration, eine
   geänderte, vollständige Adresse löst beim Verlassen des Felds eine
-  Neuberechnung aus; der Button bleibt als manueller Retry.
+  Neuberechnung aus; einen separaten Berechnen-Button gibt es nicht.
 - CORS-Allowlist, Rate-Limits, Schema-/Payloadprüfung und API-seitige Freigabe projektspezifischer DTOs.
 - Kein Honeypot/CAPTCHA zum Start.
 - Hostnamen werden nicht in Frontend-Builds fest codiert.
@@ -56,7 +56,8 @@ Provider aus oder fehlt der Key (`503`/`502`), bleibt die manuelle Eingabe
 voll möglich; die eingereichte Adresse wird serverseitig unabhängig validiert.
 Die Streckenberechnung (`/api/admin/routes/*`) ist ausschließlich
 authentifizierte Admin-API für Admin/Kundenberater mit abgeschlossener
-2FA-Session: Depot → 2–4 Umzugsadressen → Depot,
+2FA-Session: Depot → 1–4 Umzugsadressen → Depot (bei Staff-Aufträgen ohne
+Entladestelle genügt eine Beladestelle),
 gerundet auf ganze Kilometer in den ungespeicherten Entwurf. Ein einziger
 serverseitiger `GOOGLE_MAPS_API_KEY` deckt Places API (New) und Routes API ab
 (bewusste Betreiberentscheidung: gemeinsame Quoten, keine getrennte Rotation).
@@ -70,19 +71,21 @@ Der echte Google-/Hostinger-Provider-Proof bleibt offen.
 Der bisherige explizite Klick ist nicht mehr die einzige Auslösung. Sobald
 Auftragsentwurf und Konfiguration geladen sind (`GET /api/admin/routes/config`),
 berechnet die Admin-Oberfläche einmal automatisch, wenn der Betriebsstandort
-gesetzt, Google-Routes verfügbar, alle aktiven Be-/Entladeadressen mindestens
-Straße oder Ort enthalten und noch keine manuelle oder berechnete Entfernung
-vorliegt. Ein bereits vorhandener manueller oder
+gesetzt, Google-Routes verfügbar, die Routenstopps vollständig und noch keine
+manuelle oder berechnete Entfernung vorliegt. Vollständig leere
+Be-/Entladestellen werden ignoriert; jede teilweise ausgefüllte Adresse braucht
+mindestens Straße oder Ort, und mindestens eine Adresse muss vorhanden sein.
+Ein bereits vorhandener manueller oder
 berechnete Kilometerwert wird beim Öffnen nicht überschrieben. Ändert der
 Mitarbeiter Straße, PLZ oder Ort einer aktiven Adresse, wird die Route beim
-Verlassen des Felds neu berechnet, sobald alle aktiven Be-/Entladestellen
-mindestens Straße oder Ort enthalten. Die Postleitzahl ist für Mitarbeiter
+Verlassen des Felds neu berechnet, sobald die Routenstopps vollständig sind. Die Postleitzahl ist für Mitarbeiter
 optional; auch ein ausschließlich eingetragener Ort wird als Routenstopp
 verwendet. Unveränderte Blurs und Änderungen an nicht routenrelevanten Feldern
 lösen keine Anfrage aus. Laufende Berechnungen werden bei einer neueren
 Adressversion abgebrochen, veraltete Antworten ignoriert. Fehlender Key,
-fehlender Betriebsstandort oder eine aktive Adresse ohne Straße und Ort setzen die Automatik
+fehlender Betriebsstandort oder eine teilweise ausgefüllte Adresse ohne Straße und Ort setzen die Automatik
 aus, ohne die manuelle Eingabe zu blockieren; Providerfehler zeigen einen
-Fehler, ohne den zuletzt gespeicherten Kilometerwert zu löschen. Der Button
-„Fahrstrecke berechnen" bleibt als manueller Retry erhalten. Browser rufen
+Fehler, ohne den zuletzt gespeicherten Kilometerwert zu löschen. Eine erneute
+Berechnung erfolgt bei der nächsten Adressänderung; einen separaten Button gibt
+es nicht. Browser rufen
 Google weiterhin nie direkt auf; der Schlüssel bleibt in der Server-Runtime.

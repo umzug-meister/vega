@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, Grid, InputAdornment, Paper, Stack, TextField, Typography } from "@mui/material";
+import { Button, Grid, InputAdornment, Stack, TextField, Typography } from "@mui/material";
 import { AdminAlert as Alert } from "../components/AdminNotifications.js";
+import { AdminCard } from "../components/AdminCard.js";
 import type { AppSettingsDto } from "@vega/domain";
 import { apiRequest } from "../api/api-request.js";
 import { PlaceAutocompleteField } from "../places/PlaceAutocompleteField.js";
@@ -16,7 +17,7 @@ const groups: Array<{ title: string; fields: Array<{ key: SettingKey; label: str
   { title: "Standort und Kundenformular", fields: [
     { key: "origin", label: "Standort", helper: "Betriebsadresse als Start und Ende der Fahrstrecke. Kein API-Host und keine CORS-Origin." },
     { key: "dataPrivacyUrl", label: "Datenschutz URL", type: "url", helper: "Ohne Datenschutzerklärung bleibt das Absenden des Kundenformulars gesperrt." },
-    { key: "successUrl", label: "Success URL", type: "url", helper: "Optional: Weiterleitung nach erfolgreicher Anfrage. Leer: interne Dankeseite." },
+    { key: "successUrl", label: "Erfolgs-URL", type: "url", helper: "Optional: Weiterleitung nach erfolgreicher Anfrage. Leer: interne Dankeseite." },
     { key: "boxCalculatorUrl", label: "Kartonrechner URL", type: "url", helper: "Optionaler Link im Möbel-/Volumenrechner." },
   ] },
   { title: "E-Mail", fields: [
@@ -199,7 +200,7 @@ export function OptionsPage() {
     {loading && <Alert severity="info">Einstellungen werden geladen …</Alert>}
     <Stack spacing={2}>
       <Grid container spacing={2}>{groups.map((group) => <Grid key={group.title} size={{ xs: 12, lg: 6 }}>
-        <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, height: "100%" }}><Stack spacing={1.5}>
+        <AdminCard variant="outlined" sx={{ height: "100%" }}><Stack spacing={1.5}>
           <Typography component="h2" variant="h6">{group.title}</Typography>
           {group.fields.map((field) => field.key === "origin"
             ? <OriginField key={field.key} value={draft?.[field.key] ?? ""} disabled={loading || draft === null}
@@ -213,10 +214,10 @@ export function OptionsPage() {
             onBlur={(event) => void saveOnBlur(event.currentTarget.validity.badInput)}
             slotProps={field.type === "number" ? { htmlInput: { min: 0.0001, max: 10, step: 0.0001 }, input: { endAdornment: <InputAdornment position="end">m³</InputAdornment> } } : { htmlInput: { maxLength: field.type === "url" ? 2048 : field.key === "emailFromName" ? 191 : 254 } }}
           />)}
-        </Stack></Paper>
+        </Stack></AdminCard>
       </Grid>)}
         <Grid size={{ xs: 12, lg: 6 }}>
-          <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, height: "100%" }}><Stack spacing={2}>
+          <AdminCard variant="outlined" sx={{ height: "100%" }}><Stack spacing={2}>
             <Typography component="h2" variant="h6">Rechnungsnummernkreis</Typography>
             <Typography color="text.secondary">Nächste automatisch vergebene Rechnungsnummer: {invoiceNext === null ? "noch nicht geladen" : `R-${invoiceNext}`}. Bestehende Rechnungen werden nicht umnummeriert.</Typography>
             {invoiceError && <Alert severity="error">{invoiceError}</Alert>}{invoiceMessage && <Alert severity="success">{invoiceMessage}</Alert>}
@@ -229,7 +230,7 @@ export function OptionsPage() {
               onBlur={() => void saveInvoice()}
               slotProps={{ htmlInput: { min: 1, step: 1 }, input: { startAdornment: <InputAdornment position="start">R-</InputAdornment> } }} />
             <Typography variant="body2" color="text.secondary">Ein eigener Gutschriftennummernkreis wird erst mit dem freigegebenen Gutschriftenmodul angebunden.</Typography>
-          </Stack></Paper>
+          </Stack></AdminCard>
         </Grid>
       </Grid>
     </Stack>

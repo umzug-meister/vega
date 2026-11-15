@@ -397,7 +397,7 @@ export function OffersPage() {
                 top: { xs: "58px", md: "68px" },
                 zIndex: 3,
                 bgcolor: "background.paper",
-                fontWeight: 700,
+                fontWeight: 600,
               },
               "& th:not(:last-child), & td:not(:last-child)": {
                 borderRight: "1px solid",
@@ -450,7 +450,7 @@ export function OffersPage() {
                             <>
                               <TableCell
                                 rowSpan={workerCounts.length}
-                                sx={{ fontWeight: 700, textAlign: "center" }}
+                                sx={{ fontWeight: 600, textAlign: "center" }}
                               >
                                 {trucks}
                               </TableCell>
@@ -484,7 +484,7 @@ export function OffersPage() {
                           )}
                           <TableCell align="right" sx={{ minWidth: 90 }}>
                             <Typography
-                              sx={{ fontWeight: 700, textAlign: "center" }}
+                              sx={{ fontWeight: 600, textAlign: "center" }}
                             >
                               {workers}
                             </Typography>

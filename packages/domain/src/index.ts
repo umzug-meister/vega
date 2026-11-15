@@ -226,7 +226,7 @@ export interface CreateOrderInput {
     phone: string;
   };
   from: OrderAddressInput;
-  to: OrderAddressInput;
+  to?: OrderAddressInput;
   details?: OrderDetailsInput;
   pricingSnapshot?: OrderPricingSnapshot;
   movingDate: string;
@@ -305,6 +305,8 @@ export interface AdminOrderDetail extends Omit<AdminOrderListItem, "customerComp
   revision: number;
   data: CreateOrderInput;
   originOrderId: string | null;
+  /** True when the order was created from an inbox mail and can be answered as a reply. */
+  hasSourceMail: boolean;
 }
 
 /** One order of a copy family (root plus all copies). */
@@ -325,6 +327,8 @@ export interface EmailDraft {
   subject: string;
   contentHtml: string;
   attachmentNames: string[];
+  /** True when the draft replies to the mail the order was created from. */
+  replyToSourceMail?: boolean;
 }
 
 export interface StaffEmailSendInput {
@@ -629,3 +633,96 @@ export type CatalogServiceInput = Omit<CatalogServiceDto, "id">;
 export type CatalogPackingInput = Omit<CatalogPackingDto, "id">;
 
 export type CatalogOfferInput = Omit<CatalogOfferDto, "id">;
+
+export interface InboxAddress {
+  name: string;
+  address: string;
+}
+
+export interface InboxAttachmentDto {
+  id: string;
+  filename: string;
+  contentType: string;
+  sizeBytes: number;
+  inline: boolean;
+}
+
+export interface InboxMessageListItem {
+  uid: number;
+  subject: string;
+  from: InboxAddress | null;
+  date: string;
+  unseen: boolean;
+  attachmentCount: number;
+}
+
+export interface InboxMessageList {
+  messages: InboxMessageListItem[];
+  pagination: { page: number; perPage: number; total: number; totalPages: number };
+}
+
+export interface InboxMessageDetail extends InboxMessageListItem {
+  to: InboxAddress[];
+  text: string;
+  html?: string;
+  attachments: InboxAttachmentDto[];
+}
+
+export interface InboxReplyDraft {
+  to: InboxAddress[];
+  cc: InboxAddress[];
+  subject: string;
+  quoteText: string;
+}
+
+export interface InboxUnmatchedFurniture {
+  name: string;
+  quantity: number;
+  estimatedVolume: number | null;
+}
+
+export interface InboxSkippedAttachment {
+  filename: string;
+  reason: string;
+}
+
+/** Fields the AI may prefill; the client merges them onto an empty order and a human reviews before saving. */
+export interface InboxOrderDraft {
+  customer: { firstName: string; lastName: string; email: string; phone: string };
+  from: Partial<OrderAddressInput>;
+  to: Partial<OrderAddressInput>;
+  movingDate?: string;
+  movingTime?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  dateFixed?: boolean;
+  visitWanted?: boolean;
+  costsAssumption?: boolean;
+  secondaryFrom?: Partial<OrderAddressInput>;
+  secondaryTo?: Partial<OrderAddressInput>;
+  note: string;
+  furniture: {
+    items: OrderFurnitureInput[];
+    volume: number;
+    volumeComplete: boolean;
+    boxes?: number;
+    wardrobeBoxes?: number;
+    expensive?: boolean;
+    expensiveText?: string;
+    heavy?: boolean;
+    heavyText?: string;
+    bulky?: boolean;
+    bulkyText?: string;
+  };
+  extras?: {
+    packingRequested?: boolean;
+    services?: OrderServiceInput[];
+  };
+}
+
+export interface InboxAnalysisResult {
+  draft: InboxOrderDraft;
+  unmatchedFurniture: InboxUnmatchedFurniture[];
+  skippedAttachments: InboxSkippedAttachment[];
+  filledFields: string[];
+}

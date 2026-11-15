@@ -3,12 +3,12 @@ import {
   Box,
   FormControlLabel,
   MenuItem,
-  Paper,
   Stack,
   Switch,
   TextField,
   Typography,
 } from "@mui/material";
+import { AdminCard } from "../components/AdminCard.js";
 import { CustomerFields } from "./CustomerFields.js";
 import type { OrderFormValue } from "./order-form-types.js";
 
@@ -30,15 +30,15 @@ export function CustomerTab({ value, update }: CustomerTabProps) {
         rowGap: 4,
       }}
     >
-      <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, minWidth: 0 }}>
+      <AdminCard variant="outlined" sx={{ minWidth: 0 }}>
         <CustomerFields
           value={value.customer}
           onChange={(customer) =>
             update({ customer: { ...value.customer, ...customer } })
           }
         />
-      </Paper>
-      <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, minWidth: 0 }}>
+      </AdminCard>
+      <AdminCard variant="outlined" sx={{ minWidth: 0 }}>
         <Stack spacing={3}>
           <Stack spacing={1.5}>
             <Typography component="h2" variant="h6">
@@ -100,7 +100,7 @@ export function CustomerTab({ value, update }: CustomerTabProps) {
             </TextField>
           </Stack>
         </Stack>
-      </Paper>
+      </AdminCard>
     </Box>
   );
 }

@@ -81,7 +81,7 @@ export function orderPdfFilename({
   if (basis?.hours) filename += `_${basis.hours}_Std`;
   const hvz =
     Number(Boolean(data.from.parkingSlot)) +
-    Number(Boolean(data.to.parkingSlot));
+    Number(Boolean(data.to?.parkingSlot));
   if (hvz) filename += `_${hvz}xHVZ`;
   return `${filename.replace(/[/\\\u0000-\u001f\u007f]/gu, "_")}.pdf`;
 }
@@ -223,9 +223,11 @@ function addAddresses(pdf: OrderPdfBuilder, data: CreateOrderInput) {
   const headings = [
     " ",
     ...(secondFrom ? ["1. Beladestelle", "2. Beladestelle"] : ["Beladestelle"]),
-    ...(secondTo
-      ? ["1. Entladestelle", "2. Entladestelle"]
-      : ["Entladestelle"]),
+    ...(data.to
+      ? secondTo
+        ? ["1. Entladestelle", "2. Entladestelle"]
+        : ["Entladestelle"]
+      : []),
   ];
   const columns = [
     [
@@ -240,7 +242,7 @@ function addAddresses(pdf: OrderPdfBuilder, data: CreateOrderInput) {
     ],
     addressColumn(data.from, "from"),
     ...(secondFrom ? [addressColumn(secondFrom, "from")] : []),
-    addressColumn(data.to, "to"),
+    ...(data.to ? [addressColumn(data.to, "to")] : []),
     ...(secondTo ? [addressColumn(secondTo, "to")] : []),
   ];
   pdf.addSpace();

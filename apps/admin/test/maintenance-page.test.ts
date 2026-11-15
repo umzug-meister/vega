@@ -49,7 +49,7 @@ test("Maintenance is a standalone admin-only page, with the former setup URL red
   const route = resolveAdminRoute("/maintenance");
   assert.equal(route?.adminOnly, true);
   assert.equal(route?.settingsArea, undefined);
-  assert.equal(route?.title, "Maintenance");
+  assert.equal(route?.title, "Wartung");
   assert.equal(resolveAdminRoute("/settings/setup"), null);
   assert.equal(resolveAdminRoute("/options")?.settingsArea, "options");
 });
@@ -76,7 +76,7 @@ test("Maintenance navigation is visible only to admins and opens the standalone 
   };
   const view = await mount(React.createElement(AdminShell, props));
   context.after(() => view.cleanup());
-  const navigation = view.container.querySelector('[aria-label="Maintenance"]');
+  const navigation = view.container.querySelector('[aria-label="Wartung"]');
   assert.ok(navigation);
   await view.click(navigation);
   assert.deepEqual(navigated, ["/maintenance"]);
@@ -87,7 +87,7 @@ test("Maintenance navigation is visible only to admins and opens the standalone 
     }),
   );
   assert.equal(
-    view.container.querySelector('[aria-label="Maintenance"]'),
+    view.container.querySelector('[aria-label="Wartung"]'),
     null,
   );
 });
@@ -135,6 +135,7 @@ test("setup displays runtime embed, copies URL and code, and runs smoke test onl
   assert.equal(calls.length, 1);
   assert.ok(view.container.textContent?.includes("Nach Seed entfernen"));
   assert.ok(view.container.textContent?.includes("Fehlt"));
+  assert.ok(view.container.textContent?.includes("Gemini-Test"));
   const loader = view.container.querySelector<HTMLInputElement>(
     'input[value="https://runtime.example.test/customer-form/loader.js"]',
   );

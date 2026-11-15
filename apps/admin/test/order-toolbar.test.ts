@@ -130,7 +130,7 @@ test("management submenu groups users and maintenance and highlights the active 
     /<div class="[^"]*MuiListItemButton-root[^"]*"[^>]*aria-label="Nutzer"[^>]*>/u,
   )?.[0];
   const maintenanceItem = html.match(
-    /<div class="[^"]*MuiListItemButton-root[^"]*"[^>]*aria-label="Maintenance"[^>]*>/u,
+    /<div class="[^"]*MuiListItemButton-root[^"]*"[^>]*aria-label="Wartung"[^>]*>/u,
   )?.[0];
 
   assert.ok(managementItem);
@@ -625,7 +625,7 @@ test("order positions keep manual editing and expose an explicit server calculat
       onCalculate: () => {},
     }),
   );
-  assert.ok(html.includes("Positionen berechnen"));
+  assert.ok(html.includes("Berechnen"));
   assert.ok(html.includes("Beschreibung"));
   assert.ok(html.includes("Betrag (€)"));
   assert.ok(html.includes("Manuelle Position"));
