@@ -285,8 +285,10 @@ PDF-Tests sichern vollständige Inhalte und Seitenbegrenzungen statt exakter
 Zeichenkoordinaten oder Zeichenstrom-Hashes; die globale Vorgabe kompakter
 Admin-Eingabefelder bleibt separat abgesichert.
 
-CI (`.github/workflows/ci.yml`) nutzt Node 24 und MariaDB 11.8.9 inkl. frischer
-Migrationen und Drift-Prüfung.
+CI (`.github/workflows/ci.yml`) nutzt Node 24 und MariaDB 11.8.9. Nach dem Build
+laufen Lint, reguläre Tests, Deployment-Test und Datenbankprüfungen parallel.
+Im Datenbankzweig folgen Migrationen, Drift-Prüfung und Datenbanktests
+aufeinander; der Build führt selbst keine Migration aus.
 
 ## WordPress-Einbettung
 
