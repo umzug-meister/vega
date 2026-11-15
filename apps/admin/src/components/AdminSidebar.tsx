@@ -40,6 +40,7 @@ import {
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import type { AdminRoute } from "../routes.js";
+import { WorldClocks } from "./WorldClocks.js";
 
 export const EXPANDED_SIDEBAR_WIDTH = 264;
 export const COLLAPSED_SIDEBAR_WIDTH = 72;
@@ -475,6 +476,7 @@ export function AdminSidebar({
           </List>
         </Box>
         <Box sx={{ mt: "auto" }}>
+          {!sidebarCollapsed && <WorldClocks />}
           <Divider />
           <List>
             <ListItemButton
