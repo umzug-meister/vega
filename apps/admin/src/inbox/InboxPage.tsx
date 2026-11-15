@@ -5,6 +5,7 @@ import {
   ContentCopyOutlined,
   EmailOutlined,
   FileDownloadOutlined,
+  RefreshOutlined,
   ReplyAllOutlined,
   SaveOutlined,
   SearchOutlined,
@@ -29,6 +30,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import type {
   InboxAnalysisResult,
+  InboxAttachmentDto,
   InboxMessageDetail,
   InboxMessageList,
 } from "@vega/domain";
@@ -65,9 +67,56 @@ function formatSize(bytes: number): string {
     : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
+const PREVIEW_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+]);
+
+function AttachmentPreview({
+  attachment,
+  messageUid,
+}: {
+  attachment: InboxAttachmentDto;
+  messageUid: number;
+}) {
+  const [imageError, setImageError] = useState(false);
+  const url = `/api/admin/inbox/messages/${messageUid}/attachments/${encodeURIComponent(attachment.id)}`;
+  const isImage = PREVIEW_IMAGE_TYPES.has(attachment.contentType.toLowerCase());
+
+  return (
+    <Box>
+      <Button
+        component="a"
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        startIcon={<AttachFileOutlined />}
+        sx={{ justifyContent: "flex-start" }}
+      >
+        {attachment.filename} ({formatSize(attachment.sizeBytes)})
+      </Button>
+      {isImage && (imageError ? (
+        <Alert severity="error">Bildvorschau konnte nicht geladen werden: {attachment.filename}</Alert>
+      ) : (
+        <Box
+          component="img"
+          src={url}
+          alt={attachment.filename}
+          loading="lazy"
+          onError={() => setImageError(true)}
+          sx={{ display: "block", maxWidth: "100%", maxHeight: 480, objectFit: "contain" }}
+        />
+      ))}
+    </Box>
+  );
+}
+
 export function InboxPage({ navigate }: InboxPageProps) {
   const [list, setList] = useState<InboxMessageList>();
   const [page, setPage] = useState(1);
+  const [listRefresh, setListRefresh] = useState(0);
   const [listError, setListError] = useState("");
   const [loadingList, setLoadingList] = useState(true);
   const [geminiEnabled, setGeminiEnabled] = useState(false);
@@ -113,7 +162,7 @@ export function InboxPage({ navigate }: InboxPageProps) {
         if (!controller.signal.aborted) setLoadingList(false);
       });
     return () => controller.abort();
-  }, [page]);
+  }, [page, listRefresh]);
 
   useEffect(() => {
     if (selected === undefined) return;
@@ -251,9 +300,23 @@ export function InboxPage({ navigate }: InboxPageProps) {
   const listPanel = (
     <AdminCard variant="outlined" sx={{ minWidth: 0 }}>
       <Stack spacing={1.5}>
-        <Typography component="h2" variant="h6">
-          Posteingang
-        </Typography>
+        <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
+          <Typography component="h2" variant="h6">
+            Posteingang
+          </Typography>
+          <Tooltip title="Posteingang aktualisieren">
+            <span>
+              <IconButton
+                size="small"
+                aria-label="Posteingang aktualisieren"
+                disabled={loadingList}
+                onClick={() => setListRefresh((value) => value + 1)}
+              >
+                <RefreshOutlined fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Stack>
         {listError && <Alert severity="error">{listError}</Alert>}
         {loadingList && <CircularProgress size={24} />}
         {list && !loadingList && list.messages.length === 0 && (
@@ -481,18 +544,11 @@ export function InboxPage({ navigate }: InboxPageProps) {
                     <Divider sx={{ my: 1.5 }} />
                     <Stack spacing={0.5}>
                       {visibleAttachments.map((attachment) => (
-                        <Button
-                          key={attachment.id}
-                          component="a"
-                          href={`/api/admin/inbox/messages/${detail.uid}/attachments/${encodeURIComponent(attachment.id)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          startIcon={<AttachFileOutlined />}
-                          sx={{ justifyContent: "flex-start" }}
-                        >
-                          {attachment.filename} (
-                          {formatSize(attachment.sizeBytes)})
-                        </Button>
+                        <AttachmentPreview
+                          key={`${detail.uid}-${attachment.id}`}
+                          attachment={attachment}
+                          messageUid={detail.uid}
+                        />
                       ))}
                     </Stack>
                   </>
@@ -531,37 +587,33 @@ export function InboxPage({ navigate }: InboxPageProps) {
                   </IconButton>
                 </span>
               </Tooltip>
-              {createdOrderNumber !== undefined && (
-                <Tooltip title="Angebotskopie anlegen">
-                  <span>
-                    <IconButton
-                      color="inherit"
-                      disabled={orderDirty || orderBusy}
-                      onClick={() => void copyOrder()}
-                      aria-label="Angebotskopie anlegen"
-                    >
-                      <ContentCopyOutlined />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              )}
-              {createdOrderNumber !== undefined && (
-                <Tooltip title="Als PDF speichern">
-                  <span>
-                    <IconButton
-                      color="inherit"
-                      type="submit"
-                      form="order-create-form"
-                      name="action"
-                      value="pdf"
-                      disabled={orderDirty || orderBusy}
-                      aria-label="PDF erzeugen"
-                    >
-                      <FileDownloadOutlined />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              )}
+              <Tooltip title="Angebotskopie anlegen">
+                <span>
+                  <IconButton
+                    color="inherit"
+                    disabled={createdOrderNumber === undefined || orderDirty || orderBusy}
+                    onClick={() => void copyOrder()}
+                    aria-label="Angebotskopie anlegen"
+                  >
+                    <ContentCopyOutlined />
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Tooltip title="Als PDF speichern">
+                <span>
+                  <IconButton
+                    color="inherit"
+                    type="submit"
+                    form="order-create-form"
+                    name="action"
+                    value="pdf"
+                    disabled={createdOrderNumber === undefined || orderDirty || orderBusy}
+                    aria-label="PDF erzeugen"
+                  >
+                    <FileDownloadOutlined />
+                  </IconButton>
+                </span>
+              </Tooltip>
               <Tooltip title="Angebot versenden">
                 <span>
                   <IconButton

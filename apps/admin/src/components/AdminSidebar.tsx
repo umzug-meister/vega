@@ -117,7 +117,9 @@ export function AdminSidebar({
     route.settingsArea === "content",
   );
   const [managementOpen, setManagementOpen] = useState(
-    route.settingsArea === "users" || route.path === "/maintenance",
+    route.settingsArea === "users" ||
+      route.settingsArea === "options" ||
+      route.path === "/maintenance",
   );
   const [archiveOpen, setArchiveOpen] = useState(
     pathname === "/orders/archived" || pathname === "/invoices/archived",
@@ -130,7 +132,9 @@ export function AdminSidebar({
     : EXPANDED_SIDEBAR_WIDTH;
   const isContentArea = route.settingsArea === "content";
   const isManagementArea =
-    route.settingsArea === "users" || route.path === "/maintenance";
+    route.settingsArea === "users" ||
+    route.settingsArea === "options" ||
+    route.path === "/maintenance";
   const isArchivePath =
     pathname === "/orders/archived" || pathname === "/invoices/archived";
 
@@ -266,6 +270,18 @@ export function AdminSidebar({
             {isAdmin && (
               <>
                 <ListItemButton
+                  sx={listItemButtonSx}
+                  title="Rechnungen"
+                  aria-label="Rechnungen"
+                  selected={pathname === "/invoices"}
+                  onClick={() => navigate("/invoices")}
+                >
+                  <ListItemIcon>
+                    <ReceiptLongOutlined />
+                  </ListItemIcon>
+                  {!sidebarCollapsed && <ListItemText primary="Rechnungen" />}
+                </ListItemButton>
+                <ListItemButton
                   title="Content"
                   sx={{ ...listItemButtonSx }}
                   aria-label="Content"
@@ -312,30 +328,6 @@ export function AdminSidebar({
                     ))}
                   </List>
                 </Collapse>
-                <ListItemButton
-                  sx={listItemButtonSx}
-                  title="Optionen"
-                  aria-label="Optionen"
-                  selected={route.settingsArea === "options"}
-                  onClick={() => navigate("/options")}
-                >
-                  <ListItemIcon>
-                    <SettingsOutlined />
-                  </ListItemIcon>
-                  {!sidebarCollapsed && <ListItemText primary="Optionen" />}
-                </ListItemButton>
-                <ListItemButton
-                  sx={listItemButtonSx}
-                  title="Rechnungen"
-                  aria-label="Rechnungen"
-                  selected={pathname === "/invoices"}
-                  onClick={() => navigate("/invoices")}
-                >
-                  <ListItemIcon>
-                    <ReceiptLongOutlined />
-                  </ListItemIcon>
-                  {!sidebarCollapsed && <ListItemText primary="Rechnungen" />}
-                </ListItemButton>
               </>
             )}
             <ListItemButton
@@ -425,6 +417,18 @@ export function AdminSidebar({
                   unmountOnExit
                 >
                   <List component="div" disablePadding>
+                    <ListItemButton
+                      title="Optionen"
+                      aria-label="Optionen"
+                      sx={{ pl: 3, ...listItemButtonSx }}
+                      selected={route.settingsArea === "options"}
+                      onClick={() => navigate("/options")}
+                    >
+                      <ListItemIcon sx={{ minWidth: 32 }}>
+                        <SettingsOutlined />
+                      </ListItemIcon>
+                      {!sidebarCollapsed && <ListItemText primary="Optionen" />}
+                    </ListItemButton>
                     <ListItemButton
                       title="Nutzer"
                       aria-label="Nutzer"

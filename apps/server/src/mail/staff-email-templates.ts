@@ -1,4 +1,4 @@
-import { addInvoiceAmounts, type CreateOrderInput } from "@vega/domain";
+import { addInvoiceAmounts, type CreateOrderInput, type OrderAddressInput } from "@vega/domain";
 import { escapeHtml } from "./email-template.js";
 
 /**
@@ -15,6 +15,39 @@ export interface EmailDraftContent {
 export interface OfferOption {
   orderNumber: number;
   data: CreateOrderInput;
+}
+
+export function missingOrderDetailsHtml(data: CreateOrderInput): string {
+  const missing: string[] = [];
+  if (!data.customer.firstName.trim() || !data.customer.lastName.trim())
+    missing.push("Vor- und Nachname");
+  if (!data.customer.phone.trim()) missing.push("Telefonnummer");
+
+  const checkAddress = (address: OrderAddressInput | undefined, label: string) => {
+    const street = address?.street?.trim() ?? "";
+    const fields = [
+      !street ? "Straße und Hausnummer" : /\d/u.test(street) ? "" : "Hausnummer",
+      !address?.postalCode?.trim() ? "Postleitzahl" : "",
+      !address?.city?.trim() ? "Ort" : "",
+      !address?.floor?.trim() ? "Etage" : "",
+    ].filter(Boolean);
+    if (fields.length) missing.push(`${label}: ${fields.join(", ")}`);
+  };
+  checkAddress(data.from, "Abholadresse");
+  checkAddress(data.to, "Lieferadresse");
+  if (data.details?.showSecondaryFrom)
+    checkAddress(data.details.secondaryFrom, "Weitere Abholadresse");
+  if (data.details?.showSecondaryTo)
+    checkAddress(data.details.secondaryTo, "Weitere Lieferadresse");
+  if (!data.movingDate.trim() && !(data.dateFrom && data.dateTo))
+    missing.push("Gewünschter Umzugstermin oder Zeitraum");
+  const furniture = data.details?.furniture;
+  if (!furniture || furniture.volume <= 0 || furniture.volumeComplete === false)
+    missing.push("Vollständige Liste des Umzugsguts oder das gesamte Umzugsvolumen");
+  if (!missing.length) return "";
+  const highlight = (text: string) =>
+    `<strong><span style="color:#28527a">${escapeHtml(text)}</span></strong>`;
+  return `<p>${highlight("Für die weitere Planung benötigen wir noch folgende Angaben. Bitte teilen Sie uns diese in Ihrer Antwort mit:")}</p><ul>${missing.map((item) => `<li><p>${highlight(item)}</p></li>`).join("")}</ul>`;
 }
 
 type Customer = Pick<
@@ -143,6 +176,7 @@ export function offerEmail(input: {
   secondOption?: OfferOption;
   referenceNumber: number;
   now: Date;
+  includeMissingDetails?: boolean;
 }): EmailDraftContent {
   const { option, secondOption, referenceNumber, now } = input;
   const data = option.data;
@@ -167,6 +201,7 @@ export function offerEmail(input: {
       ? `<p><strong>Berechnetes Umzugsvolumen: ${escapeHtml(amount(volume))} m³</strong></p>`
       : "",
     `<p><strong>Unser Kostenvoranschlag ist bis zum ${offerValidUntil(now)} gültig.</strong> ${secondOption ? "Im Anhang finden Sie beide Aufträge." : "Im Anhang finden Sie den Auftrag."}</p>`,
+    input.includeMissingDetails ? missingOrderDetailsHtml(data) : "",
     "<p><strong>Sollten Sie unser Angebot annehmen, bitten wir Sie um eine kurze Bestätigung per E-Mail.</strong> Das Unterschreiben des Auftrages ist hierfür nicht erforderlich.</p>",
     secondOption ? "<h2>1. Option</h2>" : "",
     optionHtml(option),

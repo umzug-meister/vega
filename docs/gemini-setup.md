@@ -1,8 +1,14 @@
 # Gemini-Einrichtung (Postfach → Auftragsentwurf)
 
 Die Analyse einer Mail läuft über **Vertex AI (Gemini), Region `global`** (Modelle sind im Projekt nur dort verfügbar; keine EU-Datenresidenz, AVV ist freigegeben).
-Gemini liefert nur einen Auftragsentwurf; Preise und Volumen berechnet das Backend.
+Gemini liefert nur einen Auftragsentwurf; Preise berechnet das Backend. Ein ausdrücklich
+genanntes Gesamtvolumen des Umzugsguts wird für die menschliche Prüfung direkt in
+den Entwurf übernommen, unabhängig von Möbelliste und Kartons. Fehlt es, berechnet
+das Backend das Volumen aus Katalog und Kartonvolumina.
 Die Funktion ist standardmäßig aus (`GEMINI_ENABLED` nicht gesetzt).
+Bildanhänge (JPEG, PNG, GIF, WebP) werden in der Mailvorschau über den
+geschützten Anhang-Endpunkt angezeigt; andere Anhänge bleiben als Links verfügbar.
+Externe Bilder im Mail-HTML werden weiterhin nicht geladen.
 
 ## 1. Google-Cloud-Projekt vorbereiten
 
@@ -84,6 +90,18 @@ Server neu starten.
 - Ein mit der Mail verknüpfter Auftrag kann als Angebot auf die Originalmail
   geantwortet werden. Die Originalmail wird per Message-ID gesucht; Empfänger
   ist ihr Absender.
+- Die Angebotsantwort enthält eine bearbeitbare Liste fehlender Angaben aus dem
+  zuletzt gespeicherten Auftrag: Name, Telefonnummer, Adressbestandteile und
+  Etagen (auch aktivierte Zusatzadressen), Umzugstermin oder Zeitraum sowie
+  vollständiges Umzugsgut oder Gesamtvolumen. Sie entfällt, wenn nichts davon
+  fehlt. Einleitung und Liste erscheinen blau und fett direkt nach dem
+  Gültigkeitshinweis. Sie gilt auch für manuell verknüpfte Aufträge; Mitarbeitende prüfen die
+  Angaben vor dem Versand. Eine Straße ohne Ziffer wird als fehlende Hausnummer
+  behandelt; eine Ziffer allein beweist umgekehrt keine vollständige Adresse.
+  Ein nicht erkannter Termin wird bei neuen
+  KI-Entwürfen nicht durch das heutige Datum oder eine Uhrzeit ersetzt. Bei
+  früher gespeicherten Aufträgen lässt sich ein damals vorbelegter Termin nicht
+  automatisch als unbekannt erkennen.
 - Die Signatur setzt der Server beim Versand zwischen Antworttext und Zitat.
   Das Zitat liegt wie jede Staff-Mail in `EmailOutbox.contentHtml` und wird mit
   dem Auftrag aufbewahrt; „keine Mailinhalte gespeichert“ gilt nur für den

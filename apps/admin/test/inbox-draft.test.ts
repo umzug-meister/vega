@@ -25,9 +25,39 @@ test("draftToFormValue keeps defaults and applies draft fields", () => {
   assert.equal(value.from.city, "Berlin");
   assert.equal(value.from.runningDistance, "10 m.");
   assert.equal(value.movingDate, "2026-05-01");
-  assert.equal(value.movingTime, "07:00");
+  assert.equal(value.movingTime, "");
   assert.equal(value.details.furniture.volumeComplete, false);
   assert.equal(value.details.furniture.items.length, 1);
+});
+
+test("draftToFormValue does not invent an appointment when none was extracted", () => {
+  const value = draftToFormValue({
+    customer: { firstName: "", lastName: "", email: "", phone: "" },
+    from: {},
+    to: {},
+    note: "",
+    furniture: { items: [], volume: 0, volumeComplete: true },
+  });
+  assert.equal(value.movingDate, "");
+  assert.equal(value.movingTime, "");
+});
+
+test("draftToFormValue preserves declared volume independently of furniture", () => {
+  const value = draftToFormValue({
+    customer: { firstName: "", lastName: "", email: "", phone: "" },
+    from: {},
+    to: {},
+    note: "",
+    furniture: {
+      items: [{ name: "Couch", quantity: 2, volume: 1.5, catalogId: 1 }],
+      volume: 25.5,
+      volumeComplete: true,
+      boxes: 10,
+    },
+  });
+  assert.equal(value.details.furniture.volume, 25.5);
+  assert.equal(value.details.furniture.items.length, 1);
+  assert.equal(value.details.furniture.boxes, 10);
 });
 
 test("draftToFormValue transfers additional fields without losing form defaults", () => {

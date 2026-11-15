@@ -103,7 +103,7 @@ test("content submenu highlights only the selected child route", () => {
   assert.match(offersItem, /Mui-selected/u);
 });
 
-test("management submenu groups users and maintenance and highlights the active child", () => {
+test("management submenu groups options, users and maintenance and highlights the active child", () => {
   const route = resolveAdminRoute("/users");
   assert.ok(route);
   const html = render(
@@ -132,14 +132,46 @@ test("management submenu groups users and maintenance and highlights the active 
   const maintenanceItem = html.match(
     /<div class="[^"]*MuiListItemButton-root[^"]*"[^>]*aria-label="Wartung"[^>]*>/u,
   )?.[0];
+  const optionsItem = html.match(
+    /<div class="[^"]*MuiListItemButton-root[^"]*"[^>]*aria-label="Optionen"[^>]*>/u,
+  )?.[0];
 
   assert.ok(managementItem);
   assert.ok(usersItem);
   assert.ok(maintenanceItem);
+  assert.ok(optionsItem);
+  assert.ok(html.indexOf('aria-label="Verwaltung"') < html.indexOf('aria-label="Optionen"'));
   assert.match(managementItem, /aria-expanded="true"/u);
   assert.doesNotMatch(managementItem, /Mui-selected/u);
   assert.match(usersItem, /Mui-selected/u);
   assert.doesNotMatch(maintenanceItem, /Mui-selected/u);
+  assert.doesNotMatch(optionsItem, /Mui-selected/u);
+});
+
+test("options route opens management and highlights options", () => {
+  const route = resolveAdminRoute("/options");
+  assert.ok(route);
+  const html = render(
+    createElement(AdminShell, {
+      user: {
+        id: "test",
+        name: "Test",
+        email: "test@example.test",
+        role: "Admin",
+        twoFactorEnabled: true,
+        mustChangePassword: false,
+        blocked: false,
+      },
+      route,
+      pathname: "/options",
+      navigate: () => {},
+      children: null,
+    }),
+  );
+  assert.match(html, /aria-label="Verwaltung" aria-expanded="true"/u);
+  assert.match(html, /MuiListItemButton-root[^"]*Mui-selected[^"]*"[^>]*aria-label="Optionen"/u);
+  assert.ok(html.indexOf('aria-label="E-Mail Postfach"') < html.indexOf('aria-label="Rechnungen"'));
+  assert.ok(html.indexOf('aria-label="Rechnungen"') < html.indexOf('aria-label="Content"'));
 });
 
 test("dirty documents allow only saving and clean saved documents enable follow-up actions", () => {

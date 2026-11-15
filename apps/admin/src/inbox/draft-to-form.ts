@@ -22,8 +22,8 @@ export function draftToFormValue(draft: InboxOrderDraft): OrderFormValue {
       draft.to.street?.trim() || draft.to.postalCode?.trim() || draft.to.city?.trim()
         ? { ...createEmptyAddress(), ...draft.to }
         : undefined,
-    ...(draft.movingDate ? { movingDate: draft.movingDate } : {}),
-    ...(draft.movingTime ? { movingTime: draft.movingTime } : {}),
+    movingDate: draft.movingDate ?? "",
+    movingTime: draft.movingTime ?? "",
     ...(draft.dateFixed !== undefined ? { dateFixed: draft.dateFixed } : {}),
     ...(draft.visitWanted !== undefined
       ? { visitWanted: draft.visitWanted }
