@@ -5,6 +5,7 @@ const ALLOWED_TAGS = [
   "a",
   "b",
   "br",
+  "blockquote",
   "col",
   "colgroup",
   "div",
@@ -29,6 +30,11 @@ const ALLOWED_TAGS = [
 ];
 
 const ALLOWED_STYLES = {
+  blockquote: {
+    "margin-left": [/^\d{1,2}px$/],
+    "padding-left": [/^\d{1,2}px$/],
+    "border-left": [/^\d{1,2}px solid #[0-9a-f]{6}$/i],
+  },
   span: {
     color: [/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i],
   },
@@ -51,6 +57,7 @@ export function sanitizeRichTextHtml(html: string): string {
     allowedTags: ALLOWED_TAGS,
     allowedAttributes: {
       a: ["href"],
+      blockquote: ["style"],
       span: ["style"],
       td: ["colspan", "rowspan"],
       th: ["colspan", "rowspan"],

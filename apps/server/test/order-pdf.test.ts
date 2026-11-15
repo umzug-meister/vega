@@ -33,6 +33,7 @@ test("order PDF renders saved customer, positions and amounts with a valid attac
   );
   const pdf = generateOrderPdf(input, now);
   assert.equal(pdf.subarray(0, 4).toString("ascii"), "%PDF");
+  assert.ok(pdf.byteLength < 500_000, "order PDF should compress its logo image");
   const pageCount = pdf.toString("latin1").match(/\/Type \/Page\b/g)?.length;
   assert.equal(pageCount, 4);
   const content = pdf.toString("latin1");
@@ -164,6 +165,17 @@ test("PDF handles incomplete saved drafts without invalid dates or invented data
   assert.ok(!pdf.toString("latin1").includes("NaN"));
   assert.ok(!pdf.toString("latin1").includes("undefined"));
   assert.equal(orderPdfFilename(input), "_Auftrag_1042_1xHVZ.pdf");
+});
+
+test("order PDF includes only the loading address when no destination exists", () => {
+  const input = orderPdfFixture();
+  input.data.details!.showSecondaryTo = false;
+  delete input.data.details!.secondaryTo;
+  delete input.data.to;
+  const pdf = generateOrderPdf(input, now).toString("latin1");
+  assert.ok(pdf.includes("Beladestelle"));
+  assert.ok(!pdf.includes("Musterstraße 2"));
+  assert.ok(!pdf.includes("Bürostraße 4"));
 });
 
 test("saved custom-item notes, own furniture lists and removed services are retained", () => {

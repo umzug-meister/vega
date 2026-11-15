@@ -50,7 +50,7 @@ test("admin typography and compact fields are preserved", () => {
   assert.equal(adminTheme.typography.h4.fontWeight, 500);
   assert.equal(customerTheme.typography.h4.fontWeight, 500);
   assert.equal(adminTheme.typography.button.textTransform, "none");
-  assert.equal(adminTheme.shape.borderRadius, 8);
+  assert.equal(adminTheme.shape.borderRadius, 4);
   assert.equal(
     adminTheme.components?.MuiTextField?.defaultProps?.margin,
     "dense",
@@ -142,20 +142,17 @@ test("light and dark schemes provide distinct legible surfaces", () => {
   assert.equal(dark.palette.primary.main, "#91B4FF");
 });
 
-test("glass styles override their opaque fallback in both color schemes", () => {
+test("app shell keeps solid opaque surfaces", () => {
   const appbar = adminTheme.components?.MuiAppBar?.styleOverrides?.root;
   const drawer = adminTheme.components?.MuiDrawer?.styleOverrides?.paper;
   assert.ok(typeof appbar === "object" && appbar !== null);
   assert.ok(typeof drawer === "object" && drawer !== null);
   assert.equal(appbar.backgroundColor, "var(--mui-palette-background-paper)");
-  assert.deepEqual(appbar["@supports (backdrop-filter: blur(1px))"], {
-    backgroundColor: "rgba(var(--mui-palette-background-paperChannel) / 0.78)",
-    backdropFilter: "blur(22px) saturate(165%)",
-  });
-  assert.deepEqual(drawer["@supports (backdrop-filter: blur(1px))"], {
-    backgroundColor: "rgba(var(--mui-palette-background-paperChannel) / 0.84)",
-    backdropFilter: "blur(24px) saturate(170%)",
-  });
+  assert.equal(appbar.backdropFilter, undefined);
+  assert.equal(appbar["@supports (backdrop-filter: blur(1px))"], undefined);
+  assert.equal(drawer.backgroundColor, "var(--mui-palette-background-paper)");
+  assert.equal(drawer.backdropFilter, undefined);
+  assert.equal(drawer["@supports (backdrop-filter: blur(1px))"], undefined);
 });
 
 test("content surfaces use opaque semantic colors", () => {
@@ -168,6 +165,15 @@ test("content surfaces use opaque semantic colors", () => {
     assert.ok(typeof root === "object" && root !== null);
     assert.equal(root.backgroundColor, "var(--mui-palette-background-paper)");
   }
+});
+
+test("card padding is not overridden from Material UI defaults", () => {
+  const paperRoot = adminTheme.components?.MuiPaper?.styleOverrides?.root;
+  const cardRoot = adminTheme.components?.MuiCard?.styleOverrides?.root;
+  assert.ok(typeof paperRoot === "object" && paperRoot !== null);
+  assert.ok(typeof cardRoot === "object" && cardRoot !== null);
+  assert.equal(paperRoot["&.MuiPaper-outlined"].padding, undefined);
+  assert.equal(cardRoot.padding, undefined);
 });
 
 test("focus and reduced motion preferences work in both modes", () => {

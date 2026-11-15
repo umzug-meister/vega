@@ -30,8 +30,8 @@ export function SectionTabs({
               position: "sticky",
               top: { xs: 58, md: 68 },
               zIndex: 2,
-              pb: 2,
-              backgroundColor: "var(--mui-palette-background-default)",
+              pb: 3,
+              backgroundColor: "transparent",
             }
           : { pb: 2 }
       }

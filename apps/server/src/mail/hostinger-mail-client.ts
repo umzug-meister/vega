@@ -9,12 +9,14 @@ export interface MailAttachment {
 
 export interface OutgoingMail {
   to: string[];
+  cc?: string[];
   subject: string;
   html: string;
   text: string;
   displayName?: string;
   expectedFromAddress?: string;
   attachments?: MailAttachment[];
+  replyToMailUid?: number;
 }
 
 export class MailDeliveryError extends Error {
@@ -80,12 +82,16 @@ export class HostingerMailClient {
       }
       const body = JSON.stringify({
         to: message.to,
+        ...(message.cc?.length ? { cc: message.cc } : {}),
         subject: message.subject,
         html: message.html,
         text: message.text,
         ...(message.displayName ? { displayName: message.displayName } : {}),
         ...(message.attachments?.length
           ? { attachments: message.attachments }
+          : {}),
+        ...(message.replyToMailUid
+          ? { inReplyTo: { uid: message.replyToMailUid, folder: "INBOX" } }
           : {}),
       });
       sendStarted = true;

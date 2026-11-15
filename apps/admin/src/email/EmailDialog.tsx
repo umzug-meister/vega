@@ -32,7 +32,13 @@ import { familyLabel } from "./family-label.js";
 import { EmailSendAttempt, mailAttemptStorage } from "./email-send-attempt.js";
 
 export type EmailTarget =
-  | { type: "order"; orderNumber: number; kind: OrderEmailKind }
+  | {
+      type: "order";
+      orderNumber: number;
+      kind: OrderEmailKind;
+      replyToSourceMail?: boolean;
+      simpleSignature?: boolean;
+    }
   | { type: "invoice"; id: string }
   | { type: "credit"; id: string }
   | { type: "reminder"; id: string; level: number };
@@ -94,11 +100,14 @@ export function EmailDialog({
     target.type === "order" ? target.orderNumber : undefined;
   const query =
     target.type === "order"
-      ? `?kind=${target.kind}${isPair ? `&partner=${partner ?? ""}` : ""}`
+      ? `?kind=${target.kind}${isPair ? `&partner=${partner ?? ""}` : ""}${target.replyToSourceMail ? "&reply=1" : ""}`
       : "";
   const attempt = useMemo(
-    () => new EmailSendAttempt(`vega:mail:${basePath}`, mailAttemptStorage()),
-    [basePath],
+    () => new EmailSendAttempt(
+      `vega:mail:${basePath}${target.type === "order" && target.simpleSignature ? ":simple-signature" : ""}`,
+      mailAttemptStorage(),
+    ),
+    [basePath, target],
   );
   const frozen = sending || attempt.frozen;
   const completed =
@@ -178,6 +187,10 @@ export function EmailDialog({
           ...(target.type === "order"
             ? {
                 kind: target.kind,
+                ...(target.simpleSignature ? { simpleSignature: true } : {}),
+                ...(target.replyToSourceMail
+                  ? { replyToSourceMail: true }
+                  : {}),
                 ...(isPair && partner !== undefined
                   ? { partnerOrderNumber: partner }
                   : {}),

@@ -65,7 +65,6 @@ export function RichTextEditor({
     extensions: [
       // Match the server sanitizer's allowlist.
       StarterKit.configure({
-        blockquote: false,
         code: false,
         codeBlock: false,
         horizontalRule: false,

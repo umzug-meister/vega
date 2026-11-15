@@ -141,6 +141,47 @@ const settings: AppSettingsDto = {
   emailFromAddress: null,
 };
 
+test("public creation queues the runtime order link only in the company notification", async (context) => {
+  const input = publicFixture();
+  input.customer.email = "customer@example.test";
+  const queued: Prisma.EmailOutboxCreateArgs["data"][] = [];
+  context.mock.method(
+    client,
+    "$transaction",
+    async (operation: (tx: object) => Promise<unknown>) =>
+      operation({
+        orderNumberSequence: { update: async () => ({ nextValue: 1001 }) },
+        order: { create: async () => ({ id: "order-test" }) },
+        orderActivityEvent: { create: async () => ({}) },
+        emailOutbox: {
+          create: async (args: Prisma.EmailOutboxCreateArgs) => {
+            queued.push(args.data);
+            return { id: `mail-${queued.length}` };
+          },
+        },
+      }),
+  );
+  const created = await createOrder(
+    input,
+    "public",
+    "-",
+    { ...settings, companyEmail: "company@example.test" },
+    new URL("https://runtime.example.test/"),
+  );
+  assert.equal(created.orderNumber, 1000);
+  assert.deepEqual(created.outboxIds, ["mail-1", "mail-2"]);
+  assert.equal(queued.length, 2);
+  assert.deepEqual(queued[0]?.recipients, ["customer@example.test"]);
+  assert.deepEqual(queued[1]?.recipients, ["company@example.test"]);
+  assert.equal(typeof queued[0]?.contentHtml, "string");
+  assert.equal(typeof queued[1]?.contentHtml, "string");
+  assert.doesNotMatch(queued[0]!.contentHtml, /\/edit\/|Auftrag in Vega öffnen/u);
+  assert.match(
+    queued[1]!.contentHtml,
+    /href="https:\/\/runtime\.example\.test\/edit\/1000"/u,
+  );
+});
+
 test("stored orders retain the previous public order source", () => {
   const input = {
     ...orderFixture(),

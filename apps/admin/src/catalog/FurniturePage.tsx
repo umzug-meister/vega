@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { FilterList, FilterListOff } from "@mui/icons-material";
-import { Card, Checkbox, FormControlLabel, FormGroup, IconButton, Stack, Typography } from "@mui/material";
+import { Card, CardContent, Checkbox, FormControlLabel, FormGroup, IconButton, Stack, Typography } from "@mui/material";
 import { AdminAlert } from "../components/AdminNotifications.js";
 import type { CatalogCategoryDto, CatalogFurnitureDto } from "@vega/domain";
 import { CatalogCrudPage, type CatalogColumn, type CatalogField } from "./CatalogCrudPage.js";
@@ -56,8 +56,9 @@ export function FurniturePage() {
     </IconButton>
   );
   const filterPanel = filterBarVisible ? (
-    <Card variant="outlined" sx={{ p: 1 }}>
-      <FormGroup row>
+    <Card variant="outlined">
+      <CardContent>
+        <FormGroup row>
         <Typography variant="subtitle2" color="primary" sx={{ mr: 1, alignSelf: "center", fontWeight: "bold" }}>Kategorie:</Typography>
         <FormControlLabel label="Ohne Kategorie" control={<Checkbox checked={showWithoutCategory} onChange={(event) => setShowWithoutCategory(event.target.checked)} />} />
         {categories.items.map((category) => (
@@ -67,7 +68,8 @@ export function FurniturePage() {
             control={<Checkbox checked={selectedCategoryIds.includes(category.id)} onChange={(event) => setSelectedCategoryIds((current) => event.target.checked ? [...current, category.id] : current.filter((id) => id !== category.id))} />}
           />
         ))}
-      </FormGroup>
+        </FormGroup>
+      </CardContent>
     </Card>
   ) : null;
 

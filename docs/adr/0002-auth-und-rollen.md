@@ -18,6 +18,7 @@ Rollen sind `Admin` und `Kundenberater`. Berechtigungen werden serverseitig auf 
 
 - Admin: Benutzer, globale Kataloge/Preise, alle Orders und Angebote, Rechnungen, Gutschriften und Mahnungen.
 - Kundenberater: Orders bearbeiten, Einzelangebote kopieren/anpassen/archivieren, individuellen Angebotspreis festlegen, E-Mail/PDF versenden, Order archivieren/wiederherstellen.
+- Admins und Kundenberater nutzen das E-Mail-Postfach: Mails der konfigurierten Mailbox lesen und beantworten, per Gemini analysieren und mit aktiven Orders verknüpfen. Archivierte Orders können nicht verknüpft werden.
 - Kundenberater dürfen keine globalen Preis-/Katalogdaten, Benutzer oder Buchhaltungsdatensätze verwalten.
 
 ## Folgen
