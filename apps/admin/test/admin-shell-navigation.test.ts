@@ -37,6 +37,7 @@ test("sidebar collapse remains accessible and preserves navigation", async () =>
   try {
     const navigation = app.container.querySelector('[aria-label="Hauptmenü"]');
     assert.ok(navigation);
+    assert.ok(navigation.querySelector('[aria-label="Ortszeiten"]'));
     assert.ok(app.container.querySelector('[aria-label="Aufträge"]'));
     assert.ok(
       app.container.querySelector('[title="Abmelden"][aria-label="Abmelden"]'),
@@ -56,7 +57,9 @@ test("sidebar collapse remains accessible and preserves navigation", async () =>
       "Seitenleiste ausklappen",
     );
     assert.equal(app.container.querySelector('[aria-label="Katalog"]'), null);
+    assert.equal(navigation.querySelector('[aria-label="Ortszeiten"]'), null);
     await app.click(collapse()!);
+    assert.ok(navigation.querySelector('[aria-label="Ortszeiten"]'));
 
     await app.click(app.container.querySelector('[aria-label="Aufträge"]')!);
     assert.deepEqual(navigated, ["/"]);
