@@ -44,6 +44,7 @@ const fixedAdminRoutes: Record<string, AdminRoute> = {
     title: "Optionen",
     adminOnly: true,
     settingsArea: "options",
+    parentTitle: "Verwaltung",
   },
   "/maintenance": {
     path: "/maintenance",

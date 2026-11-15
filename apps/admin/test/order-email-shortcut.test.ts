@@ -129,7 +129,7 @@ test("Inbox can open a saved-order offer outside the order editor", async (conte
       data: {
         to: "kunde@example.test",
         subject: "Angebot",
-        contentHtml: "<p>Angebot</p><p></p><blockquote>Originalmail</blockquote>",
+        contentHtml: '<p>Im Anhang finden Sie den Auftrag.</p><p><strong><span style="color:#28527a">Bitte antworten:</span></strong></p><ul><li><p><strong><span style="color:#28527a">Telefonnummer</span></strong></p></li></ul><p></p><blockquote>Originalmail</blockquote>',
         attachmentNames: [],
       },
     });
@@ -183,5 +183,7 @@ test("Inbox can open a saved-order offer outside the order editor", async (conte
   ]);
   assert.equal(sendBody?.replyToSourceMail, true);
   assert.equal(sendBody?.simpleSignature, true);
+  assert.match(String(sendBody?.contentHtml), /<span style="color: rgb\(40, 82, 122\);"><strong>Bitte antworten:<\/strong><\/span>/u);
+  assert.match(String(sendBody?.contentHtml), /<span style="color: rgb\(40, 82, 122\);"><strong>Telefonnummer<\/strong><\/span>/u);
   assert.match(String(sendBody?.contentHtml), /<blockquote><p>Originalmail<\/p><\/blockquote>/u);
 });

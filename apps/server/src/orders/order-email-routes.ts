@@ -101,6 +101,7 @@ export function registerOrderEmailRoutes(
         req.params.orderNumber,
         req.query.kind,
         req.query.partner,
+        req.query.reply === "1",
       );
       if (!context.ok) return fail(res, context);
       const { order, partner, draft } = context.value;
@@ -272,6 +273,7 @@ async function resolveContext(
   orderNumberParam: unknown,
   kindParam: unknown,
   partnerParam: unknown,
+  replyToSourceMail = false,
 ): Promise<ContextResult> {
   const orderNumber = parseOrderNumber(orderNumberParam);
   if (orderNumber === null) return orderNotFound;
@@ -329,6 +331,7 @@ async function resolveContext(
           option: { orderNumber: order.orderNumber, data },
           referenceNumber: order.orderNumber,
           now: new Date(),
+          includeMissingDetails: replyToSourceMail,
         }),
       },
     };

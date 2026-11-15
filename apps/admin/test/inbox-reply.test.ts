@@ -78,6 +78,187 @@ test("Reply All composer displays recipients and sends the edited body", async (
   assert.equal(closed, true);
 });
 
+test("Inbox refresh reloads the current page and preserves the selected message", async (context) => {
+  let listRequests = 0;
+  context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.endsWith("/api/admin/inbox/status"))
+      return Response.json({ data: { geminiEnabled: false } });
+    if (url.includes("/api/admin/inbox/messages?page=")) {
+      listRequests += 1;
+      if (listRequests === 3)
+        return Response.json({ error: { message: "Postfach nicht erreichbar" } }, { status: 503 });
+      return Response.json({
+        data: {
+          messages: [{
+            uid: 42, subject: listRequests === 1 ? "Vorher" : "Aktualisiert", from: null,
+            date: "2026-11-14T10:00:00.000Z", unseen: false, attachmentCount: 0,
+          }],
+          pagination: { page: 1, perPage: 25, total: 1, totalPages: 1 },
+        },
+      });
+    }
+    if (url.endsWith("/api/admin/inbox/messages/42"))
+      return Response.json({
+        data: {
+          uid: 42, subject: "Ausgewählte Mail", from: null, to: [],
+          date: "2026-11-14T10:00:00.000Z", unseen: false,
+          attachmentCount: 0, text: "Vorschau", attachments: [],
+        },
+      });
+    throw new Error(`Unexpected request: ${url}`);
+  });
+  const view = await mount(
+    React.createElement(AdminNotifications, null,
+      React.createElement(InboxPage, { navigate: () => {} })),
+  );
+  context.after(() => view.cleanup());
+  await view.flush();
+  const message = [...view.window.document.querySelectorAll('[role="button"]')]
+    .find((button) => button.textContent?.includes("Vorher"));
+  assert.ok(message);
+  await view.click(message);
+  await view.flush();
+  const refresh = view.window.document.querySelector<HTMLButtonElement>(
+    'button[aria-label="Posteingang aktualisieren"]',
+  );
+  assert.ok(refresh);
+  await view.click(refresh);
+  await view.flush();
+  assert.equal(listRequests, 2);
+  assert.ok(view.window.document.body.textContent?.includes("Aktualisiert"));
+  assert.ok(view.window.document.body.textContent?.includes("Ausgewählte Mail"));
+  assert.equal(view.window.document.querySelector('[aria-pressed="true"]')?.textContent?.includes("Aktualisiert"), true);
+  await view.click(refresh);
+  await view.flush();
+  assert.equal(listRequests, 3);
+  assert.ok(view.window.document.body.textContent?.includes("Postfach nicht erreichbar"));
+  assert.equal(refresh.disabled, false);
+  await view.click(refresh);
+  await view.flush();
+  assert.equal(listRequests, 4);
+  assert.ok(!view.window.document.body.textContent?.includes("Postfach nicht erreichbar"));
+});
+
+test("Inbox displays image attachments inline and preserves attachment links", async (context) => {
+  context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.endsWith("/api/admin/inbox/status"))
+      return Response.json({ data: { geminiEnabled: false } });
+    if (url.includes("/api/admin/inbox/messages?page="))
+      return Response.json({
+        data: {
+          messages: [{
+            uid: 42, subject: "Fotos", from: null,
+            date: "2026-11-14T10:00:00.000Z", unseen: false, attachmentCount: 2,
+          }],
+          pagination: { page: 1, perPage: 25, total: 1, totalPages: 1 },
+        },
+      });
+    if (url.endsWith("/api/admin/inbox/messages/42"))
+      return Response.json({
+        data: {
+          uid: 42, subject: "Fotos", from: null, to: [],
+          date: "2026-11-14T10:00:00.000Z", unseen: false,
+          attachmentCount: 2, text: "Bilder", attachments: [
+            { id: "image/1", filename: "foto.jpg", contentType: "image/jpeg", sizeBytes: 1024, inline: false },
+            { id: "pdf", filename: "liste.pdf", contentType: "application/pdf", sizeBytes: 1024, inline: false },
+            { id: "logo", filename: "logo.png", contentType: "image/png", sizeBytes: 100, inline: true },
+          ],
+        },
+      });
+    throw new Error(`Unexpected request: ${url}`);
+  });
+  const view = await mount(
+    React.createElement(AdminNotifications, null,
+      React.createElement(InboxPage, { navigate: () => {} })),
+  );
+  context.after(() => view.cleanup());
+  await view.flush();
+  const message = [...view.window.document.querySelectorAll('[role="button"]')]
+    .find((button) => button.textContent?.includes("Fotos"));
+  assert.ok(message);
+  await view.click(message);
+  await view.flush();
+  const image = view.window.document.querySelector<HTMLImageElement>('img[alt="foto.jpg"]');
+  assert.ok(image);
+  assert.equal(image.getAttribute("src"), "/api/admin/inbox/messages/42/attachments/image%2F1");
+  assert.equal(view.window.document.querySelector('img[alt="logo.png"]'), null);
+  assert.ok(view.window.document.querySelector('a[href="/api/admin/inbox/messages/42/attachments/pdf"]'));
+  await React.act(async () => {
+    image.dispatchEvent(new view.window.Event("error"));
+  });
+  await view.flush();
+  assert.ok(view.window.document.body.textContent?.includes("Bildvorschau konnte nicht geladen werden: foto.jpg"));
+  assert.ok(view.window.document.querySelector('a[href="/api/admin/inbox/messages/42/attachments/image%2F1"]'));
+});
+
+test("Inbox draft shows disabled actions until an order is saved", async (context) => {
+  context.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.endsWith("/api/admin/inbox/status"))
+      return Response.json({ data: { geminiEnabled: true } });
+    if (url.includes("/api/admin/inbox/messages?page="))
+      return Response.json({
+        data: {
+          messages: [{
+            uid: 42, subject: "Anfrage", from: null,
+            date: "2026-11-14T10:00:00.000Z", unseen: false, attachmentCount: 0,
+          }],
+          pagination: { page: 1, perPage: 25, total: 1, totalPages: 1 },
+        },
+      });
+    if (url.endsWith("/api/admin/inbox/messages/42"))
+      return Response.json({
+        data: {
+          uid: 42, subject: "Anfrage", from: null, to: [],
+          date: "2026-11-14T10:00:00.000Z", unseen: false,
+          attachmentCount: 0, text: "Anfrage", attachments: [],
+        },
+      });
+    if (url.endsWith("/api/admin/inbox/messages/42/analyze"))
+      return Response.json({
+        data: {
+          draft: {
+            customer: { firstName: "", lastName: "", email: "", phone: "" },
+            from: {}, to: {}, note: "",
+            furniture: { items: [], volume: 0, volumeComplete: true },
+          },
+          unmatchedFurniture: [], skippedAttachments: [], filledFields: [],
+        },
+      });
+    if (url === "/api/admin/routes/config")
+      return Response.json({ data: { origin: null, available: false } });
+    return Response.json({ data: [] });
+  });
+  const view = await mount(
+    React.createElement(AdminNotifications, null,
+      React.createElement(InboxPage, { navigate: () => {} })),
+  );
+  context.after(() => view.cleanup());
+  await view.flush();
+  const message = [...view.window.document.querySelectorAll('[role="button"]')]
+    .find((button) => button.textContent?.includes("Anfrage"));
+  assert.ok(message);
+  await view.click(message);
+  await view.flush();
+  const generate = [...view.window.document.querySelectorAll("button")]
+    .find((button) => button.textContent?.trim() === "Generieren");
+  assert.ok(generate);
+  await view.click(generate);
+  await view.flush();
+  for (const [label, disabled] of [
+    ["Auftrag speichern", false],
+    ["Angebotskopie anlegen", true],
+    ["PDF erzeugen", true],
+    ["Angebot versenden", true],
+  ] as const) {
+    const button = view.window.document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
+    assert.ok(button, label);
+    assert.equal(button.disabled, disabled, label);
+  }
+});
+
 test("Inbox links a selected email to an existing order and opens its editor", async (context) => {
   const originalFetch = globalThis.fetch;
   const requests: Array<{ url: string; method: string; body?: unknown }> = [];
@@ -194,6 +375,11 @@ test("Inbox links a selected email to an existing order and opens its editor", a
   ));
   assert.ok(requests.some((request) => request.url === "/api/admin/orders/1042"));
 
+  for (const label of ["Angebotskopie anlegen", "PDF erzeugen", "Angebot versenden"]) {
+    const action = view.window.document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
+    assert.ok(action, label);
+    assert.equal(action.disabled, false, label);
+  }
   const copyButton = view.window.document.querySelector<HTMLButtonElement>(
     'button[aria-label="Angebotskopie anlegen"]',
   );
@@ -209,5 +395,15 @@ test("Inbox links a selected email to an existing order and opens its editor", a
     request.url.endsWith("/api/admin/inbox/messages/42/link-order") &&
     (request.body as { orderNumber?: number } | undefined)?.orderNumber === 1043,
   ));
+  const firstName = [...view.window.document.querySelectorAll("input")]
+    .find((input) => input.labels?.[0]?.textContent?.includes("Vorname"));
+  assert.ok(firstName);
+  await view.input(firstName, "Änderung");
+  await view.flush();
+  for (const label of ["Angebotskopie anlegen", "PDF erzeugen", "Angebot versenden"]) {
+    const action = view.window.document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
+    assert.ok(action, label);
+    assert.equal(action.disabled, true, label);
+  }
   assert.ok(requests.some((request) => request.url === "/api/admin/orders/1043"));
 });

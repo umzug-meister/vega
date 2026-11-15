@@ -74,6 +74,7 @@ export const ANALYSIS_SYSTEM_INSTRUCTION = [
   "- 'from' ist die Auszugsadresse (Beladestelle), 'to' die Einzugsadresse (Entladestelle).",
   "- Weitere eindeutig genannte Be- und Entladestellen in secondaryFrom bzw. secondaryTo eintragen. Angaben zu Keller, Dachboden, Garage, umzuziehenden Zimmern und Hausstockwerken nur bei eindeutiger Zuordnung übernehmen. Hausstockwerke: UG, EG, 1.OG, 2.OG.",
   "- Möbel: Ordne jedes erkannte Möbelstück dem passenden Eintrag des Möbelkatalogs zu (Synonyme beachten, z. B. Sofa = Couch) und gib die Katalog-ID und die Anzahl an. Zähle nur tatsächlich genannte oder auf Fotos sichtbare Möbel. Kartons und Kleinteile nicht als Möbel zählen; ausdrücklich genannte Karton- und Kleiderboxmengen separat angeben.",
+  "- Gesamtvolumen: Übernimm ein ausdrücklich für das gesamte Umzugsgut genanntes Volumen in m³ als 'declaredVolumeM3', auch bei ungefährer Angabe (z. B. 'ca. 25,5 m³' = 25.5). Es gilt unabhängig von der Möbelliste und den Kartons. Kein Gesamtvolumen aus einzelnen Möbeln, Raummaßen oder Fotos berechnen oder schätzen; bei fehlender, mehrdeutiger oder widersprüchlicher Angabe null.",
   "- Bettenanzahl und Gesamtbreite von Schränken und Küche in Metern nur bei ausdrücklicher Angabe übernehmen. Besondere schwere, wertvolle und sperrige Gegenstände samt Beschreibung separat angeben.",
   "- Leistungen und Packmaterial nur bei ausdrücklichem Wunsch und eindeutiger Zuordnung zum jeweiligen Katalog mit Art, ID und Menge angeben. Keine Preise ausgeben. Mengen nicht raten. Wünsche ohne eindeutige Katalogposition oder Menge in der Notiz festhalten. Verpackungsmaterial-Kaufwunsch, Besichtigungswunsch und Kostenübernahme durch das Arbeitsamt nur bei eindeutiger Angabe setzen.",
   "- dateFixed nur setzen, wenn die Verbindlichkeit eines einzelnen Termins ausdrücklich genannt wird.",
@@ -153,6 +154,11 @@ export function buildResponseSchema(): Record<string, unknown> {
       secondaryTo: secondaryAddressSchema,
       boxes: { type: "INTEGER", nullable: true },
       wardrobeBoxes: { type: "INTEGER", nullable: true },
+      declaredVolumeM3: {
+        type: "NUMBER",
+        nullable: true,
+        description: "Ausdrücklich genanntes Gesamtvolumen des Umzugsguts in m³, sonst null.",
+      },
       expensiveText: { type: "STRING", nullable: true },
       heavyText: { type: "STRING", nullable: true },
       bulkyText: { type: "STRING", nullable: true },
@@ -196,7 +202,7 @@ export function buildResponseSchema(): Record<string, unknown> {
       },
       note: { type: "STRING", nullable: true },
     },
-    required: ["from", "to", "furniture", "unmatchedFurniture"],
+    required: ["from", "to", "furniture", "unmatchedFurniture", "declaredVolumeM3"],
   };
 }
 
@@ -484,6 +490,12 @@ export function mapGeminiOutput(
     draft.furniture.volumeComplete &&
     !(boxes > 0 && boxVolume === null) &&
     !(wardrobeBoxes > 0 && wardrobeBoxVolume === null);
+  const declaredVolume = num(output.declaredVolumeM3, 0, 100_000);
+  if (declaredVolume !== undefined) {
+    draft.furniture.volume = declaredVolume;
+    draft.furniture.volumeComplete = true;
+    filledFields.push("furniture.volume");
+  }
   for (const key of ["expensive", "heavy", "bulky"] as const) {
     const text = str(output[`${key}Text`], 3000);
     if (text) {
@@ -528,7 +540,9 @@ export function mapGeminiOutput(
   if (note) noteLines.push(note);
   if (unmatched.length) {
     noteLines.push(
-      "Nicht im Katalog erkannt (grobe Schätzung, nicht im berechneten Volumen enthalten): " +
+      (declaredVolume === undefined
+        ? "Nicht im Katalog erkannt (grobe Schätzung, nicht im berechneten Volumen enthalten): "
+        : "Nicht im Katalog erkannt (grobe Schätzung): ") +
         unmatched
           .map(
             (item) =>

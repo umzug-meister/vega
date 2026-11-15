@@ -38,17 +38,13 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: Build and typecheck
-        run: npm run build
+      - run: npm run build
       - parallel:
-          - name: Lint
-            run: npm run lint
-          - name: Unit tests
-            run: npm test
+          - run: npm run lint
+          - run: npm test
           - name: Database migrations and tests
             run: |
               npm run db:migrate:deploy
               npm run db:check-schema
               npm run test:database
-          - name: Deployment test
-            run: npm run test:deployment
+          - run: npm run test:deployment

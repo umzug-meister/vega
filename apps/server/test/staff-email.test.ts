@@ -7,6 +7,7 @@ import {
 import {
   declineEmail,
   invoiceEmail,
+  missingOrderDetailsHtml,
   offerEmail,
   offerValidUntil,
   salutationLine,
@@ -50,6 +51,53 @@ test("salutation follows the stored customer and stays neutral without a name", 
 
 test("offer validity is the next calendar day in Europe/Berlin", () => {
   assert.equal(offerValidUntil(now), "17.10.2026");
+});
+
+test("missing order details request only absent data and survive email sanitization", () => {
+  const data = orderFixture();
+  data.customer.firstName = "";
+  data.customer.phone = " ";
+  data.from.street = "";
+  data.from.floor = "";
+  delete data.to;
+  data.movingDate = "";
+  assert.ok(data.details);
+  data.details.secondaryFrom = { street: "Lager 1", postalCode: "12345", city: "Berlin", floor: "EG" };
+  data.details.showSecondaryTo = false;
+  data.details.furniture.volumeComplete = false;
+  const html = missingOrderDetailsHtml(data);
+  assert.match(html, /Bitte teilen Sie uns diese in Ihrer Antwort mit/u);
+  assert.match(html, /<p><strong><span style="color:#28527a">Für die weitere Planung/u);
+  assert.match(html, /<li><p><strong><span style="color:#28527a">Telefonnummer<\/span><\/strong><\/p><\/li>/u);
+  for (const expected of [
+    "Vor- und Nachname", "Telefonnummer", "Abholadresse: Straße und Hausnummer, Etage",
+    "Lieferadresse: Straße und Hausnummer, Postleitzahl, Ort, Etage",
+    "Gewünschter Umzugstermin oder Zeitraum", "Vollständige Liste des Umzugsguts oder das gesamte Umzugsvolumen",
+  ]) assert.ok(html.includes(expected), expected);
+  assert.doesNotMatch(html, /Weitere Abholadresse|Weitere Lieferadresse/u);
+  assert.equal(sanitizeEmailHtml(html), html);
+  assert.equal(
+    sanitizeEmailHtml('<p><span style="color: rgb(40, 82, 122);"><strong>Telefonnummer</strong></span></p>'),
+    '<p><span style="color:#28527a"><strong>Telefonnummer</strong></span></p>',
+  );
+
+  data.customer.firstName = "Test";
+  data.customer.phone = "123456";
+  data.from.street = "Beispielstraße 1";
+  data.from.floor = "EG";
+  data.to = { street: "Zielstraße 2", postalCode: "12345", city: "Berlin", floor: "1. Etage" };
+  data.dateFrom = "2026-11-16";
+  data.dateTo = "2026-11-20";
+  data.details.furniture.volumeComplete = true;
+  assert.equal(missingOrderDetailsHtml(data), "");
+
+  data.details.furniture.volume = 0;
+  assert.match(missingOrderDetailsHtml(data), /Umzugsvolumen/u);
+  data.details.showSecondaryFrom = true;
+  data.details.secondaryFrom.floor = "";
+  assert.match(missingOrderDetailsHtml(data), /Weitere Abholadresse: Etage/u);
+  data.from.street = "Beispielstraße";
+  assert.match(missingOrderDetailsHtml(data), /Abholadresse: Hausnummer/u);
 });
 
 test("single offer lists crew, conditions and the PDF total without a closing greeting", () => {

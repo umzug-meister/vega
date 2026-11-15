@@ -395,6 +395,42 @@ test("box volume is calculated from server settings, not the model", () => {
   assert.equal(result.draft.furniture.volumeComplete, true);
 });
 
+test("declared total volume takes precedence over furniture and boxes", () => {
+  const result = mapGeminiOutput(
+    {
+      declaredVolumeM3: 25.5,
+      furniture: [{ catalogId: 1, quantity: 2 }],
+      boxes: 10,
+      unmatchedFurniture: [{ name: "Klavier", quantity: 1, estimatedVolumeM3: 1.2 }],
+    },
+    { ...context, boxVolumes: { box: 0.1, wardrobeBox: null } },
+  );
+  assert.equal(result.draft.furniture.volume, 25.5);
+  assert.equal(result.draft.furniture.volumeComplete, true);
+  assert.equal(result.draft.furniture.items[0]?.quantity, 2);
+  assert.equal(result.draft.furniture.boxes, 10);
+  assert.ok(result.filledFields.includes("furniture.volume"));
+  assert.ok(result.draft.note.includes("Klavier"));
+  assert.ok(!result.draft.note.includes("nicht im berechneten Volumen enthalten"));
+  const withoutFurniture = mapGeminiOutput({ declaredVolumeM3: 12.75 }, context);
+  assert.equal(withoutFurniture.draft.furniture.volume, 12.75);
+  assert.deepEqual(withoutFurniture.draft.furniture.items, []);
+});
+
+test("missing or invalid declared volume falls back to calculated volume", () => {
+  for (const declaredVolumeM3 of [null, undefined, -1, 100_001, "25", NaN, Infinity]) {
+    const result = mapGeminiOutput(
+      { declaredVolumeM3, furniture: [{ catalogId: 1, quantity: 2 }], boxes: 2 },
+      { ...context, boxVolumes: { box: 0.1, wardrobeBox: null } },
+    );
+    assert.equal(result.draft.furniture.volume, 3.2);
+    assert.ok(!result.filledFields.includes("furniture.volume"));
+  }
+  const zero = mapGeminiOutput({ declaredVolumeM3: 0 }, context);
+  assert.equal(zero.draft.furniture.volume, 0);
+  assert.ok(zero.filledFields.includes("furniture.volume"));
+});
+
 test("house floor fallback and missing or invalid additional values", () => {
   const result = mapGeminiOutput(
     {
@@ -622,6 +658,41 @@ test("analyzeMessage redacts contact data before Gemini and reports skipped atta
   assert.equal(result.skippedAttachments[0]?.filename, "alt.doc");
   assert.equal(result.draft.customer.phone, "0171 1234567");
   assert.equal(result.draft.furniture.items[0]?.name, "Couch");
+});
+
+test("analyzeMessage requests and transfers explicitly stated total volume", async () => {
+  const inbox = fakeInbox();
+  inbox.getText = async () => ({
+    text: "Das Umzugsvolumen beträgt ca. 25,5 m³. Dazu gehören zwei Sofas und zehn Kartons.",
+    html: "",
+  });
+  const gemini: GeminiClient = {
+    generateJson: async (request) => {
+      assert.match(request.systemInstruction, /Gesamtvolumen.*declaredVolumeM3/u);
+      assert.match(JSON.stringify(request.parts), /25,5 m³/u);
+      const properties = request.responseSchema.properties;
+      assert.ok(properties && typeof properties === "object");
+      assert.deepEqual(Reflect.get(properties, "declaredVolumeM3"), {
+        type: "NUMBER",
+        nullable: true,
+        description: "Ausdrücklich genanntes Gesamtvolumen des Umzugsguts in m³, sonst null.",
+      });
+      return {
+        from: {},
+        to: {},
+        furniture: [{ catalogId: 1, quantity: 2, confidence: "high" }],
+        unmatchedFurniture: [],
+        boxes: 10,
+        declaredVolumeM3: 25.5,
+      };
+    },
+  };
+  const result = await analyzeMessage(
+    { inbox, gemini, loadCatalog: async () => catalog, loadBoxVolumes: async () => ({ box: 0.1, wardrobeBox: null }) },
+    5,
+  );
+  assert.equal(result.draft.furniture.volume, 25.5);
+  assert.equal(result.draft.furniture.items[0]?.quantity, 2);
 });
 
 test("forwarded partial addresses and floors survive redaction and reach the order draft", async () => {
