@@ -25,6 +25,8 @@ und Rechnungserstellung. Optionen (`/options`), Katalogbereiche (`/offers`,
 `/prices`, `/packings`, `/services`, `/categories`, `/furniture`) und Nutzer
 (`/users`) sind direkte Pfade ohne vorgeschaltetes `/settings`-Segment;
 archivierte Orders/Rechnungen und Profil haben eigene Routen.
+Der Admin-Inhaltsbereich nutzt die verfügbare Breite neben der Seitenleiste
+ohne feste Maximalbreite; ein seitlicher Innenabstand bleibt bestehen.
 
 Wartung (`/maintenance`) liegt im Admin-Bereich „Verwaltung“ und ist
 ausschließlich für Admins sichtbar und zugänglich.

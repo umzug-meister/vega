@@ -68,6 +68,19 @@ test("sidebar collapse remains accessible and preserves navigation", async () =>
   }
 });
 
+test("admin content uses the available width without a maximum", async () => {
+  const app = await mount(shell(), "/offers");
+  try {
+    const container = app.container.querySelector("main .MuiContainer-root");
+    assert.ok(container);
+    assert.equal(app.window.getComputedStyle(container).width, "100%");
+    assert.ok(["", "none"].includes(app.window.getComputedStyle(container).maxWidth));
+    assert.equal(app.window.getComputedStyle(container).paddingLeft, "16px");
+  } finally {
+    await app.cleanup();
+  }
+});
+
 test("content navigation maps every section to its icon and highlights the route", async () => {
   const app = await mount(shell(), "/offers");
   try {
