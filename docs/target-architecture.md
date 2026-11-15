@@ -65,6 +65,9 @@ seinen Kopien. Auf kleinen Bildschirmen sind alle verfügbaren
 Dokumentaktionen einschließlich der einzelnen E-Mail-Aktionen erreichbar;
 dieselben Sperr- und Rollenregeln gelten. In aktiven und archivierten
 Auftragslisten steht eine angegebene Firma vor dem Kundennamen.
+In der ausgeklappten Admin-Seitenleiste stehen analoge Uhren mit aktuellen
+Ortszeiten: München oben, Minsk, Kaliningrad und Warna darunter. Die Anzeige
+nutzt Ortszeitzonen und berücksichtigt Sommer- und Winterzeit automatisch.
 
 Archivierte Aufträge und Rechnungen sind nicht bearbeitbar. Die Archivlisten
 bieten PDF-Download zum Drucken sowie Wiederherstellung und zeigen das
