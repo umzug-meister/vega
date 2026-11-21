@@ -10,7 +10,7 @@ export async function renderOrderPdf(order: OrderWithRelations): Promise<{ pdf: 
   const data = orderDataWithRelations(order);
   const pricingSnapshot = data.pricingSnapshot;
   const input = {
-    orderNumber: order.orderNumber, data, rates: pricingSnapshot?.rates ?? [],
+    orderNumber: order.orderNumber, pdfFilename: order.pdfFilename, data, rates: pricingSnapshot?.rates ?? [],
     services: (pricingSnapshot?.services ?? []).map((service) => ({ ...service, show: true, media: null, description: "" })),
   };
   const [latestActivity, lastEdit] = await Promise.all([

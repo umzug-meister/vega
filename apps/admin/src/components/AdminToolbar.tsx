@@ -5,6 +5,7 @@ import {
   CloseOutlined,
   ContentCopyOutlined,
   EmailOutlined,
+  EditOutlined,
   FileDownloadOutlined,
   MenuOutlined,
   MoreVert,
@@ -14,6 +15,7 @@ import {
 import {
   AppBar,
   Badge,
+  Box,
   Divider,
   IconButton,
   ListItemIcon,
@@ -37,7 +39,8 @@ interface AdminToolbarProps {
   orderActionsDisabled: boolean;
   orderHasChanges: boolean;
   orderIsCopy: boolean;
-  orderHasSourceMail: boolean;
+  orderPdfFilename: string | null;
+  onEditOrderPdfFilename: () => void;
   isAdmin: boolean;
   isInvoiceEditor: boolean;
   editedInvoiceId?: string | undefined;
@@ -48,10 +51,7 @@ interface AdminToolbarProps {
   onOpenDrawer: () => void;
   onCopyOrder: () => void;
   onArchiveOrder: () => void;
-  onOrderEmail: (
-    kind: "offer" | "offer-pair" | "decline",
-    replyToSourceMail?: boolean,
-  ) => void;
+  onOrderEmail: (kind: "offer" | "offer-pair" | "decline") => void;
   onInvoiceEmail: () => void;
   onArchiveInvoice: () => void;
 }
@@ -67,7 +67,8 @@ export function AdminToolbar({
   orderActionsDisabled,
   orderHasChanges,
   orderIsCopy,
-  orderHasSourceMail,
+  orderPdfFilename,
+  onEditOrderPdfFilename,
   isAdmin,
   isInvoiceEditor,
   editedInvoiceId,
@@ -102,11 +103,10 @@ export function AdminToolbar({
 
   function selectOrderEmail(
     kind: "offer" | "offer-pair" | "decline",
-    replyToSourceMail = false,
   ) {
     setActionsMenuAnchor(null);
     setEmailMenuAnchor(null);
-    onOrderEmail(kind, replyToSourceMail);
+    onOrderEmail(kind);
   }
 
   return (
@@ -131,10 +131,53 @@ export function AdminToolbar({
         <Typography
           component="h1"
           variant="h6"
-          sx={{ flexGrow: 1, ml: { xs: 1, md: 0 } }}
+          sx={{ flexGrow: isOrderEditor && orderPdfFilename ? 0 : 1, flexShrink: 0, ml: { xs: 1, md: 0 } }}
         >
           {title}
         </Typography>
+        {isOrderEditor && orderPdfFilename && (
+          <Box
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 0.5,
+              mx: { xs: 1, md: 2 },
+              "&:hover .offer-filename-edit, &:focus-within .offer-filename-edit": { opacity: 1 },
+            }}
+          >
+            <Typography
+              variant="body2"
+              noWrap
+              title={orderPdfFilename.replace(/\.pdf$/iu, "")}
+              aria-label="Angebotsname"
+              sx={{ minWidth: 0 }}
+            >
+              {orderPdfFilename.replace(/\.pdf$/iu, "")}
+            </Typography>
+            <Tooltip title="Angebotsnamen bearbeiten">
+              <span>
+                <IconButton
+                  size="small"
+                  color="inherit"
+                  className="offer-filename-edit"
+                  aria-label="Angebotsnamen bearbeiten"
+                  disabled={orderActionsDisabled}
+                  onClick={onEditOrderPdfFilename}
+                  sx={{
+                    opacity: 0,
+                    "&:focus-visible": { opacity: 1 },
+                    "@media (hover: none)": { opacity: 1 },
+                  }}
+                >
+                  <EditOutlined fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Box>
+        )}
         {isOrderEditor && (
           <>
             {!isSmallScreen ? (
@@ -210,13 +253,6 @@ export function AdminToolbar({
                       <MenuItem onClick={() => selectOrderEmail("offer")}>
                         Angebot versenden
                       </MenuItem>
-                      {orderHasSourceMail && (
-                        <MenuItem
-                          onClick={() => selectOrderEmail("offer", true)}
-                        >
-                          Als Antwort auf Mail senden
-                        </MenuItem>
-                      )}
                       {orderIsCopy && (
                         <MenuItem
                           onClick={() => selectOrderEmail("offer-pair")}
@@ -348,14 +384,6 @@ export function AdminToolbar({
                         </ListItemIcon>
                         Angebot versenden
                       </MenuItem>
-                      {orderHasSourceMail && (
-                        <MenuItem
-                          disabled={orderActionsDisabled}
-                          onClick={() => selectOrderEmail("offer", true)}
-                        >
-                          Als Antwort auf Mail senden
-                        </MenuItem>
-                      )}
                       {orderIsCopy && (
                         <MenuItem
                           disabled={orderActionsDisabled}

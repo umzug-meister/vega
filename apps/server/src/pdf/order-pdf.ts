@@ -73,7 +73,11 @@ function date(value: string, weekday = false): string {
 export function orderPdfFilename({
   orderNumber,
   data,
-}: Pick<OrderPdfInput, "orderNumber" | "data">): string {
+  pdfFilename,
+}: Pick<OrderPdfInput, "orderNumber" | "data"> & {
+  pdfFilename?: string | null;
+}): string {
+  if (pdfFilename) return pdfFilename;
   const basis = data.details?.basis;
   let filename = `${date(data.movingDate)}_${data.customer.lastName || "Auftrag"}_${orderNumber}`;
   if (basis?.workers) filename += `_${basis.workers}`;
@@ -84,6 +88,20 @@ export function orderPdfFilename({
     Number(Boolean(data.to?.parkingSlot));
   if (hvz) filename += `_${hvz}xHVZ`;
   return `${filename.replace(/[/\\\u0000-\u001f\u007f]/gu, "_")}.pdf`;
+}
+
+export function normalizeOrderPdfFilename(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const name = value.trim().replace(/\.pdf$/iu, "").trim();
+  const filename = `${name}.pdf`;
+  if (
+    !name ||
+    name === "." ||
+    name === ".." ||
+    /[<>:"/\\|?*\u0000-\u001f\u007f]/u.test(name) ||
+    Buffer.byteLength(filename, "utf8") > 255
+  ) return null;
+  return filename;
 }
 
 export function generateOrderPdf(

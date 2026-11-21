@@ -4,6 +4,7 @@ import {
   generateOrderPdf,
   orderPdfEditDate,
   orderPdfFilename,
+  normalizeOrderPdfFilename,
 } from "../src/pdf/order-pdf.js";
 import { orderPdfFixture } from "./order-pdf-fixture.js";
 
@@ -12,6 +13,20 @@ const streams = (pdf: Buffer) =>
   [...pdf.toString("latin1").matchAll(/stream\n([\s\S]*?)\nendstream/g)].map(
     (match) => match[1]!,
   );
+
+test("confirmed PDF names are normalized, safe and stable across order edits", () => {
+  assert.equal(normalizeOrderPdfFilename("  Angebot Müller  "), "Angebot Müller.pdf");
+  assert.equal(normalizeOrderPdfFilename("  Angebot.PDF  "), "Angebot.pdf");
+  for (const value of [undefined, null, 3, "", "  ", ".pdf", ".", "..", "../angebot", "a/b", "a\\b", "a\nb", "a:b", "a?b", "a\u0000b"])
+    assert.equal(normalizeOrderPdfFilename(value), null, String(value));
+  assert.equal(normalizeOrderPdfFilename("a".repeat(251)), `${"a".repeat(251)}.pdf`);
+  assert.equal(normalizeOrderPdfFilename("a".repeat(252)), null);
+  assert.equal(normalizeOrderPdfFilename("ä".repeat(126)), null);
+  const input = orderPdfFixture();
+  input.data.movingDate = "2027-01-01";
+  input.data.customer.lastName = "Changed";
+  assert.equal(orderPdfFilename({ ...input, pdfFilename: "Bestätigtes Angebot.pdf" }), "Bestätigtes Angebot.pdf");
+});
 
 test("order PDF renders saved customer, positions and amounts with a valid attachment filename", () => {
   const input = orderPdfFixture();
