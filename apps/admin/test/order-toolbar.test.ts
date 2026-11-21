@@ -205,6 +205,7 @@ test("dirty documents allow only saving and clean saved documents enable follow-
               pathname,
               navigate: () => {},
               orderDirty: dirty,
+              orderPdfFilename: kind === "order" && !fresh ? "Angebot.pdf" : null,
               invoiceDirty: dirty,
               orderBusy: busy,
               invoiceBusy: busy,
@@ -226,6 +227,7 @@ test("dirty documents allow only saving and clean saved documents enable follow-
             kind === "order"
               ? [
                   saveLabel,
+                  ...(fresh ? [] : ["Angebotsnamen bearbeiten"]),
                   "Angebotskopie anlegen",
                   "PDF erzeugen",
                   "E-Mail versenden",
@@ -265,6 +267,7 @@ test("dirty documents allow only saving and clean saved documents enable follow-
 });
 
 test("small-screen order and invoice actions are grouped in the overflow menu", async () => {
+  const linkedOrderState = { orderHasSourceMail: true };
   const originalMatchMedia = window.matchMedia;
   window.matchMedia = (query: string) => ({
     matches: true,
@@ -303,6 +306,7 @@ test("small-screen order and invoice actions are grouped in the overflow menu", 
         route: orderRoute,
         pathname: orderRoute.path,
         navigate: () => {},
+        ...linkedOrderState,
         orderIsCopy: true,
         children: null,
       }),

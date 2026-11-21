@@ -111,6 +111,7 @@ export function registerOrderEmailRoutes(
           : [order, ...(partner ? [partner] : [])].map((entry) =>
               orderPdfFilename({
                 orderNumber: entry.orderNumber,
+                pdfFilename: entry.pdfFilename,
                 data: orderDataWithRelations(entry),
               }),
             );

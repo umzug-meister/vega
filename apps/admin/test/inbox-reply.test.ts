@@ -117,8 +117,10 @@ test("Inbox refresh reloads the current page and preserves the selected message"
   const message = [...view.window.document.querySelectorAll('[role="button"]')]
     .find((button) => button.textContent?.includes("Vorher"));
   assert.ok(message);
+  assert.equal([...view.window.document.querySelectorAll("button")].some((button) => button.textContent?.includes("Antwort")), false);
   await view.click(message);
   await view.flush();
+  assert.ok([...view.window.document.querySelectorAll("button")].some((button) => button.textContent?.includes("Antwort")));
   const refresh = view.window.document.querySelector<HTMLButtonElement>(
     'button[aria-label="Posteingang aktualisieren"]',
   );

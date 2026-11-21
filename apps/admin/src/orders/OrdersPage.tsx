@@ -10,6 +10,8 @@ import { AdminAlert as Alert } from "../components/AdminNotifications.js";
 import type { AdminOrderListItem } from "@vega/domain";
 import { apiRequest } from "../api/api-request.js";
 import { ArchiveDateCells, ArchiveDateHeaders } from "../components/ArchiveDates.js";
+import { useOrderPdfFilename } from "./useOrderPdfFilename.js";
+import { downloadOrderPdf, saveAndFetchOrderPdf } from "./order-pdf-download.js";
 
 const PAGE_SIZE = 10;
 
@@ -25,6 +27,7 @@ export function OrdersPage({ archived = false, navigate }: { archived?: boolean;
   const [error, setError] = useState("");
   const archiveLock = useRef(false);
   const [archiveBusy, setArchiveBusy] = useState(false);
+  const { ensurePdfFilename, filenameDialog } = useOrderPdfFilename();
 
   const loadOrders = useCallback(async (nextPage: number, searchValue = "") => {
     setLoading(true); setError("");
@@ -66,6 +69,22 @@ export function OrdersPage({ archived = false, navigate }: { archived?: boolean;
   }
 
   function onClear() { setSearch(""); setActiveSearch(""); setCurrentPage(1); }
+  async function downloadPdf(orderNumber: number) {
+    if (archiveLock.current) return;
+    archiveLock.current = true;
+    setArchiveBusy(true);
+    setError("");
+    try {
+      if (!await ensurePdfFilename(orderNumber)) return;
+      const file = await saveAndFetchOrderPdf(orderNumber, () => Promise.resolve(true));
+      if (file) downloadOrderPdf(file);
+    } catch (reason) {
+      setError(reason instanceof Error && !(reason instanceof TypeError) ? reason.message : "PDF konnte nicht heruntergeladen werden.");
+    } finally {
+      archiveLock.current = false;
+      setArchiveBusy(false);
+    }
+  }
   async function changeArchive(orderNumber: number) {
     if (archiveLock.current) return;
     archiveLock.current = true;
@@ -83,6 +102,7 @@ export function OrdersPage({ archived = false, navigate }: { archived?: boolean;
   }
 
   return <Stack spacing={2}>
+    {filenameDialog}
     <Stack
       direction="row"
       spacing={1}
@@ -220,8 +240,8 @@ export function OrdersPage({ archived = false, navigate }: { archived?: boolean;
                   <TableCell sx={{ whiteSpace: "nowrap" }}>
                     <Tooltip title="PDF herunterladen">
                       <IconButton
-                        component="a"
-                        href={`/api/admin/orders/${order.orderNumber}/pdf`}
+                        disabled={archiveBusy}
+                        onClick={() => void downloadPdf(order.orderNumber)}
                         aria-label="Auftrags-PDF herunterladen"
                       >
                         <FileDownloadOutlined />

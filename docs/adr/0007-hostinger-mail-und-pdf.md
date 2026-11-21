@@ -11,6 +11,15 @@
 - Anfrage wird in MySQL gespeichert, bevor E-Mailversand erfolgt. Mailfehler verlieren keine Anfrage und können erneut versucht werden.
 - Erfolgreicher In-App-Mailversand protokolliert Aktion, Benutzername und Zeit.
 - PDF-Layouts bleiben zunächst wie Bestand. PDF-Erzeugung erfolgt im Backend on-demand; Dateien werden nicht dauerhaft gespeichert.
+- Der beim ersten PDF-Download oder Öffnen des Angebots-Maildialogs bestätigte
+  Dateiname wird als `Order.pdfFilename` gespeichert, nicht das PDF selbst.
+  Download, Entwurf und Mailanhang verwenden denselben Namen. Ohne bestätigten
+  Namen bleibt der bisherige serverseitige Standard verfügbar. Kopien erhalten
+  einen eigenen, zunächst leeren Namen.
+  Der gespeicherte Name kann über den Stift in der Auftrags-Navbar erneut im
+  Namensdialog geändert werden; der Server vergleicht dabei den bisherigen
+  Dateinamen zusätzlich zur Auftragsrevision, ohne das PDF-Bearbeitungsdatum
+  oder den fachlichen Bearbeitungsstand zu verändern.
 
 ## Umsetzungsstand (2026-10-09)
 
@@ -68,7 +77,8 @@
   Verknüpfung). „Angebot versenden“ nutzt den bestehenden Angebotsentwurf und
   PDF-Anhang, aber die einfache Reply-Signatur. Dieser Versandmodus ist
   serverseitig auf Orders mit
-  `sourceMailUid` begrenzt.
+  `sourceMailUid` begrenzt. In der Oberfläche ist dieser Antwortmodus nur im
+  Postfach mit ausgewählter E-Mail verfügbar, nicht im Menü des Auftragseditors.
 - Im editierbaren Mailtext kann zusätzlich die Textfarbe aus einer festen
   Palette (Schwarz, Grau, Rot, Orange, Grün, Blau) gesetzt oder auf die
   Standardfarbe zurückgesetzt werden. Der Editor schreibt sie als

@@ -96,6 +96,10 @@ test("staff order mails: family, pair rules, idempotent send with PDFs and succe
 
   const origin = await createOrder(orderFixture(), "admin", "Test Admin");
   numbers.push(origin.orderNumber);
+  await prisma.order.update({
+    where: { orderNumber: origin.orderNumber },
+    data: { pdfFilename: "Ursprungsangebot.pdf" },
+  });
   const copyNumbers: number[] = [];
   for (let index = 0; index < 3; index++) {
     const copied = await json(
@@ -113,6 +117,11 @@ test("staff order mails: family, pair rules, idempotent send with PDFs and succe
     number,
     number,
   ];
+  assert.equal((await prisma.order.findUniqueOrThrow({ where: { orderNumber: copy } })).pdfFilename, null);
+  await prisma.order.update({
+    where: { orderNumber: copy },
+    data: { pdfFilename: "Kopiertes Angebot.pdf" },
+  });
   await prisma.order.update({
     where: { orderNumber: archivedCopy },
     data: { archivedAt: new Date() },
@@ -182,6 +191,8 @@ test("staff order mails: family, pair rules, idempotent send with PDFs and succe
     Array.isArray(pairDraft.attachmentNames) &&
       pairDraft.attachmentNames.length === 2,
   );
+  assert.ok(Array.isArray(pairDraft.attachmentNames));
+  assert.equal(pairDraft.attachmentNames[0], "Kopiertes Angebot.pdf");
   assert.deepEqual(
     record((await json(await draft(copy, "kind=decline"))).data)
       .attachmentNames,
@@ -262,6 +273,7 @@ test("staff order mails: family, pair rules, idempotent send with PDFs and succe
   assert.ok(
     Array.isArray(payload.attachments) && payload.attachments.length === 2,
   );
+  assert.equal(record(payload.attachments[0]).filename, "Kopiertes Angebot.pdf");
   for (const attachment of payload.attachments) {
     const entry = record(attachment);
     assert.equal(entry.contentType, "application/pdf");

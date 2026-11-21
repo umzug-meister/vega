@@ -26,7 +26,7 @@ import {
   orderRelations,
 } from "./order-relations.js";
 import { renderOrderPdf } from "./order-pdf-service.js";
-import { orderGrossTotal } from "../pdf/order-pdf.js";
+import { normalizeOrderPdfFilename, orderGrossTotal, orderPdfFilename } from "../pdf/order-pdf.js";
 import { registerOrderEmailRoutes } from "./order-email-routes.js";
 import type { AppConfig } from "../config.js";
 import { normalizeOrderSearch, orderListWhere } from "./order-search.js";
@@ -194,6 +194,51 @@ export function createAdminOrderRouter(
       res.setHeader("Cache-Control", "no-store");
       res.json({ data: { items: entries } });
     } catch (error) {
+      next(error);
+    }
+  });
+
+  router.put("/:orderNumber/pdf-filename", async (req, res, next) => {
+    try {
+      const orderNumber = parseOrderNumber(req.params.orderNumber);
+      if (orderNumber === null) return notFound(res);
+      const body = asRecord(req.body);
+      const filename = normalizeOrderPdfFilename(body?.filename);
+      if (!filename) return invalidOrder(res, [{
+        field: "filename",
+        message: "Bitte geben Sie einen gültigen Dateinamen ohne Pfad oder Sonderzeichen ein (maximal 255 UTF-8-Bytes einschließlich .pdf).",
+      }]);
+      const revision = body?.revision;
+      if (typeof revision !== "number" || !Number.isSafeInteger(revision) || revision < 0)
+        return orderConflict(res);
+      const previousFilename = body?.previousFilename ?? null;
+      if (
+        previousFilename !== null &&
+        (typeof previousFilename !== "string" || normalizeOrderPdfFilename(previousFilename) !== previousFilename)
+      ) return invalidOrder(res, [{ field: "previousFilename", message: "Der bisherige Dateiname ist ungültig." }]);
+      const saved = await prisma.$transaction(async (tx) => {
+        const order = await tx.order.findUnique({
+          where: { orderNumber },
+          select: { id: true, updatedAt: true },
+        });
+        if (!order) return null;
+        // Filename metadata must not change the offer's edit date or editor revision.
+        const claimed = await tx.order.updateMany({
+          where: { id: order.id, revision, updatedAt: order.updatedAt, pdfFilename: previousFilename },
+          data: { pdfFilename: filename, updatedAt: order.updatedAt },
+        });
+        if (claimed.count !== 1) throw new Error("ORDER_CONFLICT");
+        return { pdfFilename: filename };
+      });
+      if (!saved) return notFound(res);
+      res.setHeader("Cache-Control", "no-store");
+      res.json({ data: saved });
+    } catch (error) {
+      if (
+        isMissingOrder(error) ||
+        isTransactionConflict(error) ||
+        (error instanceof Error && error.message === "ORDER_CONFLICT")
+      ) return orderConflict(res);
       next(error);
     }
   });
@@ -643,6 +688,7 @@ const orderListSelect = {
 } satisfies Prisma.OrderSelect;
 const orderDetailSelect = {
   id: true,
+  pdfFilename: true,
   sourceMessageId: true,
   revision: true,
   ...orderListSelect,
@@ -694,6 +740,7 @@ function toOrderDetail(
     hasSourceMail: sourceMessageId !== null,
     isCopy: order.originOrderId !== null,
     data,
+    defaultPdfFilename: orderPdfFilename({ orderNumber: order.orderNumber, data }),
     grossTotal: orderGrossTotal(data),
   };
 }

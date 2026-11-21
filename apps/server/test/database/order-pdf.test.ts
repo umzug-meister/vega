@@ -5,6 +5,11 @@ import test from "node:test";
 import { hashPassword } from "better-auth/crypto";
 import { orderPdfFixture } from "../order-pdf-fixture.js";
 
+function record(value: unknown): Record<string, unknown> {
+  assert.ok(typeof value === "object" && value !== null && !Array.isArray(value));
+  return value as Record<string, unknown>;
+}
+
 const testUrl = process.env.TEST_DATABASE_URL;
 if (!testUrl || !/^\/[a-zA-Z0-9_]+_test$/u.test(new URL(testUrl).pathname)) {
   throw new Error("TEST_DATABASE_URL must select a separate database ending in _test.");
@@ -43,6 +48,7 @@ test("Admin and Kundenberater export current saved orders with auth gates, attac
   assert.equal((await fetch(`${base}${path}`)).status, 401);
   const password = "Pdf-test-only-password1";
   for (const role of ["Admin", "Kundenberater"]) {
+    await prisma.order.update({ where: { id: orderId }, data: { pdfFilename: null } });
     const id = randomUUID();
     userIds.push(id);
     await prisma.user.create({ data: {
@@ -73,10 +79,55 @@ test("Admin and Kundenberater export current saved orders with auth gates, attac
     assert.equal((await fetch(`${base}/api/admin/orders/not-a-number/pdf`, { headers })).status, 404);
     assert.equal((await fetch(`${base}/api/admin/orders/999999/pdf`, { headers })).status, 404);
     assert.equal(await prisma.orderActivityEvent.count({ where: { orderId, actorName: `PDF ${role}` } }), 1);
+    const filenamePath = `${base}/api/admin/orders/${order.orderNumber}/pdf-filename`;
+    const beforeName = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+    const filenameHeaders = { ...headers, "Content-Type": "application/json" };
+    assert.equal((await fetch(filenamePath, {
+      method: "PUT", headers: filenameHeaders,
+      body: JSON.stringify({ filename: "../invalid", revision: beforeName.revision }),
+    })).status, 400);
+    const attempts = await Promise.all(["Mein Angebot", "Anderes Angebot"].map((filename) =>
+      fetch(filenamePath, { method: "PUT", headers: filenameHeaders,
+        body: JSON.stringify({ filename, revision: beforeName.revision }),
+      })));
+    assert.deepEqual(attempts.map((attempt) => attempt.status).sort(), [200, 409]);
+    let named = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+    assert.ok(named.pdfFilename);
+    assert.ok(["Mein Angebot.pdf", "Anderes Angebot.pdf"].includes(named.pdfFilename));
+    assert.equal(named.revision, beforeName.revision);
+    assert.equal(named.edited, beforeName.edited);
+    assert.equal(named.updatedAt.getTime(), beforeName.updatedAt.getTime());
+    const renames = await Promise.all(["Umbenanntes Angebot", "Alternativer Name"].map((filename) =>
+      fetch(filenamePath, {
+        method: "PUT", headers: filenameHeaders,
+        body: JSON.stringify({ filename, revision: named.revision, previousFilename: named.pdfFilename }),
+      })));
+    assert.deepEqual(renames.map((attempt) => attempt.status).sort(), [200, 409]);
+    const staleRename = await fetch(filenamePath, {
+      method: "PUT", headers: filenameHeaders,
+      body: JSON.stringify({ filename: "Veralteter Entwurf", revision: named.revision, previousFilename: named.pdfFilename }),
+    });
+    assert.equal(staleRename.status, 409);
+    named = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+    assert.ok(named.pdfFilename);
+    assert.ok(["Umbenanntes Angebot.pdf", "Alternativer Name.pdf"].includes(named.pdfFilename));
+    assert.equal(named.revision, beforeName.revision);
+    assert.equal(named.edited, beforeName.edited);
+    assert.equal(named.updatedAt.getTime(), beforeName.updatedAt.getTime());
+    const detail = record(await (await fetch(`${base}/api/admin/orders/${order.orderNumber}`, { headers })).json());
+    const unchangedName = await fetch(filenamePath, {
+      method: "PUT", headers: filenameHeaders,
+      body: JSON.stringify({ filename: named.pdfFilename, revision: named.revision, previousFilename: named.pdfFilename }),
+    });
+    assert.equal(unchangedName.status, 200);
+    assert.equal(record(detail.data).pdfFilename, named.pdfFilename);
+    const draft = record(await (await fetch(`${base}/api/admin/orders/${order.orderNumber}/email-draft?kind=offer`, { headers })).json());
+    assert.deepEqual(record(draft.data).attachmentNames, [named.pdfFilename]);
     const updatedData = structuredClone(fixture.data);
     updatedData.note = `Saved state for ${role}`;
     await prisma.order.update({ where: { id: orderId }, data: { data: JSON.parse(JSON.stringify(updatedData)) } });
     const fresh = await fetch(`${base}${path}`, { headers });
+    assert.equal(fresh.headers.get("Content-Disposition"), `attachment; filename*=UTF-8''${encodeURIComponent(named.pdfFilename)}`);
     assert.ok(Buffer.from(await fresh.arrayBuffer()).toString("latin1").includes(`Saved state for ${role}`));
     await prisma.order.update({ where: { id: orderId }, data: { data: { invalid: true } } });
     const failed = await fetch(`${base}${path}`, { headers });
