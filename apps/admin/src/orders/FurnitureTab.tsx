@@ -530,14 +530,12 @@ export function FurnitureTab({
                         />
                       </Grid>
                       <Grid size={{ xs: 5, sm: 2 }}>
-                        <TextField
-                          type="number"
+                        <NonNegativeNumberField
                           label="m³"
                           value={item.volume ?? 0}
-                          onChange={(event) =>
-                            updateItem(index, {
-                              volume: Number(event.target.value),
-                            })
+                          step="any"
+                          onChange={(volume) =>
+                            updateItem(index, { volume })
                           }
                         />
                       </Grid>

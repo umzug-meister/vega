@@ -122,6 +122,10 @@ Gleichstand nach ID.
 Gewicht, Montage-/Aufpreise und die bisherigen Möbel-Flags entfallen aus
 DTOs, Eingaben und Datenbank. Die Migration setzt bisher leere Schrittgrößen
 auf 1; vorhandene Kategoriezuordnungen bleiben erhalten.
+Im Auftragseditor akzeptiert das m³-Feld einer Möbelposition nichtnegative
+Dezimalwerte ohne feste Schrittgröße; Mengen- und Katalogregeln bleiben unverändert.
+Ein gespeicherter Wert 0 wird beim Laden als leeres Feld angezeigt; eine explizit
+eingegebene 0 bleibt während der Bearbeitung sichtbar. Leeren setzt den Wert auf 0.
 
 Die Profilseite bietet Profil, Passwort und OTP-Einstellungen als drei getrennte
 Änderungsformulare.
