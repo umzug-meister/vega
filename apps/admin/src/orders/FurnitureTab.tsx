@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import {
   AddOutlined,
   CalculateOutlined,
@@ -21,6 +21,7 @@ import {
 } from "@mui/material";
 import { AdminAlert as Alert } from "../components/AdminNotifications.js";
 import { AdminCard } from "../components/AdminCard.js";
+import { NonNegativeNumberField } from "../components/NonNegativeNumberField.js";
 import type {
   CatalogFurnitureDto,
   CustomerFormConfig,
@@ -37,50 +38,6 @@ interface FurnitureTabProps {
     furniture: OrderFormValue["details"]["furniture"],
   ) => void;
   orderNumber?: number;
-}
-
-function NonNegativeNumberField({
-  label,
-  value,
-  step,
-  endAdornment,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  step: number | "any";
-  endAdornment?: ReactNode;
-  onChange: (value: number) => void;
-}) {
-  const [inputValue, setInputValue] = useState(() =>
-    value === 0 ? "" : String(value),
-  );
-  const lastValue = useRef(value);
-
-  useEffect(() => {
-    if (value === lastValue.current) return;
-    lastValue.current = value;
-    setInputValue(value === 0 ? "" : String(value));
-  }, [value]);
-
-  return (
-    <TextField
-      type="number"
-      label={label}
-      value={inputValue}
-      onChange={(event) => {
-        const rawValue = event.target.value;
-        const nextValue = rawValue === "" ? 0 : Number(rawValue);
-        lastValue.current = nextValue;
-        setInputValue(rawValue);
-        onChange(nextValue);
-      }}
-      slotProps={{
-        htmlInput: { min: 0, step },
-        input: endAdornment ? { endAdornment } : {},
-      }}
-    />
-  );
 }
 
 export function calculateFurnitureVolume(

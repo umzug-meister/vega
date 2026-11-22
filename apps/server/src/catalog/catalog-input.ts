@@ -96,11 +96,9 @@ export function validateFurnitureInput(input: unknown): CatalogValidation<Catalo
     issues.push({ field: "volume", message: "Bitte geben Sie ein gültiges Volumen mit höchstens zwei Nachkommastellen ein." });
   }
   const rawStep = record.step === undefined ? 1 : record.step;
-  const step = typeof rawStep === "number" && Number.isFinite(rawStep) && rawStep >= 0.5 && rawStep <= 100_000
-    ? rawStep
-    : 0;
-  if (step === 0 || Math.abs(step * 2 - Math.round(step * 2)) > 0.00001) {
-    issues.push({ field: "step", message: "Bitte geben Sie ein Vielfaches von 0,5 zwischen 0,5 und 100.000 ein." });
+  const step = rawStep === 0.5 || rawStep === 1 ? rawStep : 0;
+  if (step === 0) {
+    issues.push({ field: "step", message: "Bitte wählen Sie die Schrittgröße 0,5 oder 1." });
   }
   const value: CatalogFurnitureInput = {
     name,

@@ -18,6 +18,8 @@ import {
   Menu,
   MenuItem,
   Paper,
+  Radio,
+  RadioGroup,
   Select,
   Stack,
   Table,
@@ -32,6 +34,7 @@ import {
 } from "@mui/material";
 import { AdminAlert as Alert } from "../components/AdminNotifications.js";
 import { RichTextEditor } from "../components/RichTextEditor.js";
+import { NonNegativeNumberField } from "../components/NonNegativeNumberField.js";
 import { AddOutlined, DeleteOutlined, EditOutlined, MoreVert } from "@mui/icons-material";
 import { useCatalogCollection, type IdentifiedCatalogRecord } from "./useCatalogCollection.js";
 
@@ -43,12 +46,13 @@ export interface CatalogChoice {
 export interface CatalogField {
   name: string;
   label: string;
-  type: "text" | "number" | "money" | "multiline" | "richtext" | "boolean" | "multiple" | "checkboxes";
+  type: "text" | "number" | "money" | "multiline" | "richtext" | "boolean" | "multiple" | "checkboxes" | "radio";
   options?: CatalogChoice[];
   min?: number;
   max?: number;
   step?: number;
   unit?: string;
+  emptyWhenZero?: boolean;
 }
 
 export interface CatalogColumn<T> {
@@ -141,6 +145,23 @@ export function CatalogCrudPage<T extends IdentifiedCatalogRecord>({
 
   function renderField(field: CatalogField) {
     const value = form[field.name];
+    if (field.type === "radio") {
+      return (
+        <FormControl key={field.name} component="fieldset" fullWidth margin="dense">
+          <FormLabel component="legend">{field.label}</FormLabel>
+          <RadioGroup row name={field.name} aria-label={field.label} value={value ?? ""}>
+            {(field.options ?? []).map((option) => (
+              <FormControlLabel
+                key={String(option.value)}
+                value={option.value}
+                label={option.label}
+                control={<Radio onChange={() => setForm((current) => ({ ...current, [field.name]: option.value }))} />}
+              />
+            ))}
+          </RadioGroup>
+        </FormControl>
+      );
+    }
     if (field.type === "checkboxes") {
       const selected = Array.isArray(value) ? value.map(String) : [];
       return (
@@ -212,6 +233,23 @@ export function CatalogCrudPage<T extends IdentifiedCatalogRecord>({
             }
           />
         </Stack>
+      );
+    }
+    if (field.type === "number" && field.emptyWhenZero) {
+      return (
+        <NonNegativeNumberField
+          key={`${field.name}-${dialogOpen ? "open" : "closed"}-${editing?.id ?? "new"}`}
+          fullWidth
+          label={field.label}
+          value={Number(value ?? 0)}
+          min={field.min ?? 0}
+          {...(field.max !== undefined ? { max: field.max } : {})}
+          step={field.step ?? 1}
+          endAdornment={field.unit ? <InputAdornment position="end">{field.unit}</InputAdornment> : undefined}
+          onChange={(nextValue) =>
+            setForm((current) => ({ ...current, [field.name]: nextValue }))
+          }
+        />
       );
     }
     return (
