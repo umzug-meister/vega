@@ -66,11 +66,14 @@ test("furniture editing sends selected category IDs and deletion requires confir
       )!,
     );
     const dialog = app.window.document.querySelector('[role="dialog"]')!;
-    const stepInput = [
-      ...dialog.querySelectorAll<HTMLInputElement>('input[type="number"]'),
-    ].find((input) => input.value === "0.5")!;
-    assert.equal(stepInput.min, "0.5");
-    assert.equal(stepInput.step, "0.5");
+    const stepOptions = [
+      ...dialog.querySelectorAll<HTMLInputElement>('input[type="radio"]'),
+    ];
+    assert.deepEqual(stepOptions.map((input) => input.value), ["0.5", "1"]);
+    assert.deepEqual(stepOptions.map((input) => input.closest("label")!.textContent), ["0,5", "1"]);
+    assert.deepEqual(stepOptions.map((input) => input.checked), [true, false]);
+    await app.click(stepOptions[1]!);
+    assert.deepEqual(stepOptions.map((input) => input.checked), [false, true]);
     const checkboxes = [
       ...dialog.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
     ];
@@ -94,7 +97,7 @@ test("furniture editing sends selected category IDs and deletion requires confir
         body: {
           name: "Sofa",
           volume: 2,
-          step: 0.5,
+          step: 1,
           sortOrder: 0,
           categoryIds: [1, 2],
         },
@@ -125,6 +128,108 @@ test("furniture editing sends selected category IDs and deletion requires confir
       app.container.querySelector("tbody")!.textContent!.includes("Sofa"),
       false,
     );
+  } finally {
+    globalThis.fetch = originalFetch;
+    await app.cleanup();
+  }
+});
+
+test("furniture volume starts blank for zero and saves numeric input when editing or creating", async () => {
+  const originalFetch = globalThis.fetch;
+  let furniture = {
+    id: 7,
+    name: "Sofa",
+    volume: 0,
+    step: 1,
+    sortOrder: 0,
+    categoryIds: [],
+    categoryRefs: [],
+  };
+  const writes: Array<{ method: string; body: Record<string, unknown> }> = [];
+  globalThis.fetch = async (url, init) => {
+    if (!init?.method || init.method === "GET")
+      return Response.json({
+        data: String(url).endsWith("/categories") ? [] : [furniture],
+      });
+    const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+    writes.push({ method: init.method, body });
+    furniture = { ...furniture, ...body };
+    return Response.json({
+      data: init.method === "POST" ? { ...furniture, id: 8 } : furniture,
+    });
+  };
+  const app = await mount(createElement(FurniturePage));
+  try {
+    const getDialog = () => {
+      const dialog = [...app.window.document.querySelectorAll('[role="dialog"]')].at(-1);
+      assert.ok(dialog);
+      return dialog;
+    };
+    const getVolume = () => {
+      const input = [...getDialog().querySelectorAll<HTMLInputElement>("input")].find(
+        (entry) => entry.labels?.[0]?.textContent === "Volumen",
+      );
+      assert.ok(input);
+      return input;
+    };
+    const edit = async () => {
+      await app.click(app.container.querySelector('[aria-label="Aktionen für Eintrag 7"]')!);
+      await app.click([...app.window.document.querySelectorAll('[role="menuitem"]')].find(
+        (item) => item.textContent === "Bearbeiten",
+      )!);
+    };
+    const save = async () => {
+      await app.click([...getDialog().querySelectorAll("button")].find(
+        (button) => button.textContent === "Speichern",
+      )!);
+    };
+
+    await edit();
+    assert.equal(getVolume().value, "");
+    assert.equal(getVolume().step, "0.01");
+    await app.input(getVolume(), `${getVolume().value}1`);
+    assert.equal(getVolume().value, "1");
+    await app.input(getVolume(), "1.25");
+    assert.equal(getVolume().checkValidity(), true);
+    await save();
+    assert.equal(writes[0]?.method, "PUT");
+    assert.equal(writes[0]?.body.volume, 1.25);
+    assert.equal(writes[0]?.body.sortOrder, 0);
+    assert.equal(writes[0]?.body.step, 1);
+
+    await edit();
+    assert.equal(getVolume().value, "1.25");
+    await app.input(getVolume(), "");
+    assert.equal(getVolume().value, "");
+    await save();
+    assert.equal(writes[1]?.body.volume, 0);
+
+    await edit();
+    assert.equal(getVolume().value, "");
+    await app.input(getVolume(), "0");
+    assert.equal(getVolume().value, "0");
+    await app.click([...getDialog().querySelectorAll("button")].find(
+      (button) => button.textContent === "Abbrechen",
+    )!);
+    assert.equal(writes.length, 2);
+
+    await app.click([...app.container.querySelectorAll("button")].find(
+      (button) => button.textContent?.includes("Eintrag anlegen"),
+    )!);
+    assert.equal(getVolume().value, "");
+    assert.equal(getDialog().querySelector<HTMLInputElement>('input[type="radio"][value="1"]')?.checked, true);
+    await app.click(getDialog().querySelector('input[type="radio"][value="0.5"]')!);
+    const name = [...getDialog().querySelectorAll<HTMLInputElement>("input")].find(
+      (input) => input.labels?.[0]?.textContent === "Name",
+    )!;
+    await app.input(name, "Neues Sofa");
+    await app.input(getVolume(), "0");
+    assert.equal(getVolume().value, "0");
+    await save();
+    assert.equal(writes[2]?.method, "POST");
+    assert.equal(writes[2]?.body.volume, 0);
+    assert.equal(writes[2]?.body.name, "Neues Sofa");
+    assert.equal(writes[2]?.body.step, 0.5);
   } finally {
     globalThis.fetch = originalFetch;
     await app.cleanup();

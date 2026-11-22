@@ -19,13 +19,18 @@ test("furniture uses only required catalog fields with step and sorting defaults
   assert.deepEqual(validateFurnitureInput({ name: "Sofa", categoryIds: [2, 2, 3], volume: 1.5, weight: "unused", montagePrice: 99, montage: true }), {
     ok: true, value: { name: "Sofa", categoryIds: [2, 3], volume: 1.5, step: 1, sortOrder: 0 },
   });
-  assert.deepEqual(validateFurnitureInput({ name: "Stuhl", categoryIds: [], volume: 0.5, step: 2, sortOrder: 7 }), {
-    ok: true, value: { name: "Stuhl", categoryIds: [], volume: 0.5, step: 2, sortOrder: 7 },
+  assert.deepEqual(validateFurnitureInput({ name: "Stuhl", categoryIds: [], volume: 0.5, step: 1, sortOrder: 7 }), {
+    ok: true, value: { name: "Stuhl", categoryIds: [], volume: 0.5, step: 1, sortOrder: 7 },
   });
   assert.deepEqual(validateFurnitureInput({ name: "Regalboden", categoryIds: [], volume: 0.5, step: 0.5 }), {
     ok: true, value: { name: "Regalboden", categoryIds: [], volume: 0.5, step: 0.5, sortOrder: 0 },
   });
-  for (const step of [null, 0, -1, 0.25, 1.25, "1"]) assert.equal(validateFurnitureInput({ name: "Stuhl", categoryIds: [], volume: 1, step }).ok, false);
+  for (const step of [null, 0, -1, 0.25, 1.25, 1.5, 2, "0.5", "1", NaN, Infinity]) {
+    assert.deepEqual(validateFurnitureInput({ name: "Stuhl", categoryIds: [], volume: 1, step }), {
+      ok: false,
+      issues: [{ field: "step", message: "Bitte wählen Sie die Schrittgröße 0,5 oder 1." }],
+    });
+  }
 });
 
 test("furniture rejects malformed category references, negative measures, and invalid steps", () => {

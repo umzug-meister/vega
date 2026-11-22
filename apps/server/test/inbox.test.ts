@@ -14,6 +14,8 @@ import {
   ANALYSIS_SYSTEM_INSTRUCTION,
   AnalysisError,
   analyzeMessage,
+  extractCalendarWeek,
+  isoWeekRange,
   mapGeminiOutput,
   type CatalogEntry,
 } from "../src/inbox/analysis.js";
@@ -322,6 +324,54 @@ test("forwarded-message prompt specifies source precedence and address-specific 
   assert.match(ANALYSIS_SYSTEM_INSTRUCTION, /floor: 'EG'/u);
 });
 
+test("prompt covers alternative destinations, vague periods, cost carriers and sensitive notes", () => {
+  assert.match(ANALYSIS_SYSTEM_INSTRUCTION, /Alternativen sind keine Zusatzstellen/u);
+  assert.match(ANALYSIS_SYSTEM_INSTRUCTION, /2026-11-21 bis 2026-12-10/u);
+  assert.match(ANALYSIS_SYSTEM_INSTRUCTION, /Jobcenter/u);
+  assert.match(ANALYSIS_SYSTEM_INSTRUCTION, /Obergrenze/u);
+  assert.match(ANALYSIS_SYSTEM_INSTRUCTION, /Keine Gesundheits- oder Sozialdaten/u);
+  assert.match(ANALYSIS_SYSTEM_INSTRUCTION, /to\.assembly/u);
+  assert.match(ANALYSIS_SYSTEM_INSTRUCTION, /Anzahl 8/u);
+  assert.match(ANALYSIS_SYSTEM_INSTRUCTION, /Ab-\/Aufbau-Liste.*wardrobeWidth 8/u);
+});
+
+test("combined alternative addresses are dropped instead of mixed into one address", () => {
+  const result = mapGeminiOutput(
+    {
+      from: { city: "Grünwald", floor: "EG" },
+      to: { city: "Kaufbeuren oder München-Lochhausen", floor: "1. Etage", assembly: true },
+      secondaryTo: { street: "Alte Steige 6 bzw. Rohrsängerplatz 5" },
+    },
+    context,
+  );
+  assert.equal(result.draft.from.city, "Grünwald");
+  assert.deepEqual(result.draft.to, {});
+  assert.equal(result.draft.secondaryTo, undefined);
+  assert.ok(!result.filledFields.some((field) => field.startsWith("to.")));
+  const frankfurt = mapGeminiOutput({ to: { city: "Frankfurt (Oder)" } }, context);
+  assert.equal(frankfurt.draft.to.city, "Frankfurt (Oder)");
+});
+
+test("street values with embedded postal code and city are split into fields", () => {
+  const result = mapGeminiOutput(
+    {
+      secondaryFrom: { street: "Industriestraße 3, 50735 Köln" },
+      from: { street: "Am Markt 1 50259 Pulheim", city: "Pulheim-Stommeln" },
+      to: { street: "Musterstraße 5", postalCode: "80331", city: "München" },
+    },
+    context,
+  );
+  assert.deepEqual(result.draft.secondaryFrom, {
+    street: "Industriestraße 3",
+    postalCode: "50735",
+    city: "Köln",
+  });
+  assert.equal(result.draft.from.street, "Am Markt 1");
+  assert.equal(result.draft.from.postalCode, "50259");
+  assert.equal(result.draft.from.city, "Pulheim-Stommeln");
+  assert.equal(result.draft.to.street, "Musterstraße 5");
+});
+
 test("mapGeminiOutput maps additional order fields and validates service catalog references", () => {
   const result = mapGeminiOutput(
     {
@@ -410,8 +460,9 @@ test("declared total volume takes precedence over furniture and boxes", () => {
   assert.equal(result.draft.furniture.items[0]?.quantity, 2);
   assert.equal(result.draft.furniture.boxes, 10);
   assert.ok(result.filledFields.includes("furniture.volume"));
-  assert.ok(result.draft.note.includes("Klavier"));
-  assert.ok(!result.draft.note.includes("nicht im berechneten Volumen enthalten"));
+  assert.ok(result.draft.note.includes("- Klavier ×1 (ca. 1,20 m³)"));
+  assert.ok(result.draft.note.includes("Berechnetes Umzugsvolumen: 4,00 m³"));
+  assert.ok(result.draft.note.includes("Angegebenes Gesamtvolumen: 25,50 m³"));
   const withoutFurniture = mapGeminiOutput({ declaredVolumeM3: 12.75 }, context);
   assert.equal(withoutFurniture.draft.furniture.volume, 12.75);
   assert.deepEqual(withoutFurniture.draft.furniture.items, []);
@@ -466,6 +517,47 @@ test("mapGeminiOutput maps a flexible date range and uses its start as moving da
     context,
   );
   assert.equal(invalid.draft.dateFrom, undefined);
+  const clamped = mapGeminiOutput(
+    { flexibleDateFrom: "2026-11-21", flexibleDateTo: "2026-12-10" },
+    { ...context, today: "2026-11-22" },
+  );
+  assert.equal(clamped.draft.dateFrom, "2026-11-22");
+  assert.equal(clamped.draft.dateTo, "2026-12-10");
+  assert.equal(clamped.draft.movingDate, "2026-11-22");
+  const past = mapGeminiOutput(
+    { flexibleDateFrom: "2026-11-01", flexibleDateTo: "2026-11-10" },
+    { ...context, today: "2026-11-22" },
+  );
+  assert.equal(past.draft.dateFrom, undefined);
+  assert.equal(past.draft.movingDate, undefined);
+  const week = mapGeminiOutput(
+    { calendarWeek: { year: 2027, week: 3 } },
+    { ...context, today: "2026-11-22" },
+  );
+  assert.equal(week.draft.dateFrom, "2027-01-18");
+  assert.equal(week.draft.dateTo, "2027-01-24");
+  assert.equal(week.draft.dateFixed, false);
+  const explicitWins = mapGeminiOutput(
+    { flexibleDateFrom: "2027-02-01", flexibleDateTo: "2027-02-05", calendarWeek: { year: 2027, week: 3 } },
+    context,
+  );
+  assert.equal(explicitWins.draft.dateFrom, "2027-02-01");
+  assert.deepEqual(isoWeekRange(2026, 53), ["2026-12-28", "2027-01-03"]);
+  assert.deepEqual(isoWeekRange(2027, 1), ["2027-01-04", "2027-01-10"]);
+  assert.equal(isoWeekRange(2027, 53), null);
+  assert.equal(isoWeekRange(2027, 0), null);
+  assert.equal(isoWeekRange("2027", 3), null);
+  assert.deepEqual(extractCalendarWeek("Umzug in der KW 3 2027", "2026-11-22"), ["2027-01-18", "2027-01-24"]);
+  assert.deepEqual(extractCalendarWeek("in der 3. Kalenderwoche", "2026-11-22"), ["2027-01-18", "2027-01-24"]);
+  assert.deepEqual(extractCalendarWeek("KW 49", "2026-11-22"), ["2026-11-30", "2026-12-06"]);
+  assert.equal(extractCalendarWeek("KW 3 oder KW 5", "2026-11-22"), null);
+  assert.equal(extractCalendarWeek("kein Termin", "2026-11-22"), null);
+  const hinted = mapGeminiOutput({}, { ...context, today: "2026-11-22", calendarWeekHint: ["2027-01-18", "2027-01-24"] });
+  assert.equal(hinted.draft.dateFrom, "2027-01-18");
+  assert.equal(hinted.draft.dateTo, "2027-01-24");
+  const fixedWins = mapGeminiOutput({ movingDate: "2027-01-20" }, { ...context, calendarWeekHint: ["2027-01-18", "2027-01-24"] });
+  assert.equal(fixedWins.draft.dateFrom, undefined);
+  assert.equal(fixedWins.draft.movingDate, "2027-01-20");
 });
 
 test("mapGeminiOutput extracts the postal code from prefixed or combined values", () => {
@@ -518,8 +610,47 @@ test("mapGeminiOutput maps catalog furniture, validates fields and flags unknown
   assert.equal(result.draft.furniture.items[0]?.quantity, 3);
   assert.equal(result.draft.furniture.volume, 4.5);
   assert.equal(result.draft.furniture.volumeComplete, false);
-  assert.ok(result.draft.note.includes("Klavier"));
-  assert.ok(result.draft.note.includes("ca. 1,2 m³"));
+  assert.equal(
+    result.draft.note,
+    [
+      "Halteverbot nötig",
+      "Nicht im Katalog erkannte Möbel:",
+      "- Klavier ×1 (ca. 1,20 m³)",
+      "Berechnetes Umzugsvolumen: 4,50 m³",
+      "Geschätztes Umzugsvolumen (nicht erkannte Möbel): 1,20 m³",
+      "Gesamt: ca. 5,70 m³",
+    ].join("\n"),
+  );
+});
+
+test("unmatched furniture note sums estimates with boxes and flags items without estimate", () => {
+  const result = mapGeminiOutput(
+    {
+      furniture: [{ catalogId: 2, quantity: 1, confidence: "high" }],
+      boxes: 10,
+      unmatchedFurniture: [
+        { name: "Gehbarren", quantity: 1, estimatedVolumeM3: 1.5 },
+        { name: "Stuhl", quantity: 4, estimatedVolumeM3: 0.25 },
+        { name: "Behandlungsliege", quantity: 1, estimatedVolumeM3: null },
+      ],
+      note: "x".repeat(6000),
+    },
+    { ...context, boxVolumes: { box: 0.1, wardrobeBox: 0.5 } },
+  );
+  assert.equal(result.draft.furniture.volume, 3);
+  const lines = result.draft.note.split("\n");
+  assert.deepEqual(lines.slice(-7), [
+    "Nicht im Katalog erkannte Möbel:",
+    "- Gehbarren ×1 (ca. 1,50 m³)",
+    "- Stuhl ×4 (ca. 0,30 m³)",
+    "- Behandlungsliege ×1 (ohne Schätzung)",
+    "Berechnetes Umzugsvolumen: 3,00 m³",
+    "Geschätztes Umzugsvolumen (nicht erkannte Möbel): 2,70 m³ (ohne 1 Position ohne Schätzung)",
+    "Gesamt: ca. 5,70 m³",
+  ]);
+  assert.ok(result.draft.note.length <= 5000);
+  const plain = mapGeminiOutput({ note: "Halteverbot" }, context);
+  assert.equal(plain.draft.note, "Halteverbot");
 });
 
 test("mapGeminiOutput rejects non-object output", () => {

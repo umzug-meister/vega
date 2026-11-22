@@ -25,8 +25,8 @@ export function FurniturePage() {
   }, [selectedCategoryIds, showWithoutCategory]);
   const fields: CatalogField[] = [
     { name: "name", label: "Name", type: "text" },
-    { name: "volume", label: "Volumen", type: "number", min: 0, step: 0.01, unit: "m³" },
-    { name: "step", label: "Schrittgröße", type: "number", min: 0.5, step: 0.5 },
+    { name: "volume", label: "Volumen", type: "number", min: 0, step: 0.01, unit: "m³", emptyWhenZero: true },
+    { name: "step", label: "Schrittgröße", type: "radio", options: [{ value: 0.5, label: "0,5" }, { value: 1, label: "1" }] },
     { name: "sortOrder", label: "Sortierung", type: "number", min: 0, step: 1 },
     { name: "categoryIds", label: "Kategorien", type: "checkboxes", options: categoryChoices },
   ];

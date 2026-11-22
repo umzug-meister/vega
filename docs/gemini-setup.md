@@ -74,6 +74,38 @@ Server neu starten.
 - Weitergeleitete Anfragen werden als Datenquelle gelesen; eindeutige spätere
   Korrekturen gehen vor, unauflösbare Widersprüche landen in der Notiz. Kunde
   und Antwortadresse stammen immer vom Absender der empfangenen Mail.
+- Alternative Ziel- oder Auszugsorte („zwei separate Angebote“, „entweder … oder“)
+  werden nicht als Zusatzstelle übernommen: Die betroffene Adresse bleibt leer,
+  alle Varianten stehen in der Notiz. Der Server verwirft zusätzlich Adressen,
+  deren Straße oder Ort Varianten mit „oder“/„bzw.“ kombiniert.
+- Ungefähre Termine werden als Von/Bis-Zeitraum übernommen („Anfang“ = 1.–10.,
+  „Mitte“ = 11.–20., „Ende“ = 21.–Monatsletzter). Ein Zeitraumbeginn vor dem
+  heutigen Datum wird serverseitig auf heute gesetzt; vollständig vergangene
+  Zeiträume werden verworfen. Ohne zeitlichen Anker bleibt der Termin leer.
+  Kalenderwochen („KW 3 2027“) rechnet der Server nach ISO 8601 in Montag bis
+  Sonntag um; nennt die Mail genau eine Kalenderwoche und liefert das Modell
+  keinen Termin, übernimmt der Server diese Woche.
+- Straßenangaben mit eingebetteter PLZ und Ort („Industriestraße 3, 50735 Köln“)
+  teilt der Server in Straße, PLZ und Ort auf.
+- „n-Zimmer-Wohnung“ ergibt die Zimmerzahl der zugehörigen Adresse.
+- Jobcenter, Arbeitsamt, Sozialamt, Krankenkasse oder vergleichbare Kostenträger
+  setzen „Kostenübernahme“; private Kostenträger (Arbeitgeber, Versicherung,
+  Familie) nicht. Mengenspannen werden mit der Obergrenze übernommen,
+  Sammelposten ohne Anzahl nur in der Notiz genannt. Bei Laufmeter-Katalog-
+  einträgen ist die Anzahl die Summe der Breiten in Metern.
+- Wird Ab- oder Aufbau gewünscht, füllt die Analyse die Ab-/Aufbau-Liste der
+  Auszugsadresse: Schränke-Gesamtbreite als Summe der genannten Schrankbreiten
+  (erster Maßwert; Regale, Sideboards, Kommoden und Garderoben zählen nicht),
+  Anzahl aller Betten einschließlich Pflegebetten und Küchenbreite. Fehlende
+  Breiten werden nicht geschätzt.
+- Die KI-Notiz enthält keine Namen, Kontaktdaten, Diagnosen, Pflege- oder
+  Sozialleistungsangaben; Hilfsmittel erscheinen nur als Gegenstände.
+- Nicht im Katalog erkannte Möbel hängt der Server an die Notiz an: eine Zeile
+  je Gegenstand mit geschätztem Volumen je Stück, danach „Berechnetes
+  Umzugsvolumen“ (Katalogmöbel und Kartons), „Geschätztes Umzugsvolumen (nicht
+  erkannte Möbel)“, „Gesamt: ca.“ und gegebenenfalls „Angegebenes
+  Gesamtvolumen“. Das Volumenfeld bleibt der berechnete bzw. angegebene Wert.
+  Dieser Block wird beim Kürzen der Notiz nie abgeschnitten.
 - Mail-HTML wird serverseitig mit einer engen Allowlist bereinigt; Skripte,
   aktive Inhalte und Remote-Bilder werden nicht angezeigt. Anhänge laufen über
   den Backend-Proxy mit Content-Type-Prüfung und `nosniff`.

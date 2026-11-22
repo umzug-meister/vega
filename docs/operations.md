@@ -203,8 +203,8 @@ Kategorie-Verknüpfungen, Services, Packmaterial, Angebote) sowie `boxCbm` und
 übernimmt nur Felder der Zielstruktur: Legacy-`t35` wird zu `trucks`,
 `desc`/`description` zu `description`, `imgUrl` zu `media`; die entfernten
 Felder (`montagePrice`, `extraPrice`, `bulky`, `m100`, `m150`, `colli`, Slug)
-und `Counter`-Zähler werden verworfen. Schrittgrößen in Vielfachen von 0,5,
-einschließlich 0,5, werden übernommen; ungültige Schrittgrößen werden auf 1
+und `Counter`-Zähler werden verworfen. Schrittgrößen 0,5 und 1 werden übernommen;
+andere Schrittgrößen werden auf 1
 gesetzt und als Hinweis gemeldet. Datensätze ohne Namen oder Kategorie sowie
 mit ungültigen Preisen/Volumen werden übersprungen und als Hinweis gemeldet.
 Der Plan liegt in

@@ -123,10 +123,7 @@ function planFurniture(raw: unknown, plan: LegacyCatalogImportPlan): void {
       continue;
     }
     const rawStep = numberValue(entry.step);
-    const step = rawStep !== null && rawStep >= 0.5 && rawStep <= 100_000
-      && Math.abs(rawStep * 2 - Math.round(rawStep * 2)) <= 0.00001
-      ? rawStep
-      : 1;
+    const step = rawStep === 0.5 || rawStep === 1 ? rawStep : 1;
     if (rawStep !== null && rawStep !== step) {
       plan.skipped.push(`Möbel "${name}" hatte die ungültige Schrittgröße ${rawStep}; übernommen mit Schritt 1.`);
     }

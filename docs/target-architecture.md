@@ -116,12 +116,22 @@ der Formularclient rendert nur diese Ausgabe. Optionale HTTP(S)-Medienlinks
 werden im Kundenformular und in der Admin-Vorschau ohne Referrer geladen.
 
 Der Möbelkatalog enthält neben ID und Kategoriezuordnungen nur Name, Volumen,
-Schrittgröße in Vielfachen von 0,5 (Minimum 0,5, Standard 1) und Sortierung
+Schrittgröße 0,5 oder 1 (Standard 1) und Sortierung
 (Standard 0) sowie die Kategoriezuordnungen in Kategorie-Sortierung, bei
 Gleichstand nach ID.
 Gewicht, Montage-/Aufpreise und die bisherigen Möbel-Flags entfallen aus
 DTOs, Eingaben und Datenbank. Die Migration setzt bisher leere Schrittgrößen
 auf 1; vorhandene Kategoriezuordnungen bleiben erhalten.
+Im Möbelkatalog-Dialog wird die Schrittgröße als Auswahl zwischen 0,5 und 1
+dargestellt. Der Server weist andere Werte bei Anlage und Änderung zurück.
+Bereits gespeicherte andere Schrittgrößen werden nicht automatisch geändert;
+beim Bearbeiten muss eine der beiden zulässigen Optionen gewählt werden.
+Im Auftragseditor akzeptiert das m³-Feld einer Möbelposition nichtnegative
+Dezimalwerte ohne feste Schrittgröße; Mengen- und Katalogregeln bleiben unverändert.
+Ein gespeicherter Wert 0 wird beim Laden als leeres Feld angezeigt; eine explizit
+eingegebene 0 bleibt während der Bearbeitung sichtbar. Leeren setzt den Wert auf 0.
+Dasselbe Eingabeverhalten gilt für das Volumen beim Anlegen und Bearbeiten
+von Möbelkatalogeinträgen; die Volumeneingabe bleibt in 0,01-m³-Schritten möglich.
 
 Die Profilseite bietet Profil, Passwort und OTP-Einstellungen als drei getrennte
 Änderungsformulare.
