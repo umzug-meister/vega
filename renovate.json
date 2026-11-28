@@ -3,11 +3,11 @@
   "extends": ["config:recommended"],
   "minimumReleaseAge": "3 days",
   "rebaseWhen": "behind-base-branch",
-  "schedule": ["* 1-4 * * 6"],
+  "schedule": ["after 10pm on friday", "before 6am on saturday"],
   "timezone": "Europe/Berlin",
   "updateNotScheduled": true,
   "platformAutomerge": false,
-  "enabled": false,
+  "enabled": true,
   "packageRules": [
     {
       "matchDatasources": ["docker"],
@@ -16,6 +16,7 @@
     },
     {
       "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "minor and patch updates",
       "automerge": true
     }
   ]
