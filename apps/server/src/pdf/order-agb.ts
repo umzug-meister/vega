@@ -1,4 +1,4 @@
-// Established contract text from old-app/um-admin/src/pdf/AgbTemplate.ts.
+// Established contract text, originally derived from the legacy admin template.
 export const orderAgb = [
   {
     title: "Leistungen des Möbelspediteurs.",

@@ -1,11 +1,9 @@
 # Projektanweisungen
 
-Diese Datei gilt für das Vega-Repository einschließlich `docs/` und
-`old-app/`. Das Legacy-Verzeichnis ist in `.gitignore`
-ausgeschlossen und dient ausschließlich als Referenz; seine eigenen
-Git-Metadaten bleiben erhalten. Vor Änderungen in einem Unterverzeichnis
-zusätzlich dessen `AGENTS.md` lesen; insbesondere gelten die Legacy-Regeln in
-`old-app/um-configurator/AGENTS.md` für das WordPress-Plugin.
+Diese Datei gilt für das Vega-Repository einschließlich `docs/`. Das frühere
+Bestandssystem ist nicht mehr Bestandteil des Repositories; es gibt kein
+Legacy-Verzeichnis als Referenz. Vor Änderungen in einem Unterverzeichnis
+zusätzlich dessen `AGENTS.md` lesen.
 
 ## Projektbereiche und Quellen
 
@@ -16,16 +14,13 @@ zusätzlich dessen `AGENTS.md` lesen; insbesondere gelten die Legacy-Regeln in
   verlinkten Runbooks heranziehen; das Glossar erläutert Fachbegriffe.
   Für Vega keine parallelen Dokumentkopien außerhalb von `docs/` als Quelle
   verwenden.
-- `old-app/` enthält das zu modernisierende Bestandssystem. Untersuche dort
-  die tatsächlichen Abläufe, Formulare, Datenfelder, Vorlagen und PDFs, wenn
-  eine Funktion portiert wird. Übernimm nur Verhalten, das mit den Zieldokumenten
-  vereinbar ist; Legacy-REST-Routen, WordPress als Order-Backend, alte Daten,
+- Das frühere Bestandssystem steht nicht mehr zur Verfügung. Leite zu änderndes
+  Verhalten aus `docs/`, der bestehenden Implementierung und den freigegebenen
+  Verträgen ab. Legacy-REST-Routen, WordPress als Order-Backend, alte Daten,
   Mail-Proxy- und AWS-Abhängigkeiten sind keine Zielarchitektur.
 - Das Vega-Repository ist das Zielprojekt und ein eigenes Git-Repository. Neue
   Anwendungsimplementierung, Tests und zugehörige technische Änderungen gehören
-  grundsätzlich hierhin. `old-app/` bleibt aus dem Vega-Repository
-  ausgeschlossen und dient als Referenz, außer der Auftrag verlangt ausdrücklich
-  eine Änderung am Bestand.
+  grundsätzlich hierhin. Es gibt kein separates Legacy-Verzeichnis im Repository.
 - `hostinger-email-api-definition.json` ist die maßgebliche OpenAPI-
   Spezifikation für die Hostinger-Mail-Integration. Sie beschreibt den
   Mail-Provider, nicht den gesamten Vega-Fach-API-Vertrag. Für Vega-Routen und
@@ -40,9 +35,10 @@ zusätzlich dessen `AGENTS.md` lesen; insbesondere gelten die Legacy-Regeln in
    Arbeite Abhängigkeiten und Freigabe-Gates in deren Reihenfolge ab; bei
    offenen Fach-, Sicherheits- oder Compliance-Entscheidungen
    dokumentiere den Blocker, statt eine Regel zu erfinden.
-2. Vergleiche zu portierende Funktionalität mit `old-app/`, aber setze sie
-   in der Zielstruktur des Vega-Repositories neu um. Keine Bestandsdatenmigration
-   und keine ungeprüfte Übernahme alter Endpunkte oder Zugangsdaten.
+2. Leite zu änderndes Verhalten aus `docs/` und der bestehenden Implementierung
+   ab und setze es in der Zielstruktur des Vega-Repositories um. Keine
+   Bestandsdatenmigration und keine ungeprüfte Übernahme alter Endpunkte oder
+   Zugangsdaten.
 3. Halte die Zielstruktur und Paketbefehle aus `package.json` aktuell.
    Zielruntime ist Node.js 24; Architekturvorgaben sind Express 5, TypeScript 7,
    React 19, Vite und MUI. Ein Express-Prozess liefert API und getrennte
@@ -80,7 +76,7 @@ zusätzlich dessen `AGENTS.md` lesen; insbesondere gelten die Legacy-Regeln in
   `code` behandeln, niemals Tokens, Passwörter oder E-Mail-Inhalte loggen.
   Anhänge, Timeouts, Idempotenz und Retry-Verhalten gemäß API-Spezifikation und
   `docs/hostinger-mail-cron.md` prüfen.
-- Alte Abläufe dürfen nur portiert werden, wenn sie nicht den dokumentierten
-  Datenschutz-, Berechtigungs-, Aufbewahrungs- oder Sicherheitsregeln
-  widersprechen. Bei Konflikten gilt die freigegebene Zielarchitektur; offene
-  Fachentscheidungen bleiben explizit offen.
+- Bestehendes Verhalten darf nur übernommen werden, wenn es nicht den
+  dokumentierten Datenschutz-, Berechtigungs-, Aufbewahrungs- oder
+  Sicherheitsregeln widerspricht. Bei Konflikten gilt die freigegebene
+  Zielarchitektur; offene Fachentscheidungen bleiben explizit offen.

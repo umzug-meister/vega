@@ -69,8 +69,8 @@ Details: [Betrieb und Konfiguration](./operations.md#datenbank).
    **24.x** auswählen.
 2. Das Vega-Repository aus dem vorgesehenen Git-Deployment bereitstellen.
    Falls der Tarif den Git-Import nicht unterstützt, die Dateien über den
-   unterstützten Hostinger-Deploymentweg übertragen. Nicht `old-app/`
-   deployen: Es ist nur Referenz und gehört nicht zur Ziel-App.
+   unterstützten Hostinger-Deploymentweg übertragen. Nur dieses
+   Repository-Root deployen; keine separaten Referenz- oder Archivverzeichnisse.
 3. Das **Repository-Root** als Arbeits-/Projektverzeichnis verwenden. Das ist
    das Verzeichnis mit `package.json`, `package-lock.json`, `apps/` und
    `prisma/`.

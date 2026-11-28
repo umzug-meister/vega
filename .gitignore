@@ -1,6 +1,5 @@
 .DS_Store
 node_modules/
-/old-app/
 dist/
 coverage/
 .env
