@@ -22,6 +22,7 @@ import type { OrderEmailKind } from "@vega/domain";
 import type { EmailTarget } from "../email/EmailDialog.js";
 import { OrderEmailActionsContext } from "../email/order-email-actions.js";
 import { apiRequest } from "../api/api-request.js";
+import { useOrderPdfFilename } from "../orders/useOrderPdfFilename.js";
 
 // Loaded on demand so the rich-text editor stays out of the initial bundle.
 const EmailDialog = lazy(() =>
@@ -39,7 +40,8 @@ interface AdminShellProps {
   orderDirty?: boolean;
   orderBusy?: boolean;
   orderIsCopy?: boolean;
-  orderHasSourceMail?: boolean;
+  orderPdfFilename?: string | null;
+  onOrderPdfFilenameChange?: (filename: string) => void;
   invoiceBusy?: boolean;
   invoiceDirty?: boolean;
   invoiceAccountingDirty?: boolean;
@@ -57,7 +59,8 @@ export function AdminShell({
   orderDirty = false,
   orderBusy = false,
   orderIsCopy = false,
-  orderHasSourceMail = false,
+  orderPdfFilename = null,
+  onOrderPdfFilenameChange,
   invoiceBusy = false,
   invoiceDirty = false,
   invoiceAccountingDirty = false,
@@ -74,6 +77,12 @@ export function AdminShell({
   const notify = useAdminNotification();
   const isAdmin = user.role === "Admin";
   const editedOrderNumber = pathname.match(/^\/edit\/(-?\d+)$/u)?.[1];
+  const { ensurePdfFilename, editPdfFilename, filenameDialog } = useOrderPdfFilename(
+    pathname,
+    (number, filename) => {
+      if (number === Number(editedOrderNumber)) onOrderPdfFilenameChange?.(filename);
+    },
+  );
   const editedInvoiceId =
     pathname === "/invoices/new" || pathname === "/invoices/archived"
       ? undefined
@@ -164,30 +173,36 @@ export function AdminShell({
     }, "Auftrag konnte nicht archiviert werden.");
   }
 
-  function openOrderEmail(kind: OrderEmailKind, replyToSourceMail = false) {
+  function openOrderEmail(kind: OrderEmailKind) {
     if (editedOrderNumber && !orderActionsDisabled)
-      setEmailTarget({
-        type: "order",
-        orderNumber: Number(editedOrderNumber),
-        kind,
-        ...(replyToSourceMail ? { replyToSourceMail } : {}),
-      });
+      openEmailForOrder(Number(editedOrderNumber), kind);
   }
 
-    function openEmailForOrder(
-      orderNumber: number,
-      kind: OrderEmailKind,
-      simpleSignature = false,
-      replyToSourceMail = false,
-    ) {
+  function editOrderPdfFilename() {
+    if (!editedOrderNumber || orderActionsDisabled) return;
+    void runAction(async () => {
+      await editPdfFilename(Number(editedOrderNumber));
+    }, "Der Angebotsname konnte nicht bearbeitet werden.");
+  }
+
+  function openEmailForOrder(
+    orderNumber: number,
+    kind: OrderEmailKind,
+    simpleSignature = false,
+    replyToSourceMail = false,
+  ) {
+    if (actionLock.current) return;
+    void runAction(async () => {
+      if ((kind === "offer" || kind === "offer-pair") && !await ensurePdfFilename(orderNumber)) return;
       setEmailTarget({
         type: "order",
         orderNumber,
         kind,
         ...(simpleSignature ? { simpleSignature: true } : {}),
-        ...(replyToSourceMail ? { replyToSourceMail: true } : {}),
+        ...(replyToSourceMail ? { replyToSourceMail } : {}),
       });
-    }
+    }, "Der Angebotsdialog konnte nicht geöffnet werden.");
+  }
 
   function openInvoiceEmail() {
     if (editedInvoiceId)
@@ -230,7 +245,8 @@ export function AdminShell({
         orderActionsDisabled={orderActionsDisabled}
         orderHasChanges={orderHasChanges}
         orderIsCopy={orderIsCopy}
-        orderHasSourceMail={orderHasSourceMail}
+        orderPdfFilename={orderPdfFilename}
+        onEditOrderPdfFilename={editOrderPdfFilename}
         isAdmin={isAdmin}
         isInvoiceEditor={isInvoiceEditor}
         editedInvoiceId={editedInvoiceId}
@@ -245,6 +261,7 @@ export function AdminShell({
         onInvoiceEmail={openInvoiceEmail}
         onArchiveInvoice={() => void archiveInvoice()}
       />
+      {filenameDialog}
       {emailTarget && (
         <Suspense fallback={null}>
           <EmailDialog

@@ -9,6 +9,7 @@ import type { StaffUser } from "../src/types.js";
 import { OrdersPage } from "../src/orders/OrdersPage.js";
 
 const user: StaffUser = { id: "staff", name: "Test", email: "staff@example.test", role: "Admin", twoFactorEnabled: true, mustChangePassword: false, blocked: false };
+const linkedOrderState = { orderHasSourceMail: true };
 function ErrorToastTrigger() {
   const notify = useAdminNotification();
   useEffect(() => notify("error", "Testfehler"), [notify]);
@@ -17,6 +18,7 @@ function ErrorToastTrigger() {
 function shell(navigate: (path: string) => void, orderIsCopy = false) {
   const route = resolveAdminRoute("/edit/1001")!;
   return createElement(AdminNotifications, null, createElement(AdminShell, {
+    ...linkedOrderState,
     user, route, pathname: route.path, navigate, orderIsCopy, children: null,
   }));
 }
@@ -86,7 +88,7 @@ test("archive network failures are visible and do not navigate away", async () =
   } finally { globalThis.fetch = originalFetch; await app.cleanup(); }
 });
 
-test("the order email menu exposes paired offers only for copies", async () => {
+test("the order email menu omits reply actions for linked orders and exposes paired offers only for copies", async () => {
   for (const copy of [false, true]) {
     const app = await mount(shell(() => {}, copy), "/edit/1001");
     try {
@@ -140,7 +142,7 @@ test("archived orders remain read-only and restoration failures keep the list us
     );
     assert.ok(cells[cells.length - 1]!.querySelector('[aria-label="Auftrags-PDF herunterladen"]'));
     assert.ok(cells[cells.length - 1]!.querySelector('[aria-label="Auftrag wiederherstellen"]'));
-    assert.equal(app.container.querySelector('a[href="/api/admin/orders/1001/pdf"]') !== null, true);
+    assert.ok(app.container.querySelector('button[aria-label="Auftrags-PDF herunterladen"]'));
     assert.equal([...app.container.querySelectorAll("button")].some((button) => button.textContent === "1001"), false);
     const restore = app.container.querySelector<HTMLButtonElement>('button[aria-label="Auftrag wiederherstellen"]')!;
     await app.click(restore);

@@ -30,6 +30,7 @@ import {
   downloadOrderPdf,
   saveAndFetchOrderPdf,
 } from "./order-pdf-download.js";
+import { useOrderPdfFilename } from "./useOrderPdfFilename.js";
 
 const tabNames = [
   "Kunde",
@@ -84,7 +85,7 @@ interface OrderCreatePageProps {
   onDirtyChange: (dirty: boolean) => void;
   onBusyChange: (busy: boolean) => void;
   onCopyChange?: (isCopy: boolean) => void;
-  onSourceMailChange?: (hasSourceMail: boolean) => void;
+  onPdfFilenameChange?: (filename: string | null) => void;
   dirty: boolean;
   orderNumber?: number;
   /** Prefilled values for a new order (e.g. from the Postfach analysis). */
@@ -182,7 +183,7 @@ export function OrderCreatePage({
   onDirtyChange,
   onBusyChange,
   onCopyChange,
-  onSourceMailChange,
+  onPdfFilenameChange,
   dirty,
   orderNumber,
   initialValue,
@@ -195,6 +196,12 @@ export function OrderCreatePage({
   const [pricingBusy, setPricingBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const notify = useAdminNotification();
+  const { ensurePdfFilename, filenameDialog } = useOrderPdfFilename(
+    orderNumber,
+    (number, filename) => {
+      if (number === orderNumber) onPdfFilenameChange?.(filename);
+    },
+  );
   const [loading, setLoading] = useState(orderNumber !== undefined);
   const [loadFailed, setLoadFailed] = useState(false);
   const [revision, setRevision] = useState<number | null>(null);
@@ -242,7 +249,7 @@ export function OrderCreatePage({
         valueRef.current = loaded;
         setValue(loaded);
         onCopyChange?.(body.data.isCopy);
-        onSourceMailChange?.(body.data.hasSourceMail);
+        onPdfFilenameChange?.(body.data.pdfFilename);
         onDirtyChange(false);
       })
       .catch(() => {
@@ -257,7 +264,7 @@ export function OrderCreatePage({
     return () => {
       cancelled = true;
     };
-  }, [navigate, onCopyChange, onSourceMailChange, onDirtyChange, orderNumber]);
+  }, [navigate, onCopyChange, onPdfFilenameChange, onDirtyChange, orderNumber]);
 
   function update(patch: Partial<OrderFormValue>) {
     const next = { ...valueRef.current, ...patch };
@@ -434,6 +441,7 @@ export function OrderCreatePage({
       const savedValue = toFormValue(saved.data);
       valueRef.current = savedValue;
       setValue(savedValue);
+      onPdfFilenameChange?.(saved.pdfFilename);
       onDirtyChange(false);
       const needsPricingReview =
         pricingNeedsReview || body.pricingWarning !== undefined;
@@ -554,6 +562,7 @@ export function OrderCreatePage({
     setError(null);
     try {
       if (exportPdf && orderNumber !== undefined) {
+        if (!await ensurePdfFilename(orderNumber)) return;
         if (
           (value.from.parkingSlot || value.to?.parkingSlot) &&
           !value.details.conditions.some((condition) =>
@@ -600,6 +609,7 @@ export function OrderCreatePage({
         "& .MuiFormControlLabel-label": { overflowWrap: "anywhere" },
       }}
     >
+      {filenameDialog}
       {loading && <Alert severity="info">Auftrag wird geladen …</Alert>}
       {error && (
         <Alert severity="error" role="alert">

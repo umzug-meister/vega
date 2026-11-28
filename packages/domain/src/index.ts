@@ -303,6 +303,8 @@ export interface AdminOrderListItem {
 
 export interface AdminOrderDetail extends Omit<AdminOrderListItem, "customerCompany"> {
   revision: number;
+  pdfFilename: string | null;
+  defaultPdfFilename: string;
   data: CreateOrderInput;
   originOrderId: string | null;
   /** True when the order was created from an inbox mail and can be answered as a reply. */

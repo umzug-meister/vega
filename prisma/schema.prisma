@@ -118,6 +118,7 @@ model Order {
   customerPhone   String               @db.VarChar(64)
   source          String               @db.VarChar(32)
   data            Json
+  pdfFilename     String?              @db.VarChar(255)
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @default(now()) @updatedAt
   edited          Boolean              @default(false)

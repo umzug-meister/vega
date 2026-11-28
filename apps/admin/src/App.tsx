@@ -85,7 +85,7 @@ export function App() {
   const [orderDirty, setOrderDirty] = useState(false);
   const [orderBusy, setOrderBusy] = useState(true);
   const [orderIsCopy, setOrderIsCopy] = useState(false);
-  const [orderHasSourceMail, setOrderHasSourceMail] = useState(false);
+  const [orderPdfFilename, setOrderPdfFilename] = useState<string | null>(null);
   const [invoiceBusy, setInvoiceBusy] = useState(true);
   const [invoiceDirty, setInvoiceDirty] = useState(false);
   const [accountingDirty, setAccountingDirty] = useState(false);
@@ -102,7 +102,7 @@ export function App() {
     setInvoiceDirty(false);
     setAccountingDirty(false);
     setOrderIsCopy(false);
-    setOrderHasSourceMail(false);
+    setOrderPdfFilename(null);
   }, [onInvoiceUnsavedChange, onOrderDirtyChange]);
   const { pathname, replacePath, navigatePath, confirmLeave } =
     useLocalNavigation(hasUnsavedChanges, clearDocumentState);
@@ -320,7 +320,7 @@ export function App() {
           onDirtyChange={onOrderDirtyChange}
           onBusyChange={setOrderBusy}
           onCopyChange={setOrderIsCopy}
-          onSourceMailChange={setOrderHasSourceMail}
+          onPdfFilenameChange={setOrderPdfFilename}
           dirty={orderDirty}
           {...(activeRoute.path === "/edit/-1"
             ? {}
@@ -353,7 +353,8 @@ export function App() {
       orderDirty={orderDirty || pathname === "/edit/-1"}
       orderBusy={orderBusy}
       orderIsCopy={orderIsCopy}
-      orderHasSourceMail={orderHasSourceMail}
+      orderPdfFilename={orderPdfFilename}
+      onOrderPdfFilenameChange={setOrderPdfFilename}
       invoiceBusy={invoiceBusy}
       invoiceDirty={
         invoiceDirty ||

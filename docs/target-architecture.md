@@ -58,18 +58,38 @@ PDF, Kopie, Archivieren und Rechnungserstellung werden erst nach erfolgreichem
 Speichern freigegeben und speichern nicht implizit. Während Lade-/Speichervorgängen
 oder bei Ladefehlern sind alle Dokumentaktionen gesperrt. E-Mail folgt
 denselben Sperrregeln: Beim Auftrag öffnet ein Menü „Angebot versenden",
-„Absage versenden", bei Aufträgen mit Ursprungsmail zusätzlich „Als Antwort
-auf Mail senden" und – nur bei Angebotskopien – „2 Angebote versenden"; bei
+„Absage versenden" und – nur bei Angebotskopien – „2 Angebote versenden"; bei
 Rechnungen (Admin-only) „Rechnung versenden". Der Versanddialog lädt einen
 serverseitigen Entwurf, lässt Empfänger, Betreff und Text bearbeiten und sendet
 über die Outbox. Der Auftragseditor zeigt Links zwischen Ursprungsauftrag und
-seinen Kopien. Auf kleinen Bildschirmen sind alle verfügbaren
+seinen Kopien. Antworten auf E-Mails sind ausschließlich im Postfach nach
+Auswahl einer E-Mail verfügbar, nicht im E-Mail-Menü des Auftragseditors.
+Der Angebotsversand aus dem Postfach antwortet auf die ausgewählte,
+mit dem Auftrag verknüpfte E-Mail. Auf kleinen Bildschirmen sind alle verfügbaren
 Dokumentaktionen einschließlich der einzelnen E-Mail-Aktionen erreichbar;
 dieselben Sperr- und Rollenregeln gelten. In aktiven und archivierten
 Auftragslisten steht eine angegebene Firma vor dem Kundennamen.
 In der ausgeklappten Admin-Seitenleiste stehen analoge Uhren mit aktuellen
 Ortszeiten: München oben, Minsk, Kaliningrad und Warna darunter. Die Anzeige
 nutzt Ortszeitzonen und berücksichtigt Sommer- und Winterzeit automatisch.
+
+Vor dem ersten Angebots-PDF-Download oder dem Öffnen eines Angebots-
+Versanddialogs fragt ein kleines Modal nach dem Dateinamen. Es ist mit dem
+bisherigen Standardnamen ohne `.pdf` vorbelegt; die Endung steht als fester,
+nicht editierbarer Zusatz rechts im Eingabefeld. „OK“ speichert den Namen am Auftrag und
+setzt die gewünschte Aktion fort; „Abbrechen“ führt weder Download noch
+Dialogöffnung aus. Die Endung `.pdf` wird ergänzt. Weitere Downloads,
+Mailentwürfe und PDF-Anhänge verwenden den gespeicherten Namen ohne erneute
+Abfrage, auch nach Bearbeitungen. Kopien starten ohne eigenen Dateinamen.
+Der gespeicherte Name wird ohne `.pdf` mittig in der Auftrags-Navbar angezeigt.
+Beim Hover oder Tastaturfokus erscheint ein Bearbeitungsstift; auf Touchgeräten
+ist er dauerhaft sichtbar. Er öffnet denselben Dialog mit dem aktuellen Namen.
+„OK“ speichert die Änderung und aktualisiert Navbar und künftige PDF-/Mailnamen;
+„Abbrechen“ behält den gespeicherten Namen. Dieselben Dirty-/Busy-Sperren gelten.
+Gleichzeitige Namensänderungen vergleichen den bisherigen Namen atomar.
+Der Name ist separate Metadaten: Auftragsrevision, Bearbeitungsflag und
+PDF-Bearbeitungsdatum bleiben unverändert. Auch im Archiv kann der erste
+Dateiname für den PDF-Download festgelegt werden; Fachdaten bleiben gesperrt.
 
 Archivierte Aufträge und Rechnungen sind nicht bearbeitbar. Die Archivlisten
 bieten PDF-Download zum Drucken sowie Wiederherstellung und zeigen das
@@ -96,12 +116,22 @@ der Formularclient rendert nur diese Ausgabe. Optionale HTTP(S)-Medienlinks
 werden im Kundenformular und in der Admin-Vorschau ohne Referrer geladen.
 
 Der Möbelkatalog enthält neben ID und Kategoriezuordnungen nur Name, Volumen,
-Schrittgröße in Vielfachen von 0,5 (Minimum 0,5, Standard 1) und Sortierung
+Schrittgröße 0,5 oder 1 (Standard 1) und Sortierung
 (Standard 0) sowie die Kategoriezuordnungen in Kategorie-Sortierung, bei
 Gleichstand nach ID.
 Gewicht, Montage-/Aufpreise und die bisherigen Möbel-Flags entfallen aus
 DTOs, Eingaben und Datenbank. Die Migration setzt bisher leere Schrittgrößen
 auf 1; vorhandene Kategoriezuordnungen bleiben erhalten.
+Im Möbelkatalog-Dialog wird die Schrittgröße als Auswahl zwischen 0,5 und 1
+dargestellt. Der Server weist andere Werte bei Anlage und Änderung zurück.
+Bereits gespeicherte andere Schrittgrößen werden nicht automatisch geändert;
+beim Bearbeiten muss eine der beiden zulässigen Optionen gewählt werden.
+Im Auftragseditor akzeptiert das m³-Feld einer Möbelposition nichtnegative
+Dezimalwerte ohne feste Schrittgröße; Mengen- und Katalogregeln bleiben unverändert.
+Ein gespeicherter Wert 0 wird beim Laden als leeres Feld angezeigt; eine explizit
+eingegebene 0 bleibt während der Bearbeitung sichtbar. Leeren setzt den Wert auf 0.
+Dasselbe Eingabeverhalten gilt für das Volumen beim Anlegen und Bearbeiten
+von Möbelkatalogeinträgen; die Volumeneingabe bleibt in 0,01-m³-Schritten möglich.
 
 Die Profilseite bietet Profil, Passwort und OTP-Einstellungen als drei getrennte
 Änderungsformulare.

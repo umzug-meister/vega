@@ -82,6 +82,43 @@ test("furniture input supports both free text and catalog suggestions", async ()
     assert.equal(items[0]?.name, "Custom bookcase");
     assert.equal("catalogId" in items[0]!, false);
 
+    const volumeLabel = [...view.container.querySelectorAll("label")].find(
+      (entry) => entry.textContent?.trim() === "m³",
+    );
+    assert.ok(volumeLabel);
+    const volumeInput = view.container.querySelector<HTMLInputElement>(
+      `#${volumeLabel.htmlFor}`,
+    );
+    assert.ok(volumeInput);
+    const getVolume = () =>
+      (
+        JSON.parse(
+          view.container.querySelector('[data-testid="furniture-items"]')!
+            .textContent!,
+        ) as Array<Record<string, unknown>>
+      )[0]?.volume;
+    assert.equal(volumeInput.value, "");
+    await view.input(volumeInput, `${volumeInput.value}1`);
+    await view.flush();
+    assert.equal(volumeInput.value, "1");
+    assert.equal(getVolume(), 1);
+
+    await view.input(volumeInput, "");
+    await view.flush();
+    assert.equal(volumeInput.value, "");
+    assert.equal(getVolume(), 0);
+    await view.input(volumeInput, "0");
+    await view.flush();
+    assert.equal(volumeInput.value, "0");
+    assert.equal(getVolume(), 0);
+
+    await view.input(volumeInput, "");
+    await view.input(volumeInput, "3.125");
+    await view.flush();
+    assert.equal(volumeInput.value, "3.125");
+    assert.equal(volumeInput.checkValidity(), true);
+    assert.equal(getVolume(), 3.125);
+
     await view.input(input, "Sofa");
     await view.flush();
     const option = [

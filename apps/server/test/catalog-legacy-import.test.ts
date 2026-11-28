@@ -79,15 +79,17 @@ test("legacy import skips invalid records and reports every decision", () => {
   assert.ok(plan.skipped.some((line) => line.includes("2 Zähler-Datensätze")));
 });
 
-test("legacy import defaults unsupported fractional steps to one with a warning", () => {
-  const plan = buildLegacyCatalogImportPlan({
-    ...PAYLOAD,
-    items: [
-      { name: "Sondermaß", volume: 1, step: "0.25", categoryRefs: [{ name: "Wohnung" }] },
-    ],
-  });
-  assert.equal(plan.furniture[0]?.input.step, 1);
-  assert.ok(plan.skipped.some((line) => line.includes("ungültige Schrittgröße 0.25")));
+test("legacy import defaults steps other than half or one to one with a warning", () => {
+  for (const step of ["0.25", "1.5", "2"]) {
+    const plan = buildLegacyCatalogImportPlan({
+      ...PAYLOAD,
+      items: [
+        { name: "Sondermaß", volume: 1, step, categoryRefs: [{ name: "Wohnung" }] },
+      ],
+    });
+    assert.equal(plan.furniture[0]?.input.step, 1);
+    assert.ok(plan.skipped.some((line) => line.includes(`ungültige Schrittgröße ${step}`)));
+  }
 });
 
 test("legacy import rejects malformed payloads, comma decimals and invalid volumes", () => {

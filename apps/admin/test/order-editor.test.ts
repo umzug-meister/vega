@@ -41,6 +41,7 @@ async function editor(
       ],
     },
     write,
+    pdf,
   }: {
     fresh?: boolean;
     initialData?: CreateOrderInput;
@@ -51,6 +52,7 @@ async function editor(
       legs: Array<{ distanceKm: number; durationMinutes: number }>;
     };
     write: (body: Record<string, unknown>, method: string) => Response;
+    pdf?: () => Response;
   },
 ) {
   const orderNumber = fresh ? undefined : 1000;
@@ -63,6 +65,7 @@ async function editor(
         return json({ data: routeConfig });
       if (path === "/api/admin/routes/distance")
         return json({ data: routeResult });
+      if (path === "/api/admin/orders/1000/pdf" && pdf) return pdf();
       if (init?.method === "PUT" || init?.method === "POST") {
         return write(
           JSON.parse(String(init.body)) as Record<string, unknown>,
@@ -74,6 +77,8 @@ async function editor(
           data: {
             orderNumber: 1000,
             revision: 7,
+            pdfFilename: null,
+            defaultPdfFilename: "Standard_1000.pdf",
             data: initialData,
             archivedAt: null,
             isCopy: false,
@@ -128,6 +133,11 @@ async function editor(
           { type: "submit", form: "order-create-form" },
           "Save",
         ),
+        React.createElement(
+          "button",
+          { type: "submit", form: "order-create-form", value: "pdf" },
+          "PDF",
+        ),
         React.createElement("output", { "data-dirty": String(dirty) }),
       ),
     );
@@ -141,6 +151,46 @@ async function editor(
   assert.ok(firstName && save);
   return { ...view, firstName, save, events };
 }
+
+test("editor PDF waits for filename confirmation, persists only the name and downloads it", async (context) => {
+  const writes: Record<string, unknown>[] = [];
+  let pdfRequests = 0;
+  const view = await editor(context, {
+    write: (body) => {
+      writes.push(body);
+      return json({ data: { pdfFilename: "Mein Angebot.pdf" } });
+    },
+    pdf: () => {
+      pdfRequests++;
+      return new Response("%PDF-test", { headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": "attachment; filename*=UTF-8''Mein%20Angebot.pdf",
+      } });
+    },
+  });
+  const downloads: string[] = [];
+  context.mock.method(view.window.HTMLAnchorElement.prototype, "click", function (this: HTMLAnchorElement) {
+    downloads.push(this.download);
+  });
+  const pdfButton = view.container.querySelector("button[value='pdf']")!;
+  const dialogButton = (label: string) => [...view.window.document.querySelectorAll('[role="dialog"] button')].find((button) => button.textContent === label)!;
+  await view.click(pdfButton);
+  await view.flush();
+  assert.equal(pdfRequests, 0);
+  assert.equal(view.window.document.querySelector<HTMLInputElement>('[role="dialog"] input')?.value, "Standard_1000");
+  await view.click(dialogButton("Abbrechen"));
+  await view.flush();
+  assert.equal(writes.length, 0);
+  assert.equal(pdfRequests, 0);
+  await view.click(pdfButton);
+  await view.flush();
+  await view.input(view.window.document.querySelector('[role="dialog"] input')!, "Mein Angebot");
+  await view.click(dialogButton("OK"));
+  await view.flush();
+  assert.deepEqual(writes, [{ filename: "Mein Angebot", revision: 7 }]);
+  assert.equal(pdfRequests, 1);
+  assert.deepEqual(downloads, ["Mein Angebot.pdf"]);
+});
 
 test("automatically calculated route distances and durations are persisted on the order", async (context) => {
   const initialData: CreateOrderInput = {
